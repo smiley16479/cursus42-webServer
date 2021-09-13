@@ -54,6 +54,7 @@ DELETE: deletes the specified resource.
 The different status codes for responses are:
 200: OK, successful request
 201: Created, for put and post methods
+204: No Content indique que la requête a réussi mais que le client n'a pas besoin de quitter la page actuelle
 400: Bad request, invalid syntax
 404: Not found, the URL is not recognized
 405: Not allowed, the resource does not accept the method
