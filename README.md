@@ -1,3 +1,5 @@
 # cursus42-webServer
 
-REAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD qing qing 
+Articles
+
+- [history of HTTP versions](http://www.tcpipguide.com/free/t_HTTPOverviewHistoryVersionsandStandards.htm)
