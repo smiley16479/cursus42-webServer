@@ -1,10 +1,10 @@
-# cursus42-webServer
+# WebServer
 
 ## Resources
 
 - [History of HTTP versions](http://www.tcpipguide.com/free/t_HTTPOverviewHistoryVersionsandStandards.htm)
 - [More Resources](https://github.com/artainmo/webserv)
-- [htons](https://stackoverflow.com/a/19209503/12416249)
+- [htons little-endian big-endian](https://stackoverflow.com/a/19209503/12416249)
 
 ### Jacob Sorber
 
