@@ -5,6 +5,7 @@
 - [History of HTTP versions](http://www.tcpipguide.com/free/t_HTTPOverviewHistoryVersionsandStandards.htm)
 - [More Resources](https://github.com/artainmo/webserv)
 - [htons little-endian big-endian](https://stackoverflow.com/a/19209503/12416249)
+  - [htonl, htons, ntohl, ntohs](http://www.man-linux-magique.net/man3/htonl.html)
 
 ### Jacob Sorber
 
