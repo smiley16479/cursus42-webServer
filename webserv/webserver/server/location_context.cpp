@@ -20,7 +20,6 @@ location_context::~location_context(){}
 
 //-------------------------------------- CONFIG functions --------------------------------------
 void location_context::configure_location_block(vector_iterator it, vector_iterator end) {
-	log("configure_location_block");
     configure configure_array[10] = { &location_context::configure_root,
                                      &location_context::configure_allowed_method,
                                      &location_context::configure_autoindex,

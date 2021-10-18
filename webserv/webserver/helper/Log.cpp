@@ -2,12 +2,15 @@
 
 void log(const std::string& msg)
 {
-	std::cerr << "\033[1m\033[34m[WebServ log] \033[0m: " << msg << std::endl;
+	std::cout << "\033[1m\033[34m[WebServ log] \033[0m: " << msg << std::endl;
 }
 
 void debug_log(const std::string& msg)
 {
-	std::cerr << "\033[1m\033[30m[WebServ debug] \033[0m: " << msg << std::endl;
+	if (true) 
+	{
+		std::cout << "\033[1m\033[30m[WebServ debug] \033[0m: " << msg << std::endl;
+	}
 }
 
 void error_log(const std::string& error)
