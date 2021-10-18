@@ -101,6 +101,7 @@ int		add_client_to_list(int fd)
             temp = temp->next;
         temp->next = new;
     }
+    printf("\033[1m\033[34m[MiniServ] \033[0m: client with fd=%d added as the #%d client\n", fd, new->id);
     return (new->id);
 }
 
@@ -190,13 +191,15 @@ int main(int ac, char **av)
     bzero(&str, sizeof(str));
     ft_log("Connected to 127.0.0.1:", atoi(av[1]));
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = 2;
     tv.tv_usec = 0;
+    ft_logd("sock_fd=", sock_fd);
     while(1)
     {
         cpy_write = cpy_read = curr_sock;
         if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL/* &tv */) < 0)
             continue;
+        ft_log("iterate over all the fds ...", "");
         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
