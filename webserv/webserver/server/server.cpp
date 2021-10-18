@@ -137,7 +137,6 @@ void    server::remove_client(int clientFD) {
 //-------------------------------------- REQUEST functions --------------------------------------
 int     server::update_request_buffer(int fd, const std::string& request_data) {
 	std::map<int, request_buf>::iterator it = _request_buffer.find(fd);
-    printf(_request_buffer.find(fd))
     debug_log("[fd=" + std::to_string(fd) + "] update request buffer: \n" + request_data);
 
     if (it == _request_buffer.end()) {
