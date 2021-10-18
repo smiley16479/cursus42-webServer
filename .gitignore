@@ -1,2 +1,5 @@
+.gitignore
 *.out
 .DS_Store
+personalDir
+.vscode

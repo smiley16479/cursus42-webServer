@@ -58,6 +58,7 @@ The different status codes for responses are:
 400: Bad request, invalid syntax
 404: Not found, the URL is not recognized
 405: Not allowed, the resource does not accept the method
+411: Content-Length Required in header fields
 500: Internal server error, situation the server does not know how to handle
 
 WEB PLATFORM
