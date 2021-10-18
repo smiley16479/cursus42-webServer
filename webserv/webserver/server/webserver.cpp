@@ -14,6 +14,8 @@
 #include "../helper/helper.hpp"
 #include "webserver.hpp"
 #include "server.hpp"
+#include "../helper/Log.hpp"
+
 
 webserver::webserver() : _servers(), _time_out_check(false) {}
 webserver::~webserver(){}
@@ -45,7 +47,7 @@ void    webserver::load_configuration(char *config_file) {
 		throw std::runtime_error("Error while reading config file");
 	if (!server_block.empty())
 		throw std::runtime_error("Error: missing '{' or '}' in config file");
-    print_struct();
+    // print_struct();
 }
 
 void    webserver::validate_configuration() {
@@ -87,6 +89,7 @@ void    webserver::run() {
     std::cout << "--- Waiting for activity... ---" << std::endl;
     while (true)
     {
+        debug_log("run()");
         fd.synchronize(_servers);
         if (select(fd.get_max(), &fd.get_read(), &fd.get_write(), 0, 0) == -1) {
 			fd.clr_fd_sets();
@@ -98,6 +101,7 @@ void    webserver::run() {
             if (fd.rdy_for_reading(server->get_tcp_socket())) //accept request
             {
                 int newFD = accept(server->get_tcp_socket(), (struct sockaddr *) &server->_addr, (socklen_t *) &server->_addr_len);
+                debug_log("[" + server->get_server_name() + "] new incoming connection newFD=" + std::to_string(newFD));
                 if (newFD == -1)
 					continue ;
                 if (fcntl(newFD, F_SETFL, O_NONBLOCK) == -1)
@@ -120,6 +124,7 @@ void    webserver::run() {
 
                     if (fd.rdy_for_reading(client_current->_clientFD)) //handle requested file
 					{
+                        debug_log("[client " + std::to_string(client_current->_clientFD) + "] ready for reading");
 						std::string request_headers;
 						read_browser_request(request_headers, client_current->_clientFD);
 						if (!request_headers.empty()) {
@@ -127,6 +132,7 @@ void    webserver::run() {
 							fd.set_time_out(client_current->_clientFD);
 						}
 						if (!request_headers.empty() && server->update_request_buffer(client_current->_clientFD, request_headers) == valid_) {
+                            debug_log("[client " + std::to_string(client_current->_clientFD) + "] ready for reading");
 							client_current->_handler.parse_request(server->_request_buffer[client_current->_clientFD]);
 							server->remove_handled_request(client_current->_clientFD);
 							client_current->_fileFD = client_current->_handler.handle_request(server->_cgi_file_types, server->_location_blocks, server->get_error_page(), &client_current->_authorization_status);
@@ -141,6 +147,7 @@ void    webserver::run() {
 
                     if (fd.rdy_for_reading(client_current->_fileFD)) //read requested file
                     {
+                        debug_log("read requested file");
                         if (fd.rdy_for_writing(client_current->_fileFD) && client_current->_handler.get_status() < error_ &&
 							!client_current->_handler.get_write_to_file()) {
                             if (client_current->_handler.get_bytes_written() < (int)client_current->_handler.get_body().size() || (int)client_current->_handler.get_body().size() == 0) {
@@ -176,6 +183,7 @@ void    webserver::run() {
 
                     if (fd.rdy_for_writing(client_current->_clientFD)) //send response
                     {
+                        debug_log("send response");
 						_time_out_check = false;
 
                         if (!client_current->_handler.get_bytes_written())

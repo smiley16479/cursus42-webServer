@@ -12,6 +12,7 @@
 
 #include "server.hpp"
 #include "../helper/helper.hpp"
+#include "../helper/Log.hpp"
 
 server::server() : _clients(), _port(0), _host(), _server_name(), _error_page(), _cgi_file_types(), _location_blocks(), _tcp_socket(0),
 				   _addr_len(0), _addr(), _request_buffer(){}
@@ -30,6 +31,7 @@ void    server::create_new_server(std::vector <std::string>& server_config) {
                                      &server::invalid_element };
 
     reset_server(); // CAN BE REMOVED?
+    debug_log("Creating server block ...");
     for (vector_iterator it = server_config.begin(); it != server_config.end(); it++) {
         int server_value = identify_server_value(*it);
         if (server_value == location_) {
@@ -74,6 +76,7 @@ void    server::invalid_element(const std::string& str) {parse_invalid(str);}
 
 //-------------------------------------- TCP functions --------------------------------------
 void	server::create_socket() {
+    debug_log("create_socket for " + this->_server_name);
     if ((this->_tcp_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 		throw (std::runtime_error("Socket creation failed"));
     if (fcntl(this->_tcp_socket, F_SETFL, O_NONBLOCK) == -1)
@@ -81,6 +84,7 @@ void	server::create_socket() {
 }
 
 void	server::bind_socket_address(int port) {
+
     memset((char *)&_addr, 0, sizeof(_addr));
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -88,11 +92,13 @@ void	server::bind_socket_address(int port) {
 
     if (bind(this->_tcp_socket, (struct sockaddr *)&_addr, sizeof(_addr)) == -1)
 		throw (std::runtime_error("Bind failed"));
+    debug_log("Socket addess binded for  " + this->_server_name + ":" + std::to_string(port));
 }
 
 void	server::create_connection(int backlog) {
     if (listen(this->_tcp_socket, backlog) == -1)
 		throw (std::runtime_error("Listen failed"));
+    debug_log("Connection created for backlog " + std::to_string(backlog) + " in " + this->_server_name);
 }
 
 
@@ -109,6 +115,7 @@ void    server::reset_server(){
 
 void    server::remove_handled_request(int used_fd){
     map_iterator request = _request_buffer.find(used_fd);
+    debug_log("[" + this->_server_name + "] remove handled request for user_fd=" + std::to_string(used_fd));
 
     request->second.get_body().clear();
     request->second.set_body_size(0);
@@ -116,6 +123,7 @@ void    server::remove_handled_request(int used_fd){
 }
 
 void    server::remove_client(int clientFD) {
+    debug_log("[" + this->_server_name + "] remove client client_fd=" + std::to_string(clientFD));
     for (client_iterator it = _clients.begin(); it != _clients.end(); it++) {
         int client = it->get_clientFD();
         if (clientFD == client) {
@@ -129,6 +137,8 @@ void    server::remove_client(int clientFD) {
 //-------------------------------------- REQUEST functions --------------------------------------
 int     server::update_request_buffer(int fd, const std::string& request_data) {
 	std::map<int, request_buf>::iterator it = _request_buffer.find(fd);
+    printf(_request_buffer.find(fd))
+    debug_log("[fd=" + std::to_string(fd) + "] update request buffer: \n" + request_data);
 
     if (it == _request_buffer.end()) {
         request_buf tmp;

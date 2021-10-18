@@ -12,6 +12,7 @@
 
 #include <cstdio>
 #include "header_handler.hpp"
+#include "../helper/Log.hpp"
 
 header_handler::header_handler(): _status(okay_), _status_phrases(), _write_to_file(false), _read_from_file(false), _write_to_browser(false), _bytes_written(0), _bytes_read(0), _max_file_size(0), _content_length(0), _content_type("Content-Type: text/"),
                                   _content_language("en"), _content_location(), _allow(), _method(), _file_location(),
@@ -217,6 +218,7 @@ int header_handler::handle_request(std::string cgi_file_types, location_vector l
 	struct  stat stats;
 	int		fd = unused_;
 
+	debug_log("handle_request");
 	verify_file_location(location_blocks, error_page);
 	verify_method(cgi_file_types);
 	if (_location_index != -1)

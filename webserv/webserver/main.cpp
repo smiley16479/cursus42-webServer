@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "server/webserver.hpp"
+#include "./helper/Log.hpp"
 
 int     main(int argc, char **argv) {
     webserver   webserver;
@@ -23,8 +24,11 @@ int     main(int argc, char **argv) {
     try {
 		signal(SIGINT, signal_handler);
         webserver.load_configuration(argv[1]);
+        log("Configuration Loaded");
         webserver.validate_configuration();
+        log("Configuration Validated");
 		webserver.establish_connection();
+        log("Connection Established");
 		webserver.run();
     }
     catch (std::exception &e) {

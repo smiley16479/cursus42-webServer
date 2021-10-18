@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "helper.hpp"
+#include "Log.hpp"
 
 std::vector<std::string>	parse_vector(const std::string& str) {
 
@@ -67,6 +68,7 @@ void read_browser_request(std::string &request, int fd) {
     char        buff[6000000];
     int         ret = 1;
 
+	debug_log("Read fd=" + std::to_string(fd));
     request.reserve(1);
     ret = read(fd, buff, 6000000);
 	if (ret == -1)
