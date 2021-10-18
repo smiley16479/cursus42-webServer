@@ -21,9 +21,12 @@ fd_set curr_sock, cpy_read, cpy_write;
 char msg[42];
 char str[42*4096], tmp[42*4096], buf[42*4096 + 42];
 
-void ft_log(char *msg, char *msg2)
+void ft_log(char *msg, int msg2)
 {
-    printf("\033[1m\033[34m[MiniServ] \033[0m: %s%s\n", msg, msg2);
+    if (msg2 == 404)
+        printf("\033[1m\033[34m[MiniServ] \033[0m: %s\n", msg);
+    else
+        printf("\033[1m\033[34m[MiniServ] \033[0m: %s%d\n", msg, msg2);
 }
 
 void	fatal() 
@@ -66,8 +69,10 @@ void	send_all(int fd, char *str_req)
 
     while (temp)
     {
+        printf("temp->fd : %d, fd : %d\n", temp->fd, fd);
         if (temp->fd != fd && FD_ISSET(temp->fd, &cpy_write))
         {
+            printf("RESPONDED\n");
             if (send(temp->fd, str_req, strlen(str_req), 0) < 0)
                 fatal();
         }
@@ -105,7 +110,7 @@ void add_client()
     socklen_t len = sizeof(clientaddr);
     int client_fd;
 
-    ft_log("add_client", "");
+    ft_log("add_client", 404);
     if ((client_fd = accept(sock_fd, (struct sockaddr *)&clientaddr, &len)) < 0)
         fatal();
     sprintf(msg, "server: client %d just arrived\n", add_client_to_list(client_fd));
@@ -164,8 +169,6 @@ int main(int ac, char **av)
         write(2, "Wrong number of arguments\n", strlen("Wrong number of arguments\n"));
         exit(1);
     }
-    ft_log("Hello motherf**cker ", "");
-
     struct sockaddr_in servaddr;
     uint16_t port = atoi(av[1]);
     bzero(&servaddr, sizeof(servaddr));
@@ -185,29 +188,31 @@ int main(int ac, char **av)
     bzero(&tmp, sizeof(tmp));
     bzero(&buf, sizeof(buf));
     bzero(&str, sizeof(str));
-    ft_log("Connected to 127.0.0.1:", av[1]);
+    ft_log("Connected to 127.0.0.1:", atoi(av[1]));
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
     while(1)
     {
-        ft_log("while(1)", "");
         cpy_write = cpy_read = curr_sock;
-        if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, &tv) < 0)
+        if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL/* &tv */) < 0)
             continue;
         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
             {
-                ft_log("FD_ISSET true", "");
+                ft_log("FD_ISSET true", fd);
+                // return 10;
                 if (fd == sock_fd)
                 {
+                    ft_log("fd == sock_fd", 404);
                     bzero(&msg, sizeof(msg));
                     add_client();
                     break;
                 }
                 else
                 {
+                    // close(fd);
                     if (recv(fd, str, sizeof(str), 0) <= 0)
                     {
                         bzero(&msg, sizeof(msg));
