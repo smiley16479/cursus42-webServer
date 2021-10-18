@@ -12,6 +12,7 @@
 
 #include "location_context.hpp"
 #include "../helper/helper.hpp"
+#include "../helper/Log.hpp"
 
 location_context::location_context() : _location_context(), _root(), _index(), _allowed_method(0), _max_file_size(0), _autoindex(false), _alias(false), _auth_basic(), _auth_user_info(), _return() {}
 location_context::~location_context(){}
@@ -19,6 +20,7 @@ location_context::~location_context(){}
 
 //-------------------------------------- CONFIG functions --------------------------------------
 void location_context::configure_location_block(vector_iterator it, vector_iterator end) {
+	log("configure_location_block");
     configure configure_array[10] = { &location_context::configure_root,
                                      &location_context::configure_allowed_method,
                                      &location_context::configure_autoindex,
