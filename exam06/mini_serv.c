@@ -7,6 +7,13 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 
+# define RESET			"\033[0m"
+# define RED			"\033[31m"				/* Red */
+# define GREEN			"\033[32m"				/* Green */
+# define YELLOW			"\033[33m"				/* Yellow */
+# define BLUE_BOLD			"\033[1m\033[34m"				/* Yellow */
+
+
 typedef struct		s_client 
 {
 	int				fd;
@@ -24,9 +31,9 @@ char str[42*4096], tmp[42*4096], buf[42*4096 + 42];
 void ft_log(char *msg, int msg2)
 {
     if (msg2 == 404)
-        printf("\033[1m\033[34m[MiniServ] \033[0m: %s\n", msg);
-    else
-        printf("\033[1m\033[34m[MiniServ] \033[0m: %s%d\n", msg, msg2);
+        printf(BLUE_BOLD "[MiniServ] :" RESET " %s\n" , msg);
+    else 
+        printf(BLUE_BOLD "[MiniServ] :" RESET " %s %d\n" , msg, msg2);
 }
 
 void	fatal() 
@@ -49,7 +56,7 @@ int get_id(int fd)
     return (-1);
 }
 
-int		get_max_fd() 
+int		get_max_fd() // iter ds la liste chainée pour trouver le + gd fd
 {
 	int	max = sock_fd;
     t_client *temp = g_clients;
@@ -63,7 +70,7 @@ int		get_max_fd()
     return (max);
 }
 
-void	send_all(int fd, char *str_req)
+void	send_all(int fd, char *str_req) // renvoi le msg à tous les clients
 {
     t_client *temp = g_clients;
 
@@ -72,7 +79,7 @@ void	send_all(int fd, char *str_req)
         printf("temp->fd : %d, fd : %d\n", temp->fd, fd);
         if (temp->fd != fd && FD_ISSET(temp->fd, &cpy_write))
         {
-            printf("RESPONDED\n");
+            printf("ds ft send_all\n");
             if (send(temp->fd, str_req, strlen(str_req), 0) < 0)
                 fatal();
         }
@@ -81,7 +88,7 @@ void	send_all(int fd, char *str_req)
 }
 
 int		add_client_to_list(int fd)
-{
+{// Créer un nouveau maillon avec un id (n+1) et renvoi cet id pour le msg l.117
     t_client *temp = g_clients;
     t_client *new;
 
@@ -101,7 +108,7 @@ int		add_client_to_list(int fd)
             temp = temp->next;
         temp->next = new;
     }
-    printf("\033[1m\033[34m[MiniServ] \033[0m: client with fd=%d added as the #%d client\n", fd, new->id);
+    printf(GREEN "[MiniServ] : client with fd=%d added as the #%d client\n" RESET, fd, new->id);
     return (new->id);
 }
 
@@ -114,7 +121,7 @@ void add_client()
     ft_log("add_client", 404);
     if ((client_fd = accept(sock_fd, (struct sockaddr *)&clientaddr, &len)) < 0)
         fatal();
-    sprintf(msg, "server: client %d just arrived\n", add_client_to_list(client_fd));
+    sprintf(msg, GREEN "server: client %d just arrived\n" RESET, add_client_to_list(client_fd));
     send_all(client_fd, msg);
     FD_SET(client_fd, &curr_sock);
 }
@@ -193,20 +200,20 @@ int main(int ac, char **av)
     struct timeval tv;
     tv.tv_sec = 2;
     tv.tv_usec = 0;
-    ft_logd("sock_fd=", sock_fd);
+    ft_log("sock_fd = ", sock_fd);
     while(1)
     {
         cpy_write = cpy_read = curr_sock;
         if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL/* &tv */) < 0)
-            continue;
-        ft_log("iterate over all the fds ...", "");
+            continue; // Si error select -> return -1
+        ft_log("iterate over all the fds ...", 404);
         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
-            {
+            {// Qd un client donne qlq chose à lire (il ecrit qlq chose)
                 ft_log("FD_ISSET true", fd);
                 // return 10;
-                if (fd == sock_fd)
+                if (fd == sock_fd) // Si le fd correspond à celui du server c'est qu'il y a nouvelle connection
                 {
                     ft_log("fd == sock_fd", 404);
                     bzero(&msg, sizeof(msg));
@@ -216,10 +223,10 @@ int main(int ac, char **av)
                 else
                 {
                     // close(fd);
-                    if (recv(fd, str, sizeof(str), 0) <= 0)
-                    {
+                    if (recv(fd, str, sizeof(str), 0) <= 0) // SI 0 -> EOF, SI -1 error
+                    {// recv est équivalent à read sauf qu'il a des flags
                         bzero(&msg, sizeof(msg));
-                        sprintf(msg, "server: client %d just left\n", rm_client(fd));
+                        sprintf(msg, RED "server: client %d just left\n" RESET, rm_client(fd));
                         send_all(fd, msg);
                         FD_CLR(fd, &curr_sock);
                         close(fd);
