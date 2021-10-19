@@ -6,7 +6,9 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <vector>
 #include "color.hpp"
+#include "struct_webserv.hpp"
 using namespace std;
 
 class config_checker
@@ -25,13 +27,19 @@ class config_checker
 	  private :
 	  std::string _str;
 	} myex;
+
+/* 
+**		TYPES
+*/
+    typedef     bool (config_checker::*configure)(const std::string&, const std::string&);
 /* 
 **		ATTRIBUTS
 */
-
-	map<string, string> _semantic;
+	server_info _si;
+	map<string, vector<string> > _semantic;
 	
 public:
+
 	config_checker(/* args */);
 	~config_checker();
 
@@ -44,6 +52,8 @@ private:
 */
 	void check_serv_part(std::ifstream&);
 	void check_loca_part(std::ifstream&);
+	bool is_not_allowed(string key,string val);
+	void allowed_port(std::ifstream& ifs);
 };
 
 #endif

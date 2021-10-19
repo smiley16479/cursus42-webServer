@@ -5,11 +5,12 @@
 
 using namespace std;
 
+
 int main(int ac, char const *av[])
 {
 	// if (ac != 2)
 		// exit(EXIT_FAILURE);
-	av[1] = "./configuration_files/webserv_config.txt";
+	av[1] = "./configuration_files/valid/default.conf";
 	config_checker confCheck;
 	try
 	{

@@ -19,8 +19,9 @@ config_checker::config_checker()
 		#endif
 		_semantic[str.substr(0, str.find_first_of(" \t"))];
 	}
-	for (map<string, string>::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
+	for (map<string, vector <string>>::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
 		cout << it->first << endl;
+	cout << "Fin du constructeur..." << endl;
 }
 
 config_checker::~config_checker()
@@ -86,16 +87,34 @@ void config_checker::check_conFile(std::string str)
 		std::cout << str << "does not exit\n";
 		return ;
 	}
-	while (ifs >> word)
+	while (ifs >> word) {
 		cout << word;
-		if (word == "SERVER") {
-
+		if (word == "server") {
+			check_serv_part(ifs);
 		}
+	}
 }
 
 /* 
 **		PRIVATE FUNCTION (UTILITAIRES)
 */
+
+bool config_checker::is_not_allowed(string key,string val)
+{
+	
+}
+
+void config_checker::allowed_port(std::ifstream& ifs)
+{
+	string word;
+	if (!(ifs >> word) || is_not_allowed("port", word));
+		throw (configException("bad port"));
+	int port(atoi(word.c_str()));
+	if (80 > port && port > 65535)
+		configException("bad port");
+	_si.port = word;
+	std::cout << "port : " << _si.port << std::endl;
+}
 
 void config_checker::check_serv_part(std::ifstream& ifs){
 	const char  *mandatory_assets[] = {"port",
@@ -109,35 +128,48 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 	ifs >> word;
 	if (word !=  "{")
 		throw (configException(word));
-	for (ifs >> word; word != "location"; ifs >> word)
-		if (word == "port") {
-			ifs >> word;
-			int port(atoi(word.c_str()));
-			if (80 > port && port > 65535)
-				configException("bad port");
+	int bracket(1);
+	for (ifs >> word; word != "}" && bracket; ifs >> word)
+		if (word == "port")
+			allowed_port(ifs);
+		else if (word == "server_name" && ifs >> word) {
+			_si.server_name[_si.server_name.size()];
+			// std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
 		}
-		else if (word == "")
-			;
-		else if (word == "")
-			;
-		else if (word == "")
-			;
-		else if (word == "")
-			;
+		else if (word == "error_page" && ifs >> word) {
+			_si.error_page = word;
+			std::cout << "error_page : " << _si.error_page << std::endl;
+		}
+		// else if (word == "host") // Quingli utilise "host" -> pk ?
+			// ;
+		else if (word == "time_out" && ifs >> word) {
+			_si.time_out = word;
+			std::cout << "time_out : " << _si.time_out << std::endl;
+		}
+		else if (word == "cgi_file_types" && ifs >> word) {
+			_si.cgi_file_types = word;
+			std::cout << "cgi_file_types : " << _si.cgi_file_types << std::endl;
+		}
+		else if (word == "location" && ifs >> word) {
+			// check_loca_part(ifs);  // ?
+			std::cout << "location : " << _si.location << std::endl;
+		}
+		else if (word == "{" || word == "}")
+			word == "{" ? ++bracket : --bracket;
 		else
-			;
-	bool found(true);
+			configException(word);
+/* 	bool found(true);
 	for (map<string, string>::iterator it = _semantic.begin(), endit = _semantic.end(); it != endit && found; ++it)
-		for (size_t i = 0, found = false; i < sizeof(mandatory_assets); ++i)
+		for (size_t i = 0, found = false; i < sizeof(mandatory_assets) / sizeof(char*); ++i)
 			if (it->first == mandatory_assets[i]) {
 				found = true;	
 				break ;
 			}
 	if (!found)
-		throw (configException());
+		throw (configException()); */
 }
 
-void config_checker::check_loca_part(void){
+void config_checker::check_loca_part(std::ifstream& ifs){
 	const char  *mandatory_assets[] = {"alias",
 		// "allowed_method",
 		// "auth_basic",
