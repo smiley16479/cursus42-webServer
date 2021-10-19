@@ -107,7 +107,31 @@ bool config_checker::is_not_allowed(string key,string val)
 	return false;
 }
 
-void config_checker::allowed_port(std::ifstream& ifs)
+void config_checker::valid_port(std::ifstream& ifs)
+{
+	string word;
+	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
+		throw (configException("bad port"));
+	int port(atoi(word.c_str()));
+	if (65535 < port || port < 80)
+		throw (configException("bad port"));
+	_si.port = word;
+	std::cout << "port : " << _si.port << std::endl;
+}
+
+void config_checker::valid_server_nm(std::ifstream& ifs)
+{// C'est quoi un server_name valide ... ? juste un nom ou il faut ping ou quoi
+	string word;
+	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
+		throw (configException("bad port"));
+	int port(atoi(word.c_str()));
+	if (65535 < port || port < 80)
+		throw (configException("bad port"));
+	_si.port = word;
+	std::cout << "port : " << _si.port << std::endl;
+}
+
+void config_checker::valid_error_page(std::ifstream& ifs)
 {
 	string word;
 	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
@@ -120,13 +144,6 @@ void config_checker::allowed_port(std::ifstream& ifs)
 }
 
 void config_checker::check_serv_part(std::ifstream& ifs){
-	const char  *mandatory_assets[] = {"port",
-			"host",
-			"server_name",
-			"error_page",
-			"time_out",
-			"cgi_file_types",
-			"location"};
 	string word;
 	ifs >> word;
 	if (word !=  "{")
@@ -134,12 +151,13 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 	int bracket(1);
 	for (ifs >> word; word != "}" || bracket; ifs >> word)
 		if (word == "port")
-			allowed_port(ifs);
+			valid_port(ifs);
 		else if (word == "server_name" && ifs >> word) {
 			_si.server_name[_si.server_name.size()];
 			// std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
 		}
 		else if (word == "error_page" && ifs >> word) {
+			valid_error_page(ifs);
 			_si.error_page = word;
 			std::cout << "error_page : " << _si.error_page << std::endl;
 		}
@@ -155,7 +173,7 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 		}
 		else if (word == "location" && ifs >> word) {
 			// check_loca_part(ifs);  // ?
-			std::cout << "location : " << _si.location << std::endl;
+			// std::cout << "location : " << _si.location[_si.location.size()] << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;

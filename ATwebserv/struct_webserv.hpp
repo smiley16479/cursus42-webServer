@@ -4,6 +4,17 @@
 #include <iostream>
 #include <vector>
 
+struct locati_info {
+	std::string root;						// dossier racine
+	std::string allowed_method;				// méthodes (GET, POST, etc) permises
+	std::string index;						// index ?
+	std::string autoindex;					// présentation du fileSystem => val (on/off)
+	std::string max_file_size;				// taille maximale de fichier à envoyer
+	std::string auth_basic;					// ?
+	std::string return_directive;			// redirection vers une autre location
+	std::string auth_user_file;				// fichiers autorisés à l'utilisateur ?
+};
+
 struct server_info {
 	std::string port;
 	std::string host;
@@ -11,7 +22,7 @@ struct server_info {
 	std::string error_page;
 	std::string time_out;
 	std::string cgi_file_types;
-	std::string location;
+	std::vector<locati_info> location;
 };
 
 /* 
