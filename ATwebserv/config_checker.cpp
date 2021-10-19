@@ -1,7 +1,4 @@
 #include "config_checker.hpp"
-#include <string>
-#include <iostream>
-using namespace std;
 
 config_checker::config_checker()
 {
@@ -11,6 +8,7 @@ config_checker::config_checker()
 		return ;
 	}
 	string str;
+	int i(0);
 	while (std::getline(ifs, str)) {
 		if (str[0] == '#')
 			continue ;
@@ -18,8 +16,15 @@ config_checker::config_checker()
 			std::cout << str << ", str.substr(0, str.find(' \t')) : " << str.substr(0, str.find_first_of(" \t")) << std::endl;
 		#endif
 		_semantic[str.substr(0, str.find_first_of(" \t"))];
+		stringstream ss;
+		string word;
+		ss << str;
+		while (ss >> word) {
+			cout << "test " << i << " : " << word << endl;
+		}
+		++i;
 	}
-	for (map<string, vector <string>>::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
+	for (map<string, vector<string> >::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
 		cout << it->first << endl;
 	cout << "Fin du constructeur..." << endl;
 }
@@ -83,12 +88,10 @@ void config_checker::check_conFile(std::string str)
 {
 	std::ifstream ifs(str.c_str());
 	std::string word;
-	if (ifs.fail()) {
-		std::cout << str << "does not exit\n";
-		return ;
-	}
+	if (ifs.fail())
+		throw (configException("Unfound"));
 	while (ifs >> word) {
-		cout << word;
+		cout << "check_ConFile : " << word << endl;
 		if (word == "server") {
 			check_serv_part(ifs);
 		}
@@ -101,17 +104,17 @@ void config_checker::check_conFile(std::string str)
 
 bool config_checker::is_not_allowed(string key,string val)
 {
-	
+	return false;
 }
 
 void config_checker::allowed_port(std::ifstream& ifs)
 {
 	string word;
-	if (!(ifs >> word) || is_not_allowed("port", word));
+	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
 		throw (configException("bad port"));
 	int port(atoi(word.c_str()));
-	if (80 > port && port > 65535)
-		configException("bad port");
+	if (65535 < port || port < 80)
+		throw (configException("bad port"));
 	_si.port = word;
 	std::cout << "port : " << _si.port << std::endl;
 }
@@ -129,7 +132,7 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 	if (word !=  "{")
 		throw (configException(word));
 	int bracket(1);
-	for (ifs >> word; word != "}" && bracket; ifs >> word)
+	for (ifs >> word; word != "}" || bracket; ifs >> word)
 		if (word == "port")
 			allowed_port(ifs);
 		else if (word == "server_name" && ifs >> word) {
@@ -140,7 +143,7 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 			_si.error_page = word;
 			std::cout << "error_page : " << _si.error_page << std::endl;
 		}
-		// else if (word == "host") // Quingli utilise "host" -> pk ?
+		// else if (word == "host") // Quingli utilise "host" au lieu de server_name et port au lieu de listen -> pk ?
 			// ;
 		else if (word == "time_out" && ifs >> word) {
 			_si.time_out = word;
