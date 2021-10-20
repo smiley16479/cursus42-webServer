@@ -22,8 +22,9 @@ struct server_info {
 	std::string host;
 	std::vector<std::string> server_name;
 	std::string error_page;
+	std::string max_file_size;				// taille maximale de fichier à envoyer
 	std::string time_out;
-	std::string cgi_file_types;
+	std::vector<std::string> cgi_file_types;// type de file gérées pour les cgi
 	std::vector<locati_info> location;
 };
 

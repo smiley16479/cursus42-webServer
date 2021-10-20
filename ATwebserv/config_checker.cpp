@@ -108,6 +108,11 @@ bool config_checker::is_not_allowed(string key,string val)
 	return false;
 }
 
+void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert)
+{
+
+}
+
 void config_checker::valid_port(std::ifstream& ifs)
 {
 	string word;
@@ -134,18 +139,22 @@ void config_checker::valid_error_page(std::ifstream& ifs)
 	std::cout << "valid_error_page : " << _si.error_page << std::endl;
 }
 
-void config_checker::check_serv_part(std::ifstream& ifs){
+void config_checker::check_serv_part(std::ifstream& ifs) {
 	string word;
 	ifs >> word;
 	if (word !=  "{")
 		throw (configException(word));
 	int bracket(1);
-	for (ifs >> word; word != "}" || bracket; ifs >> word)
+	for (ifs >> word; word != "}" && bracket; cout << MAGENTA"serv_tour de boucle word : "RESET << word << ", bracket : " << bracket << endl , ifs >> word)
 		if (word == "port")
 			valid_port(ifs);
 		else if (word == "server_name" && ifs >> word) {
 			_si.server_name.push_back(word);
 			std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
+		}
+		else if (word == "max_file_size" && ifs >> word) {
+			_si.max_file_size = word;
+			std::cout << "max_file_size : " << _si.max_file_size << std::endl;
 		}
 		else if (word == "error_page" && ifs >> word) {
 			// valid_error_page(ifs);
@@ -159,8 +168,8 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 			std::cout << "time_out : " << _si.time_out << std::endl;
 		}
 		else if (word == "cgi_file_types" && ifs >> word) {
-			_si.cgi_file_types = word;
-			std::cout << "cgi_file_types : " << _si.cgi_file_types << std::endl;
+			_si.cgi_file_types.push_back(word);
+			std::cout << "cgi_file_types : " << _si.cgi_file_types[_si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
 			check_loca_part(ifs);  // ?
@@ -193,12 +202,12 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 	ifs >> word;
 	_si.location.push_back(locati_info());
 	_si.location[_si.location.size() - 1].location = word;
-	std::cout << "location : " << _si.location[_si.location.size() - 1].location << std::endl;
+	std::cout << RED"location : "RESET << _si.location[_si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException("bad formating (location_part) around : " + word));
 	int bracket(1);
-	for (ifs >> word; word != "}" || bracket; ifs >> word , cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl)
+	for (ifs >> word; word != "}" || bracket; cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl, ifs >> word )
 		if (word == "allowed_method" && ifs >> word) {
 			_si.location[_si.location.size() - 1].allowed_method = word;
 			std::cout << GREEN"allowed_method : "RESET << _si.location[_si.location.size() - 1].allowed_method << std::endl;

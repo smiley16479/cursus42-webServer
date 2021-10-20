@@ -54,6 +54,7 @@ private:
 	void check_serv_part(std::ifstream&);
 	void check_loca_part(std::ifstream&);
 	bool is_not_allowed(string key,string val);
+	void string_vector_insert(ifstream& ifs, string& where_to_insert);
 	void valid_port(std::ifstream& ifs);
 	void valid_server_nm(std::ifstream& ifs);
 	void valid_error_page(std::ifstream& ifs);
