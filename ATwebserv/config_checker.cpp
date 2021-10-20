@@ -7,25 +7,26 @@ config_checker::config_checker()
 		std::cout << "webserv_config.txt does not exit\n"; // <-- IDEM
 		return ;
 	}
-	string str;
-	int i(0);
-	while (std::getline(ifs, str)) {
-		if (str[0] == '#')
-			continue ;
-		#if debug
-			std::cout << str << ", str.substr(0, str.find(' \t')) : " << str.substr(0, str.find_first_of(" \t")) << std::endl;
-		#endif
-		_semantic[str.substr(0, str.find_first_of(" \t"))];
-		stringstream ss;
-		string word;
-		ss << str;
-		while (ss >> word) {
-			cout << "test " << i << " : " << word << endl;
-		}
-		++i;
-	}
-	for (map<string, vector<string> >::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
-		cout << it->first << endl;
+// SERVAIT LORS DE LA CONFIGURATION DU CHECKER POUR CONNAITRE À L'AVANCE LES TOKENS
+	// string str;
+	// int i(0);
+	// while (std::getline(ifs, str)) {
+	// 	if (str[0] == '#')
+	// 		continue ;
+	// 	#if debug
+	// 		std::cout << str << ", str.substr(0, str.find(' \t')) : " << str.substr(0, str.find_first_of(" \t")) << std::endl;
+	// 	#endif
+	// 	_semantic[str.substr(0, str.find_first_of(" \t"))];
+	// 	stringstream ss;
+	// 	string word;
+	// 	ss << str;
+	// 	while (ss >> word) {
+	// 		cout << "test " << i << " : " << word << endl;
+	// 	}
+	// 	++i;
+	// }
+	// for (map<string, vector<string> >::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
+	// 	cout << it->first << endl;
 	cout << "Fin du constructeur..." << endl;
 }
 
@@ -121,26 +122,16 @@ void config_checker::valid_port(std::ifstream& ifs)
 
 void config_checker::valid_server_nm(std::ifstream& ifs)
 {// C'est quoi un server_name valide ... ? juste un nom ou il faut ping ou quoi
-	string word;
-	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
-		throw (configException("bad port"));
-	int port(atoi(word.c_str()));
-	if (65535 < port || port < 80)
-		throw (configException("bad port"));
-	_si.port = word;
-	std::cout << "port : " << _si.port << std::endl;
+// ...juste un nom apparrement
 }
 
 void config_checker::valid_error_page(std::ifstream& ifs)
 {
 	string word;
-	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
-		throw (configException("bad port"));
-	int port(atoi(word.c_str()));
-	if (65535 < port || port < 80)
-		throw (configException("bad port"));
-	_si.port = word;
-	std::cout << "port : " << _si.port << std::endl;
+	if (!(ifs >> word))
+		throw (configException("error_page"));
+	_si.error_page = word;
+	std::cout << "valid_error_page : " << _si.error_page << std::endl;
 }
 
 void config_checker::check_serv_part(std::ifstream& ifs){
@@ -153,11 +144,11 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 		if (word == "port")
 			valid_port(ifs);
 		else if (word == "server_name" && ifs >> word) {
-			_si.server_name[_si.server_name.size()];
-			// std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
+			_si.server_name.push_back(word);
+			std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
 		}
 		else if (word == "error_page" && ifs >> word) {
-			valid_error_page(ifs);
+			// valid_error_page(ifs);
 			_si.error_page = word;
 			std::cout << "error_page : " << _si.error_page << std::endl;
 		}
@@ -171,14 +162,13 @@ void config_checker::check_serv_part(std::ifstream& ifs){
 			_si.cgi_file_types = word;
 			std::cout << "cgi_file_types : " << _si.cgi_file_types << std::endl;
 		}
-		else if (word == "location" && ifs >> word) {
-			// check_loca_part(ifs);  // ?
-			// std::cout << "location : " << _si.location[_si.location.size()] << std::endl;
+		else if (word == "location") {
+			check_loca_part(ifs);  // ?
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			configException(word);
+			configException("bad formating around : " + word);
 /* 	bool found(true);
 	for (map<string, string>::iterator it = _semantic.begin(), endit = _semantic.end(); it != endit && found; ++it)
 		for (size_t i = 0, found = false; i < sizeof(mandatory_assets) / sizeof(char*); ++i)
@@ -199,6 +189,51 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 		// "index",
 		// "max_file_size",
 		"root"};
+	string word;
+	ifs >> word;
+	_si.location.push_back(locati_info());
+	_si.location[_si.location.size() - 1].location = word;
+	std::cout << "location : " << _si.location[_si.location.size() - 1].location << std::endl;
 
+	if (!(ifs >> word) || word !=  "{")
+		throw (configException("bad formating (location_part) around : " + word));
+	int bracket(1);
+	for (ifs >> word; word != "}" || bracket; ifs >> word , cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl)
+		if (word == "allowed_method" && ifs >> word) {
+			_si.location[_si.location.size() - 1].allowed_method = word;
+			std::cout << GREEN"allowed_method : "RESET << _si.location[_si.location.size() - 1].allowed_method << std::endl;
+		}
+		else if (word == "auth_basic" && ifs >> word) {
+			_si.location[_si.location.size() - 1].auth_basic = word;
+			std::cout << GREEN"auth_basic : "RESET << _si.location[_si.location.size() - 1].auth_basic << std::endl;
+		}
+		else if (word == "auth_user_file" && ifs >> word) {
+			_si.location[_si.location.size() - 1].auth_user_file = word;
+			std::cout << GREEN"auth_user_file : "RESET << _si.location[_si.location.size() - 1].auth_user_file << std::endl;
+		}
+		else if (word == "autoindex" && ifs >> word) {
+			_si.location[_si.location.size() - 1].autoindex = word;
+			std::cout << GREEN"autoindex : "RESET << _si.location[_si.location.size() - 1].autoindex << std::endl;
+		}
+		else if (word == "index" && ifs >> word) {
+			_si.location[_si.location.size() - 1].index = word;
+			std::cout << GREEN"index : "RESET << _si.location[_si.location.size() - 1].index << std::endl;
+		}
+		else if (word == "max_file_size" && ifs >> word) {
+			_si.location[_si.location.size() - 1].max_file_size = word;
+			std::cout << GREEN"max_file_size : "RESET << _si.location[_si.location.size() - 1].max_file_size << std::endl;
+		}
+		else if (word == "return_directive" && ifs >> word) {
+			_si.location[_si.location.size() - 1].return_directive = word;
+			std::cout << GREEN"return_directive : "RESET << _si.location[_si.location.size() - 1].return_directive << std::endl;
+		}
+		else if (word == "root" && ifs >> word) {
+			_si.location[_si.location.size() - 1].root = word;
+			std::cout << GREEN"root : "RESET << _si.location[_si.location.size() - 1].root << std::endl;
+		}
+		else if (word == "{" || word == "}")
+			word == "{" ? ++bracket : --bracket;
+		else
+			configException("bad formating (location_part) around : " + word);
 }
 
