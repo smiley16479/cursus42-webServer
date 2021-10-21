@@ -145,7 +145,7 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 	if (word !=  "{")
 		throw (configException(word));
 	int bracket(1);
-	for (ifs >> word; word != "}" && bracket; cout << MAGENTA"serv_tour de boucle word : "RESET << word << ", bracket : " << bracket << endl , ifs >> word)
+	for (ifs >> word; word != "}" && bracket; /* cout <<  MAGENTA "serv_tour de boucle word : " RESET << word << ", bracket : " << bracket << endl , */ ifs >> word)
 		if (word == "port")
 			valid_port(ifs);
 		else if (word == "server_name" && ifs >> word) {
@@ -202,61 +202,100 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 	ifs >> word;
 	_si.location.push_back(locati_info());
 	_si.location[_si.location.size() - 1].location = word;
-	std::cout << RED"location : "RESET << _si.location[_si.location.size() - 1].location << std::endl;
+	std::cout << RED "location : " RESET << _si.location[_si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException("bad formating (location_part1) around : " + word));
 	int bracket(1);
-	for (ifs >> word; word != "}" || bracket; cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl, ifs >> word)
-		if (word == "allowed_method" && ifs >> word) {
-			while (1)
-			{
-				std::cout << GREEN"allowed_method : "RESET << word << std::endl;
-				if	(word.find(';', 0) == string::npos)
-					_si.location[_si.location.size() - 1].allowed_method.push_back(word);
-				else {
-					if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-						throw (configException("bad formating (location_part2) around : " + word));
-					word.resize(word.size() -1);
-					_si.location[_si.location.size() - 1].allowed_method.push_back(word);
-					break ;
-				}
-				// std::cout << GREEN"allowed_method : "RESET << _si.location[_si.location.size() - 1].allowed_method.back() << std::endl;
-				ifs >> word;
-			}
-			
+
+	
+	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
+		if (word == "allowed_method")
+			extract_to_vector(ifs, _si.location[_si.location.size() - 1].allowed_method);
+		else if (word == "auth_basic") {
+			// _si.location[_si.location.size() - 1].auth_basic = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_basic);
+			std::cout << GREEN "auth_basic : " RESET << _si.location[_si.location.size() - 1].auth_basic << std::endl;
 		}
-		else if (word == "auth_basic" && ifs >> word) {
-			_si.location[_si.location.size() - 1].auth_basic = word;
-			std::cout << GREEN"auth_basic : "RESET << _si.location[_si.location.size() - 1].auth_basic << std::endl;
+		else if (word == "auth_user_file") {
+			// _si.location[_si.location.size() - 1].auth_user_file = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_user_file);
+			std::cout << GREEN "auth_user_file : " RESET << _si.location[_si.location.size() - 1].auth_user_file << std::endl;
 		}
-		else if (word == "auth_user_file" && ifs >> word) {
-			_si.location[_si.location.size() - 1].auth_user_file = word;
-			std::cout << GREEN"auth_user_file : "RESET << _si.location[_si.location.size() - 1].auth_user_file << std::endl;
+		else if (word == "autoindex") {
+			// _si.location[_si.location.size() - 1].autoindex = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].autoindex);
+			std::cout << GREEN "autoindex : " RESET << _si.location[_si.location.size() - 1].autoindex << std::endl;
 		}
-		else if (word == "autoindex" && ifs >> word) {
-			_si.location[_si.location.size() - 1].autoindex = word;
-			std::cout << GREEN"autoindex : "RESET << _si.location[_si.location.size() - 1].autoindex << std::endl;
+		else if (word == "index") {
+			// _si.location[_si.location.size() - 1].index = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].index);
+			std::cout << GREEN "index : " RESET << _si.location[_si.location.size() - 1].index << std::endl;
 		}
-		else if (word == "index" && ifs >> word) {
-			_si.location[_si.location.size() - 1].index = word;
-			std::cout << GREEN"index : "RESET << _si.location[_si.location.size() - 1].index << std::endl;
+		else if (word == "max_file_size") {
+			// _si.location[_si.location.size() - 1].max_file_size = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].max_file_size);
+
+			std::cout << GREEN "max_file_size : " RESET << _si.location[_si.location.size() - 1].max_file_size << std::endl;
 		}
-		else if (word == "max_file_size" && ifs >> word) {
-			_si.location[_si.location.size() - 1].max_file_size = word;
-			std::cout << GREEN"max_file_size : "RESET << _si.location[_si.location.size() - 1].max_file_size << std::endl;
+		else if (word == "return_directive") {
+			// _si.location[_si.location.size() - 1].return_directive = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].return_directive);
+
+			std::cout << GREEN "return_directive : " RESET << _si.location[_si.location.size() - 1].return_directive << std::endl;
 		}
-		else if (word == "return_directive" && ifs >> word) {
-			_si.location[_si.location.size() - 1].return_directive = word;
-			std::cout << GREEN"return_directive : "RESET << _si.location[_si.location.size() - 1].return_directive << std::endl;
-		}
-		else if (word == "root" && ifs >> word) {
-			_si.location[_si.location.size() - 1].root = word;
-			std::cout << GREEN"root : "RESET << _si.location[_si.location.size() - 1].root << std::endl;
+		else if (word == "return") 
+			extract_to_vector(ifs, _si.location[_si.location.size() - 1].retour);
+		else if (word == "root") {
+			// _si.location[_si.location.size() - 1].root = word;
+			extract_to_string(ifs, _si.location[_si.location.size() - 1].root);
+			std::cout << GREEN "root : " RESET << _si.location[_si.location.size() - 1].root << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
 			throw (configException("bad formating (location_part3) around : " + word));
+	}
 }
 
+
+void config_checker::extract_to_string(std::ifstream& ifs, string& v) { // on devrait checker les mauvis mot comme '{''}' etc.
+	string word;
+	if (ifs >> word) {
+		if (word.find(';', 0) == string::npos)
+			v = word;
+		else {
+			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
+				throw (configException("bad formating (location_part word1) around : " + word));
+			word.resize(word.size() -1);
+			v = word;
+			return ; // On quite au cas ou la ';' est deja passee
+		}
+		if (ifs >> word && word != ";")
+			throw (configException("bad formating (location_part word3) around : " + word));
+	}
+	else // au cas ou il n'y a plus de mots
+		throw (configException("bad formating (location_part word2) around : " + word));
+}
+
+
+void config_checker::extract_to_vector(std::ifstream& ifs, std::vector<string>& v) {
+	string word;
+	ifs >> word;
+	while (1)
+	{
+		if	(word.find(';', 0) == string::npos)
+			v.push_back(word);
+		else {
+			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
+				throw (configException("bad formating (location_part vector) around : " + word));
+			word.resize(word.size() -1);
+			v.push_back(word);
+			break ;
+		}
+		// std::cout << GREEN "allowed_method : " RESET << v.back() << std::endl;
+		ifs >> word;
+	}
+	for (std::vector<string>::iterator it = v.begin(), end = v.end(); it != end; ++it)
+		std::cout << GREEN "extract_to_Vector : " RESET << *it << std::endl;
+}

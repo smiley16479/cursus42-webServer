@@ -3,4 +3,5 @@
 .DS_Store
 personalDir
 .vscode
+a.out.dSYM
 .o

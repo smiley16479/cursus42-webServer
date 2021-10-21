@@ -15,6 +15,7 @@ struct locati_info {
 	std::string max_file_size;				// taille maximale de fichier à envoyer
 	std::string return_directive;			// redirection vers une autre location
 	std::string root;						// dossier racine
+	std::vector<std::string> retour;		// directive return
 };
 
 struct server_info {

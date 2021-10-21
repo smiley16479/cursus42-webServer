@@ -59,7 +59,8 @@ private:
 	void valid_port(std::ifstream& ifs);
 	void valid_server_nm(std::ifstream& ifs);
 	void valid_error_page(std::ifstream& ifs);
-
+	void extract_to_vector(std::ifstream& ifs, std::vector<string>& v);
+	void extract_to_string(std::ifstream& ifs, string& s);
 };
 
 #endif
