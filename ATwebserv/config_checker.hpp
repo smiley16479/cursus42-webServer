@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 #include <map>
 #include <vector>
 #include "color.hpp"

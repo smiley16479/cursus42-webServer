@@ -7,7 +7,7 @@
 struct locati_info {
 	std::string location;					// dossier reférent
 
-	std::string allowed_method;				// méthodes (GET, POST, etc) permises
+	std::vector<std::string> allowed_method;// méthodes (GET, POST, etc) permises
 	std::string auth_basic;					// ?
 	std::string auth_user_file;				// fichiers autorisés à l'utilisateur ?
 	std::string autoindex;					// présentation du fileSystem => val (on/off)

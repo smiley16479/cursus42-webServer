@@ -116,7 +116,7 @@ void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert
 void config_checker::valid_port(std::ifstream& ifs)
 {
 	string word;
-	if (!(ifs >> word) || word.find_first_not_of("0123456789") != string::npos)
+	if (!(ifs >> word) || word.find_first_not_of("0123456789;") != string::npos)
 		throw (configException("bad port"));
 	int port(atoi(word.c_str()));
 	if (65535 < port || port < 80)
@@ -177,7 +177,7 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			configException("bad formating around : " + word);
+			/* throw */ (configException("bad formating around : " + word));
 /* 	bool found(true);
 	for (map<string, string>::iterator it = _semantic.begin(), endit = _semantic.end(); it != endit && found; ++it)
 		for (size_t i = 0, found = false; i < sizeof(mandatory_assets) / sizeof(char*); ++i)
@@ -205,12 +205,26 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 	std::cout << RED"location : "RESET << _si.location[_si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
-		throw (configException("bad formating (location_part) around : " + word));
+		throw (configException("bad formating (location_part1) around : " + word));
 	int bracket(1);
-	for (ifs >> word; word != "}" || bracket; cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl, ifs >> word )
+	for (ifs >> word; word != "}" || bracket; cout << BLUE"loca_tour de boucle word : "RESET << word << " bracket : " << bracket << endl, ifs >> word)
 		if (word == "allowed_method" && ifs >> word) {
-			_si.location[_si.location.size() - 1].allowed_method = word;
-			std::cout << GREEN"allowed_method : "RESET << _si.location[_si.location.size() - 1].allowed_method << std::endl;
+			while (1)
+			{
+				std::cout << GREEN"allowed_method : "RESET << word << std::endl;
+				if	(word.find(';', 0) == string::npos)
+					_si.location[_si.location.size() - 1].allowed_method.push_back(word);
+				else {
+					if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
+						throw (configException("bad formating (location_part2) around : " + word));
+					word.resize(word.size() -1);
+					_si.location[_si.location.size() - 1].allowed_method.push_back(word);
+					break ;
+				}
+				// std::cout << GREEN"allowed_method : "RESET << _si.location[_si.location.size() - 1].allowed_method.back() << std::endl;
+				ifs >> word;
+			}
+			
 		}
 		else if (word == "auth_basic" && ifs >> word) {
 			_si.location[_si.location.size() - 1].auth_basic = word;
@@ -243,6 +257,6 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			configException("bad formating (location_part) around : " + word);
+			throw (configException("bad formating (location_part3) around : " + word));
 }
 
