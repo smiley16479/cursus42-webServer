@@ -121,7 +121,18 @@ void config_checker::valid_port(std::ifstream& ifs)
 	int port(atoi(word.c_str()));
 	if (65535 < port || port < 80)
 		throw (configException("bad port"));
-	_si.port = word;
+
+	if (word.find(';', 0) == string::npos) {
+		_si.port = word;
+		if (ifs >> word && word != ";")
+			throw (configException("bad formating(2) around : " + word));
+	}
+	else if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
+			throw (configException("bad formating(1) around : " + word));
+	else {
+		word.resize(word.size() -1);
+		_si.port = word;
+	}
 	std::cout << "port : " << _si.port << std::endl;
 }
 
@@ -148,28 +159,33 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 	for (ifs >> word; word != "}" && bracket; /* cout <<  MAGENTA "serv_tour de boucle word : " RESET << word << ", bracket : " << bracket << endl , */ ifs >> word)
 		if (word == "port")
 			valid_port(ifs);
-		else if (word == "server_name" && ifs >> word) {
-			_si.server_name.push_back(word);
-			std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
+		else if (word == "server_name" /* && ifs >> word */) {
+			// _si.server_name.push_back(word);
+			std::cout << "server_name : ";
+			extract_to_vector(ifs, _si.server_name);
+			// std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
 		}
-		else if (word == "max_file_size" && ifs >> word) {
-			_si.max_file_size = word;
+		else if (word == "max_file_size") {
+			extract_to_string(ifs, _si.max_file_size);
 			std::cout << "max_file_size : " << _si.max_file_size << std::endl;
 		}
-		else if (word == "error_page" && ifs >> word) {
-			// valid_error_page(ifs);
-			_si.error_page = word;
+		else if (word == "error_page") {
+			extract_to_string(ifs, _si.error_page);
 			std::cout << "error_page : " << _si.error_page << std::endl;
 		}
-		// else if (word == "host") // Quingli utilise "host" au lieu de server_name et port au lieu de listen -> pk ?
-			// ;
-		else if (word == "time_out" && ifs >> word) {
-			_si.time_out = word;
+		else if (word == "host") {// Quingli utilise "host" au lieu de server_name et port au lieu de listen -> pk ?
+			extract_to_string(ifs, _si.host);
+			std::cout << "host : " << _si.host << std::endl;
+		}
+		else if (word == "time_out") {
+			extract_to_string(ifs, _si.time_out);
 			std::cout << "time_out : " << _si.time_out << std::endl;
 		}
-		else if (word == "cgi_file_types" && ifs >> word) {
-			_si.cgi_file_types.push_back(word);
-			std::cout << "cgi_file_types : " << _si.cgi_file_types[_si.cgi_file_types.size() - 1] << std::endl;
+		else if (word == "cgi_file_types" /* && ifs >> word */) {
+			// _si.cgi_file_types.push_back(word);
+			std::cout << "cgi_file_types : ";
+			extract_to_vector(ifs, _si.cgi_file_types);
+			// std::cout << "cgi_file_types : " << _si.cgi_file_types[_si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
 			check_loca_part(ifs);  // ?
@@ -177,7 +193,7 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			/* throw */ (configException("bad formating around : " + word));
+			throw (configException("bad formating around : " + word));
 /* 	bool found(true);
 	for (map<string, string>::iterator it = _semantic.begin(), endit = _semantic.end(); it != endit && found; ++it)
 		for (size_t i = 0, found = false; i < sizeof(mandatory_assets) / sizeof(char*); ++i)
@@ -213,41 +229,32 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 		if (word == "allowed_method")
 			extract_to_vector(ifs, _si.location[_si.location.size() - 1].allowed_method);
 		else if (word == "auth_basic") {
-			// _si.location[_si.location.size() - 1].auth_basic = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_basic);
 			std::cout << GREEN "auth_basic : " RESET << _si.location[_si.location.size() - 1].auth_basic << std::endl;
 		}
 		else if (word == "auth_user_file") {
-			// _si.location[_si.location.size() - 1].auth_user_file = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_user_file);
 			std::cout << GREEN "auth_user_file : " RESET << _si.location[_si.location.size() - 1].auth_user_file << std::endl;
 		}
 		else if (word == "autoindex") {
-			// _si.location[_si.location.size() - 1].autoindex = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].autoindex);
 			std::cout << GREEN "autoindex : " RESET << _si.location[_si.location.size() - 1].autoindex << std::endl;
 		}
 		else if (word == "index") {
-			// _si.location[_si.location.size() - 1].index = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].index);
 			std::cout << GREEN "index : " RESET << _si.location[_si.location.size() - 1].index << std::endl;
 		}
 		else if (word == "max_file_size") {
-			// _si.location[_si.location.size() - 1].max_file_size = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].max_file_size);
-
 			std::cout << GREEN "max_file_size : " RESET << _si.location[_si.location.size() - 1].max_file_size << std::endl;
 		}
 		else if (word == "return_directive") {
-			// _si.location[_si.location.size() - 1].return_directive = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].return_directive);
-
 			std::cout << GREEN "return_directive : " RESET << _si.location[_si.location.size() - 1].return_directive << std::endl;
 		}
 		else if (word == "return") 
 			extract_to_vector(ifs, _si.location[_si.location.size() - 1].retour);
 		else if (word == "root") {
-			// _si.location[_si.location.size() - 1].root = word;
 			extract_to_string(ifs, _si.location[_si.location.size() - 1].root);
 			std::cout << GREEN "root : " RESET << _si.location[_si.location.size() - 1].root << std::endl;
 		}
@@ -258,27 +265,30 @@ void config_checker::check_loca_part(std::ifstream& ifs){
 	}
 }
 
-
-void config_checker::extract_to_string(std::ifstream& ifs, string& v) { // on devrait checker les mauvis mot comme '{''}' etc.
+// on devrait checker les mauvis mot comme '{''}' etc.
+void config_checker::extract_to_string(std::ifstream& ifs, string& v) {
 	string word;
 	if (ifs >> word) {
 		if (word.find(';', 0) == string::npos)
 			v = word;
 		else {
 			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-				throw (configException("bad formating (location_part word1) around : " + word));
+				throw (configException("bad formating(1) around : " + word));
 			word.resize(word.size() -1);
 			v = word;
 			return ; // On quite au cas ou la ';' est deja passee
 		}
 		if (ifs >> word && word != ";")
-			throw (configException("bad formating (location_part word3) around : " + word));
+			throw (configException("bad formating(2) around : " + word));
 	}
 	else // au cas ou il n'y a plus de mots
-		throw (configException("bad formating (location_part word2) around : " + word));
+		throw (configException("bad formating(3) EOF reached"));
 }
 
-
+/* 
+* Extrait des arguments potentiellement multiples vers le vecteur de string de la directive
+* Va foirrer si les arguments n'ont pas de ';' et mordent jusqu'à la fin de la seconde directive... (a réviser)
+*/
 void config_checker::extract_to_vector(std::ifstream& ifs, std::vector<string>& v) {
 	string word;
 	ifs >> word;

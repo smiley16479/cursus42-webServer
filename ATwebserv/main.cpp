@@ -14,10 +14,7 @@ int main(int ac, char const *av[])
 	config_checker confCheck;
 	try
 	{
-		// throw (Tmyex);
 		confCheck.check_conFile(av[1]);
-		// testClass2 t2;
-		// t2.testThrow2();
 	}
 	catch(const exception& e)
 	{
@@ -30,29 +27,3 @@ int main(int ac, char const *av[])
 	
 	return 0;
 }
-
-
-/* // using standard exceptions
-#include <iostream>
-#include <exception>
-using namespace std;
-
-class myexception: public exception
-{
-  virtual const char* what() const throw()
-  {
-    return "My exception happened";
-  }
-} myex;
-
-int main () {
-  try
-  {
-    throw myex;
-  }
-  catch (exception& e)
-  {
-    cout << e.what() << '\n';
-  }
-  return 0;
-} */

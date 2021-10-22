@@ -20,7 +20,7 @@ class config_checker
 	{
 	  public :
 	  configException(): _str("Config File : error.") {};
-	  configException(std::string str) : _str(str + " Config File : error.") {};
+	  configException(std::string str) : _str(str + "\nConfig File : error.") {};
 	  ~configException() throw() {};
 	  virtual const char* what() const throw()
 	  {
@@ -37,10 +37,10 @@ class config_checker
 /* 
 **		ATTRIBUTS
 */
+public:
 	server_info _si;
 	map<string, vector<string> > _semantic;
 	
-public:
 
 	config_checker(/* args */);
 	~config_checker();
