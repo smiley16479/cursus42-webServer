@@ -105,7 +105,7 @@ void config_checker::check_conFile(std::string str)
 **		PRIVATE FUNCTION (UTILITAIRES)
 */
 
-bool config_checker::is_not_allowed(string key,string val)
+/* bool config_checker::is_not_allowed(string key,string val)
 {
 	return false;
 }
@@ -113,7 +113,7 @@ bool config_checker::is_not_allowed(string key,string val)
 void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert)
 {
 
-}
+} */
 
 void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 {
@@ -138,10 +138,10 @@ void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 	std::cout << "port : " << si.port << std::endl;
 }
 
-void config_checker::valid_server_nm(std::ifstream& ifs)
+/* void config_checker::valid_server_nm(std::ifstream& ifs)
 {// C'est quoi un server_name valide ... ? juste un nom ou il faut ping ou quoi
 // ...juste un nom apparrement
-}
+} */
 
 /* void config_checker::valid_error_page(std::ifstream& ifs)
 {
@@ -282,6 +282,7 @@ void config_checker::extract_to_string(std::ifstream& ifs, string& v) {
 /* 
 * Extrait des arguments potentiellement multiples vers le vecteur de string de la directive
 * Va foirrer si les arguments n'ont pas de ';' et mordent jusqu'à la fin de la seconde directive... (a réviser)
+* On peut ajouter un numero corecpondant au type directive et des test a faire en fonction
 */
 void config_checker::extract_to_vector(std::ifstream& ifs, std::vector<string>& v) {
 	string word;

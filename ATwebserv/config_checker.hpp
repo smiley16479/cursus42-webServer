@@ -54,10 +54,10 @@ private:
 */
 	void check_serv_part(std::ifstream&, server_info&);
 	void check_loca_part(std::ifstream&, server_info&);
-	bool is_not_allowed(string key,string val);
-	void string_vector_insert(ifstream& ifs, string& where_to_insert);
+	// bool is_not_allowed(string key,string val);
+	// void string_vector_insert(ifstream& ifs, string& where_to_insert);
 	void valid_port(std::ifstream& ifs, server_info&);
-	void valid_server_nm(std::ifstream& ifs);
+	// void valid_server_nm(std::ifstream& ifs);
 	// void valid_error_page(std::ifstream& ifs);
 	void extract_to_vector(std::ifstream& ifs, std::vector<string>& v);
 	void extract_to_string(std::ifstream& ifs, string& s);

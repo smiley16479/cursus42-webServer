@@ -121,7 +121,7 @@ void add_client()
     ft_log("add_client", 404);
     if ((client_fd = accept(sock_fd, (struct sockaddr *)&clientaddr, &len)) < 0)
         fatal();
-    sprintf(msg, GREEN "server: client %d just arrived\n" RESET, add_client_to_list(client_fd));
+    sprintf(msg, "server: client %d just arrived\n", add_client_to_list(client_fd));
     send_all(client_fd, msg);
     FD_SET(client_fd, &curr_sock);
 }
@@ -223,19 +223,26 @@ int main(int ac, char **av)
                 else
                 {
                     // close(fd);
-                    if (recv(fd, str, sizeof(str), 0) <= 0) // SI 0 -> EOF, SI -1 error
+                    int n = 0;
+                    while ((n = read(fd, msg, 4))/* ß */)
+                        printf(GREEN "msg : %s, n = %d\n" RESET, msg,  n);
+                    printf(RED "read : end\n" RESET);
+                    if (recv(fd, str, sizeof(str), 0) <= 0) // SI 0 -> EOF, SI -1 error signifie que le client est soit partie soit renontre une erreur
                     {// recv est équivalent à read sauf qu'il a des flags
                         bzero(&msg, sizeof(msg));
-                        sprintf(msg, RED "server: client %d just left\n" RESET, rm_client(fd));
+                        sprintf(msg, RED "server: client %d \n" RESET, rm_client(fd));
                         send_all(fd, msg);
                         FD_CLR(fd, &curr_sock);
                         close(fd);
+                        printf(YELLOW "Ds recv\n" RESET);
                         break;
                     }
                     else
                     {
                         ex_msg(fd);
                     }
+                    printf(YELLOW "Fin else\n" RESET);
+
                 }
             }
             
