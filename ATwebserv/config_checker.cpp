@@ -94,8 +94,10 @@ void config_checker::check_conFile(std::string str)
 	while (ifs >> word) {
 		cout << "check_ConFile : " << word << endl;
 		if (word == "server") {
-			check_serv_part(ifs);
+			_si.push_back(server_info());
+			check_serv_part(ifs, _si[_si.size() - 1]);
 		}
+		cout << MAGENTA "check_ConFile : " RESET << _si.size() << endl;
 	}
 }
 
@@ -113,7 +115,7 @@ void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert
 
 }
 
-void config_checker::valid_port(std::ifstream& ifs)
+void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 {
 	string word;
 	if (!(ifs >> word) || word.find_first_not_of("0123456789;") != string::npos)
@@ -123,7 +125,7 @@ void config_checker::valid_port(std::ifstream& ifs)
 		throw (configException("bad port"));
 
 	if (word.find(';', 0) == string::npos) {
-		_si.port = word;
+		si.port = word;
 		if (ifs >> word && word != ";")
 			throw (configException("bad formating(2) around : " + word));
 	}
@@ -131,9 +133,9 @@ void config_checker::valid_port(std::ifstream& ifs)
 			throw (configException("bad formating(1) around : " + word));
 	else {
 		word.resize(word.size() -1);
-		_si.port = word;
+		si.port = word;
 	}
-	std::cout << "port : " << _si.port << std::endl;
+	std::cout << "port : " << si.port << std::endl;
 }
 
 void config_checker::valid_server_nm(std::ifstream& ifs)
@@ -141,16 +143,16 @@ void config_checker::valid_server_nm(std::ifstream& ifs)
 // ...juste un nom apparrement
 }
 
-void config_checker::valid_error_page(std::ifstream& ifs)
+/* void config_checker::valid_error_page(std::ifstream& ifs)
 {
 	string word;
 	if (!(ifs >> word))
 		throw (configException("error_page"));
-	_si.error_page = word;
-	std::cout << "valid_error_page : " << _si.error_page << std::endl;
-}
+	si.error_page = word;
+	std::cout << "valid_error_page : " << si.error_page << std::endl;
+} */
 
-void config_checker::check_serv_part(std::ifstream& ifs) {
+void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 	string word;
 	ifs >> word;
 	if (word !=  "{")
@@ -158,37 +160,37 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 	int bracket(1);
 	for (ifs >> word; word != "}" && bracket; /* cout <<  MAGENTA "serv_tour de boucle word : " RESET << word << ", bracket : " << bracket << endl , */ ifs >> word)
 		if (word == "port")
-			valid_port(ifs);
+			valid_port(ifs, si);
 		else if (word == "server_name" /* && ifs >> word */) {
-			// _si.server_name.push_back(word);
+			// si.server_name.push_back(word);
 			std::cout << "server_name : ";
-			extract_to_vector(ifs, _si.server_name);
-			// std::cout << "server_name : " << _si.server_name[_si.server_name.size() - 1] << std::endl;
+			extract_to_vector(ifs, si.server_name);
+			// std::cout << "server_name : " << si.server_name[si.server_name.size() - 1] << std::endl;
 		}
 		else if (word == "max_file_size") {
-			extract_to_string(ifs, _si.max_file_size);
-			std::cout << "max_file_size : " << _si.max_file_size << std::endl;
+			extract_to_string(ifs, si.max_file_size);
+			std::cout << "max_file_size : " << si.max_file_size << std::endl;
 		}
 		else if (word == "error_page") {
-			extract_to_string(ifs, _si.error_page);
-			std::cout << "error_page : " << _si.error_page << std::endl;
+			extract_to_string(ifs, si.error_page);
+			std::cout << "error_page : " << si.error_page << std::endl;
 		}
 		else if (word == "host") {// Quingli utilise "host" au lieu de server_name et port au lieu de listen -> pk ?
-			extract_to_string(ifs, _si.host);
-			std::cout << "host : " << _si.host << std::endl;
+			extract_to_string(ifs, si.host);
+			std::cout << "host : " << si.host << std::endl;
 		}
 		else if (word == "time_out") {
-			extract_to_string(ifs, _si.time_out);
-			std::cout << "time_out : " << _si.time_out << std::endl;
+			extract_to_string(ifs, si.time_out);
+			std::cout << "time_out : " << si.time_out << std::endl;
 		}
 		else if (word == "cgi_file_types" /* && ifs >> word */) {
-			// _si.cgi_file_types.push_back(word);
+			// si.cgi_file_types.push_back(word);
 			std::cout << "cgi_file_types : ";
-			extract_to_vector(ifs, _si.cgi_file_types);
-			// std::cout << "cgi_file_types : " << _si.cgi_file_types[_si.cgi_file_types.size() - 1] << std::endl;
+			extract_to_vector(ifs, si.cgi_file_types);
+			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
-			check_loca_part(ifs);  // ?
+			check_loca_part(ifs, si);  // ?
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
@@ -205,58 +207,50 @@ void config_checker::check_serv_part(std::ifstream& ifs) {
 		throw (configException()); */
 }
 
-void config_checker::check_loca_part(std::ifstream& ifs){
-	const char  *mandatory_assets[] = {"alias",
-		// "allowed_method",
-		// "auth_basic",
-		// "auth_user_file",
-		// "autoindex",
-		// "index",
-		// "max_file_size",
-		"root"};
+void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
+
 	string word;
 	ifs >> word;
-	_si.location.push_back(locati_info());
-	_si.location[_si.location.size() - 1].location = word;
-	std::cout << RED "location : " RESET << _si.location[_si.location.size() - 1].location << std::endl;
+	si.location.push_back(locati_info());
+	si.location[si.location.size() - 1].location = word;
+	std::cout << RED "location : " RESET << si.location[si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException("bad formating (location_part1) around : " + word));
-	int bracket(1);
-
+	int bracket(1);// reliquat d'un test qu'on peut virer pour le moment ici et sd le dernier else if
 	
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
 		if (word == "allowed_method")
-			extract_to_vector(ifs, _si.location[_si.location.size() - 1].allowed_method);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].allowed_method);
 		else if (word == "auth_basic") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_basic);
-			std::cout << GREEN "auth_basic : " RESET << _si.location[_si.location.size() - 1].auth_basic << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_basic);
+			std::cout << GREEN "auth_basic : " RESET << si.location[si.location.size() - 1].auth_basic << std::endl;
 		}
 		else if (word == "auth_user_file") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].auth_user_file);
-			std::cout << GREEN "auth_user_file : " RESET << _si.location[_si.location.size() - 1].auth_user_file << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_user_file);
+			std::cout << GREEN "auth_user_file : " RESET << si.location[si.location.size() - 1].auth_user_file << std::endl;
 		}
 		else if (word == "autoindex") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].autoindex);
-			std::cout << GREEN "autoindex : " RESET << _si.location[_si.location.size() - 1].autoindex << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].autoindex);
+			std::cout << GREEN "autoindex : " RESET << si.location[si.location.size() - 1].autoindex << std::endl;
 		}
 		else if (word == "index") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].index);
-			std::cout << GREEN "index : " RESET << _si.location[_si.location.size() - 1].index << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].index);
+			std::cout << GREEN "index : " RESET << si.location[si.location.size() - 1].index << std::endl;
 		}
 		else if (word == "max_file_size") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].max_file_size);
-			std::cout << GREEN "max_file_size : " RESET << _si.location[_si.location.size() - 1].max_file_size << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].max_file_size);
+			std::cout << GREEN "max_file_size : " RESET << si.location[si.location.size() - 1].max_file_size << std::endl;
 		}
 		else if (word == "return_directive") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].return_directive);
-			std::cout << GREEN "return_directive : " RESET << _si.location[_si.location.size() - 1].return_directive << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].return_directive);
+			std::cout << GREEN "return_directive : " RESET << si.location[si.location.size() - 1].return_directive << std::endl;
 		}
 		else if (word == "return") 
-			extract_to_vector(ifs, _si.location[_si.location.size() - 1].retour);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].retour);
 		else if (word == "root") {
-			extract_to_string(ifs, _si.location[_si.location.size() - 1].root);
-			std::cout << GREEN "root : " RESET << _si.location[_si.location.size() - 1].root << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].root);
+			std::cout << GREEN "root : " RESET << si.location[si.location.size() - 1].root << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
