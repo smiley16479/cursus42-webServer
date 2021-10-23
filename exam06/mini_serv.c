@@ -11,7 +11,7 @@
 # define RED			"\033[31m"				/* Red */
 # define GREEN			"\033[32m"				/* Green */
 # define YELLOW			"\033[33m"				/* Yellow */
-# define BLUE_BOLD			"\033[1m\033[34m"				/* Yellow */
+# define BLUE_BOLD		"\033[1m\033[34m"		/* Yellow */
 
 
 typedef struct		s_client 
@@ -70,16 +70,16 @@ int		get_max_fd() // iter ds la liste chainée pour trouver le + gd fd
     return (max);
 }
 
-void	send_all(int fd, char *str_req) // renvoi le msg à tous les clients
+void	send_all(int fd, char *str_req) // renvoi le msg à tous les clients sauf a l'emetteur
 {
     t_client *temp = g_clients;
 
     while (temp)
     {
-        printf("temp->fd : %d, fd : %d\n", temp->fd, fd);
+        printf("(send_all) temp->fd : %d, fd : %d\n", temp->fd, fd);
         if (temp->fd != fd && FD_ISSET(temp->fd, &cpy_write))
         {
-            printf("ds ft send_all\n");
+            printf("(send_all) temp->fd != fd\n");
             if (send(temp->fd, str_req, strlen(str_req), 0) < 0)
                 fatal();
         }
@@ -88,7 +88,7 @@ void	send_all(int fd, char *str_req) // renvoi le msg à tous les clients
 }
 
 int		add_client_to_list(int fd)
-{// Créer un nouveau maillon avec un id (n+1) et renvoi cet id pour le msg l.117
+{// Créer un nouveau maillon avec un id (n+1) et renvoi cet id pour le msg ds add_client
     t_client *temp = g_clients;
     t_client *new;
 
@@ -170,7 +170,7 @@ void ex_msg(int fd)
     bzero(&str, strlen(str));
 }
 
-int main(int ac, char **av)
+/* int main(int ac, char **av)
 {
     if (ac != 2)
     {
@@ -204,14 +204,14 @@ int main(int ac, char **av)
     while(1)
     {
         cpy_write = cpy_read = curr_sock;
-        if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL/* &tv */) < 0)
+        if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL) < 0)
             continue; // Si error select -> return -1
         ft_log("iterate over all the fds ...", 404);
         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
             {// Qd un client donne qlq chose à lire (il ecrit qlq chose)
-                ft_log("FD_ISSET true", fd);
+                ft_log(RED "FD_ISSET true" RESET, fd);
                 // return 10;
                 if (fd == sock_fd) // Si le fd correspond à celui du server c'est qu'il y a nouvelle connection
                 {
@@ -224,30 +224,159 @@ int main(int ac, char **av)
                 {
                     // close(fd);
                     int n = 0;
-                    while ((n = read(fd, msg, 4))/* ß */)
-                        printf(GREEN "msg : %s, n = %d\n" RESET, msg,  n);
-                    printf(RED "read : end\n" RESET);
-                    if (recv(fd, str, sizeof(str), 0) <= 0) // SI 0 -> EOF, SI -1 error signifie que le client est soit partie soit renontre une erreur
+                    printf(YELLOW "avt recv\n" RESET);
+                    if ((n = recv(fd, str, sizeof(str), 0)) <= 0 && printf(YELLOW "apres recv\n" RESET)) // SI 0 -> EOF, SI -1 error signifie que le client est soit partie soit renontre une erreur
                     {// recv est équivalent à read sauf qu'il a des flags
                         bzero(&msg, sizeof(msg));
-                        sprintf(msg, RED "server: client %d \n" RESET, rm_client(fd));
+                        sprintf(msg, RED "server: client %d just left\n" RESET, rm_client(fd));
                         send_all(fd, msg);
                         FD_CLR(fd, &curr_sock);
                         close(fd);
-                        printf(YELLOW "Ds recv\n" RESET);
+                        printf(YELLOW "Recv return %d\n" RESET, n);
                         break;
                     }
-                    else
+                    else // on envoie le msg a tous le monde
                     {
+                        printf(YELLOW "apres recv ds le else\n" RESET);
                         ex_msg(fd);
                     }
+                    while ((n = read(fd, msg, 4)))
+                        printf("msg : %s, n = %d\n" , msg,  n);
+                    printf(YELLOW "read : end\n" RESET);
                     printf(YELLOW "Fin else\n" RESET);
-
+                    sleep(2);
                 }
             }
             
         }
         
+    }
+    return (0);
+} */
+
+ #include <fcntl.h>
+
+int main(int ac, char **av)
+{
+    if (ac != 2)
+    {
+        write(2, "Wrong number of arguments\n", strlen("Wrong number of arguments\n"));
+        exit(1);
+    }
+    struct sockaddr_in servaddr;
+    uint16_t port = atoi(av[1]);
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET; 
+	servaddr.sin_addr.s_addr = htonl(2130706433); //127.0.0.1
+	servaddr.sin_port = htons(port);
+
+    if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        fatal();
+    if (bind(sock_fd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        fatal();
+    if (listen(sock_fd, 0) < 0)
+        fatal();
+    
+    FD_ZERO(&curr_sock);
+    FD_SET(sock_fd, &curr_sock);
+    bzero(&tmp, sizeof(tmp));
+    bzero(&buf, sizeof(buf));
+    bzero(&str, sizeof(str));
+    ft_log("Connected to 127.0.0.1:", atoi(av[1]));
+
+    ft_log("sock_fd = ", sock_fd);
+    printf("sizeof(cpy_read) : %lu\n", sizeof(cpy_read));
+    while(1)
+    {
+
+        cpy_write = cpy_read = curr_sock;
+        if (select(get_max_fd() + 1, &cpy_read, /* NULL */&cpy_write, NULL, NULL/* &tv */) < 0){
+            printf("select error\n");
+            continue; // Si error select -> return -1    
+        }
+        ft_log("iterate over all the fds ...", 404);
+        // FD_ZERO(&curr_sock);
+
+{// se bloque av ca
+        struct sockaddr_in clientaddr;
+        socklen_t len = sizeof(clientaddr);
+        int client_fd = 0;
+
+        for (int fd = 0; fd <= get_max_fd(); fd++)
+        {
+            if (FD_ISSET(fd, &cpy_read))
+            {
+                printf("avt accept\n");
+                if (sock_fd == fd) // nouveau client
+                    add_client();
+
+
+// {                
+//                  if ((client_fd = accept(sock_fd, (struct sockaddr *)&clientaddr, &len)) < 0)
+//                     return printf("error\n");
+//                 printf("apres accept\n");}
+
+                FD_SET(client_fd, &curr_sock);
+
+                int n = 0;
+                printf("avt recv\n");
+                if ((n = recv(client_fd, str, sizeof(str), 0)) <= 0 && printf(YELLOW "apres recv\n" RESET)){
+                    FD_CLR(client_fd, &curr_sock);
+                    close(client_fd);
+                    printf("Client part\n");
+                }
+                printf("apres recv\n");
+
+                if (send(client_fd, str, strlen(str), 0) < 0)
+                        fatal();
+            }
+        }
+}
+
+// add_client();
+
+        for (int fd = 0; fd <= get_max_fd(); fd++)
+        {
+            if (FD_ISSET(fd, &cpy_read))
+            {// Qd un client donne qlq chose à lire (il ecrit qlq chose)
+                ft_log(RED "FD_ISSET true" RESET, fd);
+                // return 10;
+                if (fd == sock_fd) // Si le fd correspond à celui du server c'est qu'il y a nouvelle connection
+                {
+                    ft_log("fd == sock_fd", 404);
+                    bzero(&msg, sizeof(msg));
+                    add_client();
+                    break;
+                }
+                else
+                {
+                    // close(fd);
+                    int n = 0;
+                    printf(YELLOW "avt recv\n" RESET);
+                    if ((n = recv(fd, str, sizeof(str), 0)) <= 0 && printf(YELLOW "apres recv\n" RESET)) // SI 0 -> EOF, SI -1 error signifie que le client est soit partie soit renontre une erreur
+                    {// recv est équivalent à read sauf qu'il a des flags
+                        bzero(&msg, sizeof(msg));
+                        sprintf(msg, RED "server: client %d just left\n" RESET, rm_client(fd));
+                        send_all(fd, msg);
+                        FD_CLR(fd, &curr_sock);
+                        close(fd);
+                        printf(YELLOW "Recv return %d\n" RESET, n);
+                        break;
+                    }
+                    else // on envoie le msg a tous le monde
+                    {
+                        printf(YELLOW "apres recv ds le else %d\n" RESET, n);
+                        ex_msg(fd);
+                    }
+                    // while ((n = read(fd, msg, 4))/* ß */)
+                    //     printf("msg : %s, n = %d\n" , msg,  n);
+                    // printf(YELLOW "read : end\n" RESET);
+                    printf(YELLOW "Fin else\n" RESET);
+                }
+            }
+            
+        }
+        sleep(2);
     }
     return (0);
 }
