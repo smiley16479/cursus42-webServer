@@ -290,7 +290,7 @@ int main(int ac, char **av)
     {
 
         cpy_write = cpy_read = curr_sock;
-        if (select(get_max_fd() + 1, &cpy_read, /* NULL */&cpy_write, NULL, NULL/* &tv */) < 0){
+        if (select(get_max_fd() + 1, &cpy_read, NULL /* &cpy_write */, NULL, NULL/* &tv */) < 0){
             printf("select error\n");
             continue; // Si error select -> return -1    
         }
@@ -298,10 +298,6 @@ int main(int ac, char **av)
         // FD_ZERO(&curr_sock);
 
 {// se bloque av ca
-        struct sockaddr_in clientaddr;
-        socklen_t len = sizeof(clientaddr);
-        int client_fd = 0;
-
         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
@@ -309,33 +305,25 @@ int main(int ac, char **av)
                 printf("avt accept\n");
                 if (sock_fd == fd) // nouveau client
                     add_client();
-
-
-// {                
-//                  if ((client_fd = accept(sock_fd, (struct sockaddr *)&clientaddr, &len)) < 0)
-//                     return printf("error\n");
-//                 printf("apres accept\n");}
-
-                FD_SET(client_fd, &curr_sock);
-
-                int n = 0;
-                printf("avt recv\n");
-                if ((n = recv(client_fd, str, sizeof(str), 0)) <= 0 && printf(YELLOW "apres recv\n" RESET)){
-                    FD_CLR(client_fd, &curr_sock);
-                    close(client_fd);
-                    printf("Client part\n");
-                }
-                printf("apres recv\n");
-
-                if (send(client_fd, str, strlen(str), 0) < 0)
+                else {
+                    int n = 0;
+                    printf("avt recv\n");
+                    if ((n = recv(fd, str, sizeof(str), 0)) <= 0 && printf(YELLOW "apres recv\n" RESET)) {
+                        FD_CLR(fd, &curr_sock);
+                        close(fd);
+                        printf("Client closed\n");
+                    }
+                    else if (printf("apres recv\n") && send(fd, str, strlen(str), 0) < 0)
                         fatal();
+                }
             }
         }
+        sleep(2);
 }
 
 // add_client();
 
-        for (int fd = 0; fd <= get_max_fd(); fd++)
+/*         for (int fd = 0; fd <= get_max_fd(); fd++)
         {
             if (FD_ISSET(fd, &cpy_read))
             {// Qd un client donne qlq chose à lire (il ecrit qlq chose)
@@ -368,7 +356,7 @@ int main(int ac, char **av)
                         printf(YELLOW "apres recv ds le else %d\n" RESET, n);
                         ex_msg(fd);
                     }
-                    // while ((n = read(fd, msg, 4))/* ß */)
+                    // while ((n = read(fd, msg, 4)))
                     //     printf("msg : %s, n = %d\n" , msg,  n);
                     // printf(YELLOW "read : end\n" RESET);
                     printf(YELLOW "Fin else\n" RESET);
@@ -376,7 +364,7 @@ int main(int ac, char **av)
             }
             
         }
-        sleep(2);
+        sleep(2); */
     }
     return (0);
 }

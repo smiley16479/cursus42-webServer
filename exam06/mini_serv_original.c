@@ -185,7 +185,7 @@ int main(int ac, char **av)
     while(1)
     {
         cpy_write = cpy_read = curr_sock;
-        if (select(get_max_fd() + 1, &cpy_read, &cpy_write, NULL, NULL) < 0)
+        if (select(get_max_fd() + 1, &cpy_read, NULL /* &cpy_write */, NULL, NULL) < 0)
             continue;
         printf(GREEN "tour\n" RESET);
         for (int fd = 0; fd <= get_max_fd(); fd++)
