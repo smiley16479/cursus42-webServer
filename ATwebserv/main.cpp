@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include "config_checker.hpp"
+#include "server.hpp"
 #include "color.hpp"
 
 using namespace std;
@@ -15,6 +16,9 @@ int main(int ac, char const *av[])
 	try
 	{
 		confCheck.check_conFile(av[1]);
+		server webserv(&confCheck._si);
+		webserv.display_server(); // A utilité de check : peut être enlevé...
+		webserv.run()
 	}
 	catch(const exception& e)
 	{

@@ -1,16 +1,14 @@
 #ifndef _CONFIG_CHECKER_HPP_
 #define _CONFIG_CHECKER_HPP_
 #include <cstring>
-#include <string>
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-#include <iostream>
 #include <algorithm>
 #include <map>
-#include <vector>
 #include "color.hpp"
 #include "struct_webserv.hpp"
+
 using namespace std;
 
 class config_checker
@@ -39,7 +37,8 @@ class config_checker
 */
 public:
 	std::vector<server_info> _si;
-	map<string, vector<string> > _semantic;
+// ↓ obsolete ajd, etait prevu pour charger le fichier de config reference au cas oú on faisait un checker costaud
+	map<string, vector<string> > _semantic; 
 	
 
 	config_checker(/* args */);

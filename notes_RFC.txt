@@ -1,4 +1,5 @@
-2.1.  Client/Server Messaging (7230)
+Message Syntax and Routing
+2.1.  Client/Server Messaging (7230) 
 
 HTTP relies upon the Uniform Resource Identifier (URI) standard
    [RFC3986] to indicate the target resource (Section 5.1) and
@@ -461,3 +462,123 @@ HTTP relies upon the Uniform Resource Identifier (URI) standard
    HTTP/1.1 request message that lacks a Host header field and to any
    request message that contains more than one Host header field or a
    Host header field with an invalid field-value.
+
+5.5.  Effective Request URI
+
+   Since the request-target often contains only part of the user agent's
+   target URI, a server reconstructs the intended target as an
+   "effective request URI" to properly service the request.  This
+   reconstruction involves both the server's local configuration and
+   information communicated in the request-target, Host header field,
+   and connection context.
+
+   For a user agent, the effective request URI is the target URI.
+
+   If the request-target is in absolute-form, the effective request URI
+   is the same as the request-target.  Otherwise, the effective request
+   URI is constructed as follows:
+
+      If the server's configuration (or outbound gateway) provides a
+      fixed URI scheme, that scheme is used for the effective request
+      URI.  Otherwise, if the request is received over a TLS-secured TCP
+      connection, the effective request URI's scheme is "https"; if not,
+      the scheme is "http".
+
+      If the server's configuration (or outbound gateway) provides a
+      fixed URI authority component, that authority is used for the
+      effective request URI.  If not, then if the request-target is in
+      authority-form, the effective request URI's authority component is
+      the same as the request-target.  If not, then if a Host header
+      field is supplied with a non-empty field-value, the authority
+      component is the same as the Host field-value.  Otherwise, the
+      authority component is assigned the default name configured for
+      the server and, if the connection's incoming TCP port number
+      differs from the default port for the effective request URI's
+      scheme, then a colon (":") and the incoming port number (in
+      decimal form) are appended to the authority component.
+
+      If the request-target is in authority-form or asterisk-form, the
+      effective request URI's combined path and query component is
+      empty.  Otherwise, the combined path and query component is the
+      same as the request-target.
+
+      The components of the effective request URI, once determined as
+      above, can be combined into absolute-URI form by concatenating the
+      scheme, "://", authority, and combined path and query component.
+
+   Example 1: the following message received over an insecure TCP
+   connection
+
+     GET /pub/WWW/TheProject.html HTTP/1.1
+     Host: www.example.org:8080
+
+   has an effective request URI of
+
+     http://www.example.org:8080/pub/WWW/TheProject.html
+
+   Example 2: the following message received over a TLS-secured TCP
+   connection
+
+     OPTIONS * HTTP/1.1
+     Host: www.example.org
+
+   has an effective request URI of
+
+     https://www.example.org
+
+   Recipients of an HTTP/1.0 request that lacks a Host header field
+   might need to use heuristics (e.g., examination of the URI path for
+   something unique to a particular host) in order to guess the
+   effective request URI's authority component.
+
+6.3.  Persistence
+
+   HTTP/1.1 defaults to the use of "persistent connections", allowing
+   multiple requests and responses to be carried over a single
+   connection.  The "close" connection option is used to signal that a
+   connection will not persist after the current request/response.  HTTP
+   implementations SHOULD support persistent connections.
+
+ A recipient determines whether a connection is persistent or not
+   based on the most recently received message's protocol version and
+   Connection header field (if any):
+
+   o  If the "close" connection option is present, the connection will
+      not persist after the current response; else,
+
+   o  If the received protocol is HTTP/1.1 (or later), the connection
+      will persist after the current response; else,
+
+   o  If the received protocol is HTTP/1.0, the "keep-alive" connection
+      option is present, the recipient is not a proxy, and the recipient
+      wishes to honor the HTTP/1.0 "keep-alive" mechanism, the
+      connection will persist after the current response; otherwise,
+
+   o  The connection will close after the current response.
+
+   A client MAY send additional requests on a persistent connection
+   until it sends or receives a "close" connection option or receives an
+   HTTP/1.0 response without a "keep-alive" connection option.
+
+   In order to remain persistent, all messages on a connection need to
+   have a self-defined message length (i.e., one not defined by closure
+   of the connection), as described in Section 3.3.  A server MUST read
+   the entire request message body or close the connection after sending
+   its response, since otherwise the remaining data on a persistent
+   connection would be misinterpreted as the next request.  Likewise, a
+   client MUST read the entire response message body if it intends to
+   reuse the same connection for a subsequent request.
+
+6.6.  Tear-down
+
+   A server that sends a "close" connection option MUST initiate a close
+   of the connection (see below) after it sends the response containing
+   "close".  The server MUST NOT process any further requests received
+   on that connection.
+
+9.3.  Attacks via Protocol Element Length
+
+   A server can reject a message that has a request-target that is too
+   long (Section 6.5.12 of [RFC7231]) or a request payload that is too
+   large (Section 6.5.11 of [RFC7231]).  Additional status codes related
+   to capacity limits have been defined by extensions to HTTP [RFC6585].

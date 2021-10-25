@@ -1,1 +1,3 @@
+# Mettre le config_checker ds le server.cpp
 # Verifier pourquoi quingli utilise "host" au lieu de server_name et port au lieu de listen
+# Les IP multiple ds le selectServer de jacob pourraient elles venir du pipelining ou concurrency 6.3.2 rfc 7230 ?
