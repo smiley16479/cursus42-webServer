@@ -202,3 +202,262 @@ HTTP relies upon the Uniform Resource Identifier (URI) standard
 
    A sender MUST NOT send a Content-Length header field in any message
    that contains a Transfer-Encoding header field.
+
+3.3.3.  Message Body Length
+
+(...)
+
+   3.  If a Transfer-Encoding header field is present and the chunked
+       transfer coding (Section 4.1) is the final encoding, the message
+       body length is determined by reading and decoding the chunked
+       data until the transfer coding indicates the data is complete.
+
+       If a Transfer-Encoding header field is present in a response and
+       the chunked transfer coding is not the final encoding, the
+       message body length is determined by reading the connection until
+       it is closed by the server.  If a Transfer-Encoding header field
+       is present in a request and the chunked transfer coding is not
+       the final encoding, the message body length cannot be determined
+       reliably; the server MUST respond with the 400 (Bad Request)
+       status code and then close the connection.
+
+       If a message is received with both a Transfer-Encoding and a
+       Content-Length header field, the Transfer-Encoding overrides the
+       Content-Length.  Such a message might indicate an attempt to
+       perform request smuggling (Section 9.5) or response splitting
+       (Section 9.4) and ought to be handled as an error.  A sender MUST
+       remove the received Content-Length field prior to forwarding such
+       a message downstream.
+
+   4.  If a message is received without Transfer-Encoding and with
+       either multiple Content-Length header fields having differing
+       field-values or a single Content-Length header field having an
+       invalid value, then the message framing is invalid and the
+       recipient MUST treat it as an unrecoverable error.  If this is a
+       request message, the server MUST respond with a 400 (Bad Request)
+       status code and then close the connection.  If this is a response
+       message received by a proxy, the proxy MUST close the connection
+       to the server, discard the received response, and send a 502 (Bad
+       Gateway) response to the client.  If this is a response message
+       received by a user agent, the user agent MUST close the
+       connection to the server and discard the received response.
+   
+   3.4.  Handling Incomplete Messages
+
+      A server that receives an incomplete request message, usually due to
+      a canceled request or a triggered timeout exception, MAY send an
+      error response prior to closing the connection.
+
+      (...)
+
+      A message body that uses the chunked transfer coding is incomplete if
+      the zero-sized chunk that terminates the encoding has not been
+      received.  A message that uses a valid Content-Length is incomplete
+      if the size of the message body received (in octets) is less than the
+      value given by Content-Length.  A response that has neither chunked
+      transfer coding nor Content-Length is terminated by closure of the
+      connection and, thus, is considered complete regardless of the number
+      of message body octets received, provided that the header section was
+      received intact.
+
+   3.5.  Message Parsing Robustness
+
+      Older HTTP/1.0 user agent implementations might send an extra CRLF
+      after a POST request as a workaround for some early server
+      applications that failed to read message body content that was not
+      terminated by a line-ending.  An HTTP/1.1 user agent MUST NOT preface
+      or follow a request with an extra CRLF.  If terminating the request
+      message body with a line-ending is desired, then the user agent MUST
+      count the terminating CRLF octets as part of the message body length.
+
+      In the interest of robustness, a server that is expecting to receive
+      and parse a request-line SHOULD ignore at least one empty line (CRLF)
+      received prior to the request-line.
+
+      Although the line terminator for the start-line and header fields is
+      the sequence CRLF, a recipient MAY recognize a single LF as a line
+      terminator and ignore any preceding CR.
+
+
+   4.  Transfer Codings
+
+      Transfer coding names are used to indicate an encoding transformation
+      that has been, can be, or might need to be applied to a payload body
+      in order to ensure "safe transport" through the network.  This
+      differs from a content coding in that the transfer coding is a
+      property of the message rather than a property of the representation
+      that is being transferred.
+
+        transfer-coding    = "chunked" ; Section 4.1
+                           / "compress" ; Section 4.2.1
+                           / "deflate" ; Section 4.2.2
+                           / "gzip" ; Section 4.2.3
+                           / transfer-extension
+        transfer-extension = token *( OWS ";" OWS transfer-parameter )
+
+      Parameters are in the form of a name or name=value pair.
+
+        transfer-parameter = token BWS "=" BWS ( token / quoted-string )
+
+      All transfer-coding names are case-insensitive and ought to be
+      registered within the HTTP Transfer Coding registry, as defined in
+      Section 8.4.  They are used in the TE (Section 4.3) and
+      Transfer-Encoding (Section 3.3.1) header fields.
+
+4.1.  Chunked Transfer Coding
+
+   The chunked transfer coding wraps the payload body in order to
+   transfer it as a series of chunks, each with its own size indicator,
+   followed by an OPTIONAL trailer containing header fields.  Chunked
+   enables content streams of unknown size to be transferred as a
+   sequence of length-delimited buffers, which enables the sender to
+   retain connection persistence and the recipient to know when it has
+   received the entire message.
+
+     chunked-body   = *chunk
+                      last-chunk
+                      trailer-part
+                      CRLF
+
+     chunk          = chunk-size [ chunk-ext ] CRLF
+                      chunk-data CRLF
+     chunk-size     = 1*HEXDIG
+     last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+     chunk-data     = 1*OCTET ; a sequence of chunk-size octets
+
+   The chunk-size field is a string of hex digits indicating the size of
+   the chunk-data in octets.  The chunked transfer coding is complete
+   when a chunk with a chunk-size of zero is received, possibly followed
+   by a trailer, and finally terminated by an empty line.
+
+4.1.1.  Chunk Extensions
+
+   The chunked encoding allows each chunk to include zero or more chunk
+   extensions, immediately following the chunk-size, for the sake of
+   supplying per-chunk metadata (such as a signature or hash),
+   mid-message control information, or randomization of message body
+   size.
+
+     chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+
+     chunk-ext-name = token
+     chunk-ext-val  = token / quoted-string
+
+   A sender MUST NOT generate a trailer that contains a field necessary
+   for message framing (e.g., Transfer-Encoding and Content-Length),
+   routing (e.g., Host), request modifiers (e.g., controls and
+   conditionals in Section 5 of [RFC7231]), authentication (e.g., see
+   [RFC7235] and [RFC6265]), response control data (e.g., see Section
+   7.1 of [RFC7231]), or determining how to process the payload (e.g.,
+   Content-Encoding, Content-Type, Content-Range, and Trailer).
+
+   (...)
+
+   Unless the request includes a TE header field indicating "trailers"
+   is acceptable, as described in Section 4.3, a server SHOULD NOT
+   generate trailer fields that it believes are necessary for the user
+   agent to receive.  Without a TE containing "trailers", the server
+   ought to assume that the trailer fields might be silently discarded
+   along the path to the user agent. 
+
+4.1.3.  Decoding Chunked
+
+   A process for decoding the chunked transfer coding can be represented
+   in pseudo-code as:
+
+     length := 0
+     read chunk-size, chunk-ext (if any), and CRLF
+     while (chunk-size > 0) {
+        read chunk-data and CRLF
+        append chunk-data to decoded-body
+        length := length + chunk-size
+        read chunk-size, chunk-ext (if any), and CRLF
+     }
+     read trailer field
+     while (trailer field is not empty) {
+        if (trailer field is allowed to be sent in a trailer) {
+            append trailer field to existing header fields
+        }
+        read trailer-field
+     }
+     Content-Length := length
+     Remove "chunked" from Transfer-Encoding
+     Remove Trailer from existing header fields
+
+4.3.  TE
+   
+   (...)
+
+   If the TE field-value is empty or if no TE field is present, the only
+   acceptable transfer coding is chunked.  A message with no transfer
+   coding is always acceptable.
+
+   Since the TE header field only applies to the immediate connection, a
+   sender of TE MUST also send a "TE" connection option within the
+   Connection header field (Section 6.1) in order to prevent the TE
+   field from being forwarded by intermediaries that do not support its
+   semantics.
+
+5.3.  Request Target
+
+   Once an inbound connection is obtained, the client sends an HTTP
+   request message (Section 3) with a request-target derived from the
+   target URI.  There are four distinct formats for the request-target,
+   depending on both the method being requested and whether the request
+   is to a proxy.
+
+     request-target = origin-form
+                    / absolute-form
+                    / authority-form
+                    / asterisk-form
+
+5.3.1.  origin-form
+
+   The most common form of request-target is the origin-form.
+
+     origin-form    = absolute-path [ "?" query ]
+
+   When making a request directly to an origin server, other than a
+   CONNECT or server-wide OPTIONS request (as detailed below), a client
+   MUST send only the absolute path and query components of the target
+   URI as the request-target.  If the target URI's path component is
+   empty, the client MUST send "/" as the path within the origin-form of
+   request-target.  A Host header field is also sent, as defined in
+   Section 5.4.
+
+   For example, a client wishing to retrieve a representation of the
+   resource identified as
+
+     http://www.example.org/where?q=now
+
+   directly from the origin server would open (or reuse) a TCP
+   connection to port 80 of the host "www.example.org" and send the
+   lines:
+
+     GET /where?q=now HTTP/1.1
+     Host: www.example.org
+
+   followed by the remainder of the request message.
+
+
+5.4.  Host
+
+   The "Host" header field in a request provides the host and port
+   information from the target URI, enabling the origin server to
+   distinguish among resources while servicing requests for multiple
+   host names on a single IP address.
+
+     Host = uri-host [ ":" port ] ; Section 2.7.1
+
+   A client MUST send a Host header field in an HTTP/1.1 request even if
+   the request-target is in the absolute-form, since this allows the
+   Host information to be forwarded through ancient HTTP/1.0 proxies
+   that might not have implemented Host.
+
+   (...)
+
+   A server MUST respond with a 400 (Bad Request) status code to any
+   HTTP/1.1 request message that lacks a Host header field and to any
+   request message that contains more than one Host header field or a
+   Host header field with an invalid field-value.

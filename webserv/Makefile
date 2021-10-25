@@ -65,7 +65,13 @@ $(NAME): $(OBJECTS)
 
 clean:
 	@echo "$(RED)----------------------------------------------------"
-	@echo "$(GREY)DELETE ./webserv"
+	@echo "$(GREY)DELETE temp & objects"
+	@echo "$(RED)----------------------------------------------------"
+	@/bin/rm -f $(TEMP_FILES) $(OBJECTS)
+
+fclean:
+	@echo "$(RED)----------------------------------------------------"
+	@echo "$(GREY)DELETE all files"
 	@echo "$(RED)----------------------------------------------------"
 	@/bin/rm -f $(NAME) $(TEMP_FILES) $(OBJECTS)
 
