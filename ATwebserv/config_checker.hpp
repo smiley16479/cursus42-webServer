@@ -36,7 +36,7 @@ class config_checker
 **		ATTRIBUTS
 */
 public:
-	std::vector<server_info> _si;
+	std::vector<server_info> *_si;
 // ↓ obsolete ajd, etait prevu pour charger le fichier de config reference au cas oú on faisait un checker costaud
 	map<string, vector<string> > _semantic; 
 	

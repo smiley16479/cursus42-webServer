@@ -1,15 +1,25 @@
 #include "server.hpp"
+#include "config_checker.hpp"
+
 using namespace std;
 
-server::server(std::vector<server_info> *si) : _si(si)
+server::server(std::string av)
 {
+  config_checker confCheck;
+	confCheck.check_conFile(av);
+  this->_si = confCheck._si;
 }
 
 server::~server()
 {
+	cout << RED "server destructeur..." RESET << endl;
+  delete _si;
 }
 
-void server::run(void) {}
+void server::run(void) {
+  for (size_t i = 0; i < _si->size(); i++)
+    if (0); // on en est a connecter les server au reseau
+}
 
 void server::display_server(void)
 {

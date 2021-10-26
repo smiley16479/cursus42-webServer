@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cstdlib>
-#include "config_checker.hpp"
 #include "server.hpp"
 #include "color.hpp"
 
@@ -12,11 +11,9 @@ int main(int ac, char const *av[])
 	// if (ac != 2)
 		// exit(EXIT_FAILURE);
 	av[1] = "./configuration_files/valid/default.conf";
-	config_checker confCheck;
 	try
 	{
-		confCheck.check_conFile(av[1]);
-		server webserv(&confCheck._si);
+		server webserv(av[1]);
 		webserv.display_server(); // A utilité de check : peut être enlevé...
 		webserv.run();
 	}

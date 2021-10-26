@@ -6,6 +6,8 @@
 - [More Resources](https://github.com/artainmo/webserv)
 - [htons little-endian big-endian](https://stackoverflow.com/a/19209503/12416249)
   - [htonl, htons, ntohl, ntohs](http://www.man-linux-magique.net/man3/htonl.html)
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [HTTP server from scratch](https://medium.com/from-the-scratch/http-server-what-do-you-need-to-know-to-build-a-simple-http-server-from-scratch-d1ef8945e4fa)
 
 ### Jacob Sorber
 

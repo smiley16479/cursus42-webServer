@@ -27,11 +27,13 @@ config_checker::config_checker()
 	// }
 	// for (map<string, vector<string> >::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
 	// 	cout << it->first << endl;
+	_si = new vector<server_info>;
 	cout << "Fin du constructeur..." << endl;
 }
 
 config_checker::~config_checker()
-{
+{// appel du destructeur en code flow : confCheck.~config_checker(); 
+	cout << RED "config_checker destructeur..." RESET << endl;
 }
 
 // void config_checker::check_conFile(std::string str)
@@ -94,10 +96,10 @@ void config_checker::check_conFile(std::string str)
 	while (ifs >> word) {
 		cout << "check_ConFile : " << word << endl;
 		if (word == "server") {
-			_si.push_back(server_info());
-			check_serv_part(ifs, _si[_si.size() - 1]);
+			_si->push_back(server_info());
+			check_serv_part(ifs, (*_si)[_si->size() - 1]);
 		}
-		cout << MAGENTA "check_ConFile : " RESET << _si.size() << endl;
+		cout << MAGENTA "check_ConFile : " RESET << _si->size() << endl;
 	}
 }
 
