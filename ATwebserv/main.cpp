@@ -18,7 +18,7 @@ int main(int ac, char const *av[])
 		confCheck.check_conFile(av[1]);
 		server webserv(&confCheck._si);
 		webserv.display_server(); // A utilité de check : peut être enlevé...
-		webserv.run()
+		webserv.run();
 	}
 	catch(const exception& e)
 	{
