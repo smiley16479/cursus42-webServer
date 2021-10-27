@@ -1,5 +1,6 @@
 #include "server.hpp"
 #include "config_checker.hpp"
+#include "header_handler.hpp"
 #include <stdexcept>
 
 #include <unistd.h> // Pour close, À ENLEVER
@@ -43,6 +44,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
+	header_handler header;
 	int i;
 
 	while(1)
@@ -88,16 +90,18 @@ void server::run(void) {
 			} */
 			else {
 				if (recv(_events[i].data.fd, str, sizeof(str), 0) <= 0) {
+						printf("server: client just left\n");
 						// bzero(&msg, sizeof(msg));
-						sprintf(msg, "server: client %d just left\n", 10);
+						// sprintf(msg, "server: client %d just left\n", 10);
 						// send_all(events[i].data.fd, msg);
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
 						// close(events[i].data.fd);
 						break;
 				}
-				else {
-					printf("ex_msg\n");
+				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
+					printf("client msg : " YELLOW "%s\n" RESET, str); 
 					// ex_msg(_events[i].data.fd);
+					header.reader(str);
 				}
 			}
 		}
