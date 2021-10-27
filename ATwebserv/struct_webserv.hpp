@@ -5,20 +5,20 @@
 #include <vector>
 
 struct locati_info {
-	std::string location;					// dossier reférent
-
+	std::string location;										// dossier reférent
+	std::string auth_basic;									// ?
+	std::string auth_user_file;							// fichiers autorisés à l'utilisateur
+	std::string autoindex;									// présentation du fileSystem => val (on/off)
+	std::string index;											// fichier servi par défault
+	std::string max_file_size;							// taille maximale de fichier à envoyer
+	std::string return_directive;						// redirection vers une autre location
+	std::string root;												// dossier racine
 	std::vector<std::string> allowed_method;// méthodes (GET, POST, etc) permises
-	std::string auth_basic;					// ?
-	std::string auth_user_file;				// fichiers autorisés à l'utilisateur ?
-	std::string autoindex;					// présentation du fileSystem => val (on/off)
-	std::string index;						// index ?
-	std::string max_file_size;				// taille maximale de fichier à envoyer
-	std::string return_directive;			// redirection vers une autre location
-	std::string root;						// dossier racine
-	std::vector<std::string> retour;		// directive return
+	std::vector<std::string> retour;				// directive return
 };
 
 struct server_info {
+	int socket;
 	std::string port;
 	std::string host;
 	std::vector<std::string> server_name;
@@ -37,21 +37,21 @@ struct server_info {
 
 // trim from start
 static inline std::string &ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+						std::not1(std::ptr_fun<int, int>(std::isspace))));
+		return s;
 }
 
 // trim from end
 static inline std::string &rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
+		s.erase(std::find_if(s.rbegin(), s.rend(),
+						std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+		return s;
 }
 
 // trim from both ends
 static inline std::string &trim(std::string &s) {
-    return ltrim(rtrim(s));
+		return ltrim(rtrim(s));
 }
  */
 

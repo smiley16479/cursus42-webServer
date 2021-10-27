@@ -33,7 +33,10 @@ config_checker::config_checker()
 
 config_checker::~config_checker()
 {// appel du destructeur en code flow : confCheck.~config_checker(); 
-	cout << RED "config_checker destructeur..." RESET << endl;
+	#ifdef _debug_
+		cout << RED "config_checker destructeur..." RESET << endl;
+	#endif
+	delete _si;
 }
 
 // void config_checker::check_conFile(std::string str)
@@ -82,7 +85,7 @@ config_checker::~config_checker()
 // 			ss >> str1;
 // 			str.append(" ");
 // 			str.append(str1);
-// 			throw (configException(str));
+// 			throw (configException(_si, str));
 // 		}
 // 	}
 // }
@@ -92,7 +95,7 @@ void config_checker::check_conFile(std::string str)
 	std::ifstream ifs(str.c_str());
 	std::string word;
 	if (ifs.fail())
-		throw (configException("Unfound"));
+		throw (configException(_si, "Unfound"));
 	while (ifs >> word) {
 		cout << "check_ConFile : " << word << endl;
 		if (word == "server") {
@@ -121,18 +124,18 @@ void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 {
 	string word;
 	if (!(ifs >> word) || word.find_first_not_of("0123456789;") != string::npos)
-		throw (configException("bad port"));
+		throw (configException(_si, "bad port"));
 	int port(atoi(word.c_str()));
 	if (65535 < port || port < 80)
-		throw (configException("bad port"));
+		throw (configException(_si, "bad port"));
 
 	if (word.find(';', 0) == string::npos) {
 		si.port = word;
 		if (ifs >> word && word != ";")
-			throw (configException("bad formating(2) around : " + word));
+			throw (configException(_si, "bad formating(2) around : " + word));
 	}
 	else if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-			throw (configException("bad formating(1) around : " + word));
+			throw (configException(_si, "bad formating(1) around : " + word));
 	else {
 		word.resize(word.size() -1);
 		si.port = word;
@@ -149,7 +152,7 @@ void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 {
 	string word;
 	if (!(ifs >> word))
-		throw (configException("error_page"));
+		throw (configException(_si, "error_page"));
 	si.error_page = word;
 	std::cout << "valid_error_page : " << si.error_page << std::endl;
 } */
@@ -158,7 +161,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 	string word;
 	ifs >> word;
 	if (word !=  "{")
-		throw (configException(word));
+		throw (configException(_si, word));
 	int bracket(1);
 	for (ifs >> word; word != "}" && bracket; /* cout <<  MAGENTA "serv_tour de boucle word : " RESET << word << ", bracket : " << bracket << endl , */ ifs >> word)
 		if (word == "port")
@@ -197,7 +200,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			throw (configException("bad formating around : " + word));
+			throw (configException(_si, "bad formating around : " + word));
 /* 	bool found(true);
 	for (map<string, string>::iterator it = _semantic.begin(), endit = _semantic.end(); it != endit && found; ++it)
 		for (size_t i = 0, found = false; i < sizeof(mandatory_assets) / sizeof(char*); ++i)
@@ -206,7 +209,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 				break ;
 			}
 	if (!found)
-		throw (configException()); */
+		throw (configException(_si, )); */
 }
 
 void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
@@ -218,7 +221,7 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 	std::cout << RED "location : " RESET << si.location[si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
-		throw (configException("bad formating (location_part1) around : " + word));
+		throw (configException(_si, "bad formating (location_part1) around : " + word));
 	int bracket(1);// reliquat d'un test qu'on peut virer pour le moment ici et sd le dernier else if
 	
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
@@ -257,7 +260,7 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
 		else
-			throw (configException("bad formating (location_part3) around : " + word));
+			throw (configException(_si, "bad formating (location_part3) around : " + word));
 	}
 }
 
@@ -269,16 +272,16 @@ void config_checker::extract_to_string(std::ifstream& ifs, string& v) {
 			v = word;
 		else {
 			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-				throw (configException("bad formating(1) around : " + word));
+				throw (configException(_si, "bad formating(1) around : " + word));
 			word.resize(word.size() -1);
 			v = word;
 			return ; // On quite au cas ou la ';' est deja passee
 		}
 		if (ifs >> word && word != ";")
-			throw (configException("bad formating(2) around : " + word));
+			throw (configException(_si, "bad formating(2) around : " + word));
 	}
 	else // au cas ou il n'y a plus de mots
-		throw (configException("bad formating(3) EOF reached"));
+		throw (configException(_si, "bad formating(3) EOF reached"));
 }
 
 /* 
@@ -295,7 +298,7 @@ void config_checker::extract_to_vector(std::ifstream& ifs, std::vector<string>& 
 			v.push_back(word);
 		else {
 			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-				throw (configException("bad formating (location_part vector) around : " + word));
+				throw (configException(_si, "bad formating (location_part vector) around : " + word));
 			word.resize(word.size() -1);
 			v.push_back(word);
 			break ;

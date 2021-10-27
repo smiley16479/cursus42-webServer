@@ -11,5 +11,9 @@
 # define MAGENTA		"\033[35m"				/* Magenta */
 # define CYAN			"\033[36m"				/* Cyan */
 # define WHITE			"\033[37m"				/* White */
-
+# define BOLD			"\033[1m"				/* Gras */
+# define DARK			"\033[2m"				/* Dark */
+# define ITALIC			"\033[3m"				/* Italic */
+# define UNDERLINE		"\033[4m"				/* Underlined */
+# define HIGHLIGHTED	"\033[7m"				/* Highlighted */
 #endif

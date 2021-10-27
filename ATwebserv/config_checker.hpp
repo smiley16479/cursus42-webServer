@@ -13,30 +13,34 @@ using namespace std;
 
 class config_checker
 {
-	/* data */
-	class configException: public std::exception
-	{
-	  public :
-	  configException(): _str("Config File : error.") {};
-	  configException(std::string str) : _str(str + "\nConfig File : error.") {};
-	  ~configException() throw() {};
-	  virtual const char* what() const throw()
-	  {
-	    return  _str.c_str();
-	  }
-	  private :
-	  std::string _str;
-	} myex;
 
 /* 
 **		TYPES
 */
-    typedef     bool (config_checker::*configure)(const std::string&, const std::string&);
+	typedef std::vector<server_info>*		info_vector;
+
+	/* data */
+	class configException: public std::exception
+	{
+	  public :
+	  configException(info_vector si): _si(si), _str("Config File : error.") {};
+	  configException(info_vector si, std::string str) : _si(si), _str(str + "\nConfig File : error.") {};
+	  ~configException() throw() {};
+	  virtual const char* what() const throw()
+	  {
+		delete _si;
+	    return  _str.c_str();
+	  }
+	  private :
+	  std::string _str;
+	  info_vector _si;
+	};
+
 /* 
 **		ATTRIBUTS
 */
 public:
-	std::vector<server_info> *_si;
+	info_vector _si;
 // ↓ obsolete ajd, etait prevu pour charger le fichier de config reference au cas oú on faisait un checker costaud
 	map<string, vector<string> > _semantic; 
 	
