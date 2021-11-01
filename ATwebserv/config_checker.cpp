@@ -264,7 +264,7 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 	}
 }
 
-// on devrait checker les mauvis mot comme '{''}' etc.
+// on devrait checker les mauvais mots comme '{''}' etc.
 void config_checker::extract_to_string(std::ifstream& ifs, string& v) {
 	string word;
 	if (ifs >> word) {
@@ -286,8 +286,8 @@ void config_checker::extract_to_string(std::ifstream& ifs, string& v) {
 
 /* 
 * Extrait des arguments potentiellement multiples vers le vecteur de string de la directive
-* Va foirrer si les arguments n'ont pas de ';' et mordent jusqu'à la fin de la seconde directive... (a réviser)
-* On peut ajouter un numero corecpondant au type directive et des test a faire en fonction
+* Va foirrer si les arguments n'ont pas de ';' et mordent jusqu'à la fin de la seconde directive... (a réviser) :
+* -> On peut ajouter un numero corecpondant au type directive et des test a faire en fonction pour y pallier
 */
 void config_checker::extract_to_vector(std::ifstream& ifs, std::vector<string>& v) {
 	string word;

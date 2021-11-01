@@ -29,7 +29,7 @@ public:
     void run(void); // lance les étapes de configuration des sockets initialize(), de run
 
     /* PRIVATE */
-    bool is_new_rx(int fd);
+    bool is_new_client(int fd);
 };
 
 #endif

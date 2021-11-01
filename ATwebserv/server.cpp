@@ -53,7 +53,7 @@ void server::run(void) {
 		_event_count = epoll_wait(_epoll_fd, _events, MAX_EVENTS, 30000);
 		printf("%d ready events\n", _event_count);
 		for(int i = 0; i < _event_count; i++) {
-			if (is_new_rx(_events[i].data.fd) && (_events[i].events & EPOLLIN) == EPOLLIN) {
+			if (is_new_client(_events[i].data.fd) && (_events[i].events & EPOLLIN) == EPOLLIN) {
 				int client_fd;
 				struct sockaddr_in clientaddr;
 				socklen_t len = sizeof(clientaddr);
@@ -95,13 +95,16 @@ void server::run(void) {
 						// sprintf(msg, "server: client %d just left\n", 10);
 						// send_all(events[i].data.fd, msg);
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
-						// close(events[i].data.fd);
+						close(_events[i].data.fd);
 						break;
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					printf("client msg : " YELLOW "%s\n" RESET, str); 
 					// ex_msg(_events[i].data.fd);
 					header.reader(str);
+					header.writer();
+					send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+
 				}
 			}
 		}
@@ -116,7 +119,7 @@ void server::run(void) {
 	return;
 }
 
-bool server::is_new_rx(int fd) {
+bool server::is_new_client(int fd) {
 	for (int i = 0; i < _s.size(); ++i)
 		if (fd == _s[i].socket)
 			return true;
