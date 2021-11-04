@@ -55,7 +55,7 @@ void header_handler::reader(char *str)
 
 string& header_handler::writer(void) {
 	string file("./files/dancing-banana.gif");
-	ifstream fs(file, std::ifstream::binary | std::ifstream::ate);
+	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open())
 		throw (std::runtime_error( "Unkown file (header_writer) : " + file));
 	stringstream ss;

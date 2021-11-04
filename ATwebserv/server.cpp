@@ -28,7 +28,7 @@ void server::initialize(void) {
 	for (size_t i = 0; i < _s.size(); i++) {
 		bzero(&servaddr, sizeof(servaddr));
 		servaddr.sin_family = AF_INET; 
-		servaddr.sin_addr.s_addr = htonl(2130706433); //127.0.0.1
+		servaddr.sin_addr.s_addr = htonl(0); //127.0.0.1 -> 2130706433
 		servaddr.sin_port = htons(atoi(_s[i].port.c_str()));
 		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
