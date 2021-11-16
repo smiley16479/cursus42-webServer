@@ -67,8 +67,6 @@ void server::run(void) {
 					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 				}
 				printf("New client added\n");
-				// sprintf(msg, "server: client %d just arrived\n", add_client_to_list(client_fd));
-				// send_all(client_fd, msg);
 			}
 /*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
 					printf("Reading file descriptor '%d' -- ", events[i].data.fd);
@@ -91,20 +89,16 @@ void server::run(void) {
 			else {
 				if (recv(_events[i].data.fd, str, sizeof(str), 0) <= 0) {
 						printf("server: client just left\n");
-						// bzero(&msg, sizeof(msg));
-						// sprintf(msg, "server: client %d just left\n", 10);
-						// send_all(events[i].data.fd, msg);
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
 						close(_events[i].data.fd);
-						break;
+						break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					printf("client msg : " YELLOW "%s\n" RESET, str); 
-					// ex_msg(_events[i].data.fd);
 					header.reader(str);
 					header.writer();
 					send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
-
+					// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE DEVRAIT VIRER LE CLIENT DE EPOLL SINON PAS DE RELOAD (REFRESH) POSSIBLE
 				}
 			}
 		}

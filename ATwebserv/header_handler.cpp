@@ -10,8 +10,8 @@
 #include "header_handler.hpp"
 
 header_handler::header_handler(/* args */)
-{
-const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
+{// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
+/* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
 												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
 												"Cache-Control:", "nection:", "coding:", "DNT:", "rol:"};
 
@@ -19,7 +19,7 @@ const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Langua
 		_hi[array[i]];
 		// _hi.insert(std::make_pair(array[i], vector<string>()));
 	for (map< string, vector<string> >::iterator it = _hi.begin(), end = _hi.end(); it != end; ++it)
-		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl;
+		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; */
 }
 
 header_handler::~header_handler()
@@ -35,14 +35,15 @@ void header_handler::reader(char *str)
 	cout << RED "DANS HEADER READER" RESET << str << endl;
 	while (std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
-		while (ss_2 >> buf_2)
-			if (_hi.find(buf_2) != _hi.end()) {
+		while (ss_2 >> buf_2) {
+			// if (_hi.find(buf_2) != _hi.end()) {
 				string index = buf_2;
 				while (ss_2 >> buf_2)
 					_hi[index].push_back(buf_2);
-			}
-			else
-				throw (std::runtime_error( "Unkown header field (header_reader) : " + buf_2));
+		}
+			// }
+			// else
+			// 	throw (std::runtime_error( "Unkown header field (header_reader) : " + buf_2));
 #ifdef _debug_
 		cout << GREEN "ss_2 >> buf_2 : " << buf_2 << RESET << endl;
 		cout << RED << buf_1 << RESET << endl;
@@ -50,31 +51,17 @@ void header_handler::reader(char *str)
 #endif
 	}
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
-	// this->display();	
+	// this->display();
 }
 
 string& header_handler::writer(void) {
-	string file("./files/dancing-banana.gif");
-	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
-	if (!fs.is_open())
-		throw (std::runtime_error( "Unkown file (header_writer) : " + file));
-	stringstream ss;
+
 	gen_startLine();
 	gen_date();
 	gen_serv();
 	gen_CType();
 	gen_CLenght();
-
-	ss << fs.tellg();
-	_response.append(ss.str());
-	_response += "\n";
-	_response += "\r\n";
-
-	cout << RED "_response : " RESET << _response << endl;
-
-	fs.seekg(ios_base::beg);
-	_response.append((istreambuf_iterator<char>(fs) ),
-                  (istreambuf_iterator<char>()    ));
+	_hi.clear();
 	return _response;
 }
 
@@ -180,6 +167,13 @@ std::string &header_handler::get_response(void) {return _response;}
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
+void	header_handler::gen_startLine() /* PROBLEM */
+{
+	_response = "HTTP/1.1 "; // version (static)
+	_response += "200 "; // status (dynamic)
+	_response += "OK\n"; // status msg (dynamic)
+}
+
 void	header_handler::gen_date()
 {
     std::string	date = "Date: ";
@@ -196,22 +190,38 @@ void	header_handler::gen_date()
     _response.append(date);
 }
 
-void	header_handler::gen_startLine() /* PROBLEM */
-{
-	_response = "HTTP/1.1 200 OK\n";
-}
-
 void	header_handler::gen_serv() /* PROBLEM */
 {
-	_response += "Server: 0.0.0.0:8080\n";
+	_response += "Server: ";// HEADER_LABEL
+	_response += "0.0.0.0"; // IP
+	_response += ":8080\n"; // PORT
 }
 
 void	header_handler::gen_CType() /* PROBLEM */
 {
-	_response += "Content-Type: image/gif\n";
+	_response += "Content-Type: "; // HEADER_LABEL
+	_response += "image/gif\n"; // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 }
 
 void	header_handler::gen_CLenght() /* PROBLEM */
 {
-	_response += "Content-Lenght: ";
+	_response += "Content-Lenght: "; // HEADER_LABEL
+
+	string file("./files/dancing-banana.gif");
+	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
+	if (!fs.is_open())
+		throw (std::runtime_error( "Unkown file (header_writer) : " + file));
+	stringstream ss;
+	
+	ss << fs.tellg();
+	_response.append(ss.str());
+	_response += "\n";
+	_response += "\r\n";
+
+	cout << RED "_response : " RESET << _response << endl;
+	if (_hi["GET"].size()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+		fs.seekg(ios_base::beg);
+		_response.append((istreambuf_iterator<char>(fs)),
+						 (istreambuf_iterator<char>() ));
+	}
 }
