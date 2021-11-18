@@ -28,7 +28,9 @@ config_checker::config_checker()
 	// for (map<string, vector<string> >::iterator it = _semantic.begin(), end = _semantic.end(); it != end; ++it)
 	// 	cout << it->first << endl;
 	_si = new vector<server_info>;
-	cout << "Fin du constructeur..." << endl;
+	#ifdef _debug_
+		cout << RED "config_checker constructeur..." RESET << endl;
+	#endif
 }
 
 config_checker::~config_checker()

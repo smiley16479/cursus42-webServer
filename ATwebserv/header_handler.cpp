@@ -9,7 +9,7 @@
 
 #include "header_handler.hpp"
 
-header_handler::header_handler(/* args */)
+header_handler::header_handler(std::vector<server_info>& server_info) : _si(server_info)
 {// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
 /* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
 												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
@@ -75,93 +75,6 @@ void header_handler::display(void) {
 	}
 }
 
-
-//	// on devrait checker les mauvais mots comme '{''}' etc.
-//	void extract_to_string(string& buf) {
-//		string word;
-//		std::stringstream ss(buf);
-//		if (ss >> word) {
-//			if (word.find(';', 0) == string::npos)
-//				v = word;
-//			else {
-//				if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-//					throw (std::runtime_error( "bad formating(1) around : " + word));
-//				word.resize(word.size() -1);
-//				v = word;
-//				return ; // On quite au cas ou la ';' est deja passee
-//			}
-//			if (ss >> word && word != ";")
-//				throw (std::runtime_error( "bad formating(2) around : " + word));
-//		}
-//		else // au cas ou il n'y a plus de mots
-//			throw (std::runtime_error( "bad formating(3) EOF reached"));
-//	}
-//	
-//	void header_handler::header_checker(string& buf) {
-//		std::stringstream ss(buf);
-//		string word;
-//		for (ss >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ss >> word) {
-//			if (word == "GET")
-//				extract_to_vector(buf);
-//			else if (word == "Host:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "auth_basic : " RESET << si.location[si.location.size() - 1].auth_basic << std::endl;
-//			}
-//			else if (word == "User-Agent:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "auth_user_file : " RESET << si.location[si.location.size() - 1].auth_user_file << std::endl;
-//			}
-//			else if (word == "Accept:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "autoindex : " RESET << si.location[si.location.size() - 1].autoindex << std::endl;
-//			}
-//			else if (word == "Accept-Language:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "index : " RESET << si.location[si.location.size() - 1].index << std::endl;
-//			}
-//			else if (word == "Accept-Encoding:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "max_file_size : " RESET << si.location[si.location.size() - 1].max_file_size << std::endl;
-//			}
-//			else if (word == "Connection:") {
-//				extract_to_string(buf);
-//				// std::cout << GREEN "return_directive : " RESET << si.location[si.location.size() - 1].return_directive << std::endl;
-//			}
-//			else if (word == "Upgrade-Insecure-Requests:") {
-//				extract_to_vector(buf);
-//				// std::cout << GREEN "root : " RESET << si.location[si.location.size() - 1].root << std::endl;
-//			}
-//			else
-//				throw (std::runtime_error( "bad header format (header_checker) around : " + word));
-//		}
-//	}
-
-/* 
-* Extrait des arguments potentiellement multiples vers le vecteur de string de la directive
-* Va foirrer si les arguments n'ont pas de ';' et mordent jusqu'à la fin de la seconde directive... (a réviser) :
-* -> On peut ajouter un numero corecpondant au type directive et des test a faire en fonction pour y pallier
-*/
-/* void config_checker::extract_to_vector(std::string& str) { // les parametres ont été changés
-	string word;
-	ifs >> word;
-	while (1)
-	{
-		if	(word.find(';', 0) == string::npos)
-			v.push_back(word);
-		else {
-			if (std::count(word.begin(), word.end(), ';') != 1 || word[word.size() -1] != ';')
-				throw (std::runtime_error( "bad formating (location_part vector) around : " + word));
-			word.resize(word.size() -1);
-			v.push_back(word);
-			break ;
-		}
-		// std::cout << GREEN "allowed_method : " RESET << v.back() << std::endl;
-		ifs >> word;
-	}
-	for (std::vector<string>::iterator it = v.begin(), end = v.end(); it != end; ++it)
-		std::cout << GREEN "extract_to_Vector : " RESET << *it << std::endl;
-} */
-
 std::string &header_handler::get_response(void) {return _response;}
 
 
@@ -200,15 +113,23 @@ void	header_handler::gen_serv() /* PROBLEM */
 }
 
 void	header_handler::gen_CType() /* PROBLEM */
-{
+{// IF YOU WANT THE BROWSER TO READ WITHOUT SKING TO DOWNLOAD IT, DON'T MENTION ITS FILE TYPE
 	_response += "Content-Type: "; // HEADER_LABEL
 
+// Capture file.ext(ension)
+	string ext = _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1);
+#ifdef _debug_
+	cout << "file ext asked : " << ext << endl;
+#endif
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
-	if( _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "/" ||
-		_hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "html" )
+	if( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_response += "text/html; charset=utf-8";
-	if( _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "ico" )
-		_response += "image/x-icon"; // /html; charset=utf-8\r\n";
+	else if( ext == "ico" ||	ext == "png" ||	ext == "jpeg" || ext == "gif" || ext == "bmp" || ext == "webp" )
+		_response += "image/";
+	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
+		_response += "audio/";
+	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
+		_response += "application/octet-stream";
 	_response += "\r\n";
 }
 
@@ -221,8 +142,8 @@ void	header_handler::gen_CLenght() /* PROBLEM */
 	cout << "file looked for : " "Unkown file (header_writer) : " + file << endl;
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open())
-		throw (std::runtime_error( "Unkown file (header_writer) : " + file));
-		// return;
+		// throw (std::runtime_error( "Unkown file (header_writer) : " + file));
+		return;
 	stringstream ss;
 	
 	ss << fs.tellg();

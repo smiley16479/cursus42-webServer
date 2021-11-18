@@ -44,7 +44,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	header_handler header;
+	header_handler header(_s);
 	int i;
 
 	while(1)

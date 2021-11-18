@@ -8,15 +8,16 @@
 #include <exception>
 #include <map>
 #include <vector>
+#include "struct_webserv.hpp"
 #include "color.hpp"
 using namespace std;
 
 class header_handler
 {
 private:
-	// map ou vector ?
-	std::map<string, vector<string> > _hi;
-	std::string											_response;
+    std::vector<server_info> &			_si; // server_info
+	std::map<string, vector<string> >	_hi; // header_info (requets header info)
+	std::string							_response; // response_content (response_header + body)
 
 
 	/* COPY DES ATTRIBUTS DE QUING_LY */
@@ -61,7 +62,7 @@ private:
 	std::string											_additional_cgi_headers;
 
 public:
-	header_handler(/* args */);
+	header_handler(std::vector<server_info>&);
 	~header_handler();
 	void reader(char *);
 	string& writer(void);
