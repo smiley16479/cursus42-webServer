@@ -13,7 +13,7 @@ header_handler::header_handler(/* args */)
 {// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
 /* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
 												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
-												"Cache-Control:", "nection:", "coding:", "DNT:", "rol:"};
+												"Cache-Control:", "DNT:", "rol:"};
 
 	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
 		_hi[array[i]];
@@ -171,7 +171,7 @@ void	header_handler::gen_startLine() /* PROBLEM */
 {
 	_response = "HTTP/1.1 "; // version (static)
 	_response += "200 "; // status (dynamic)
-	_response += "OK\n"; // status msg (dynamic)
+	_response += "OK\r\n"; // status msg (dynamic)
 }
 
 void	header_handler::gen_date()
@@ -193,33 +193,45 @@ void	header_handler::gen_date()
 void	header_handler::gen_serv() /* PROBLEM */
 {
 	_response += "Server: ";// HEADER_LABEL
-	_response += "0.0.0.0"; // IP
-	_response += ":8080\n"; // PORT
+	_response += _hi["Host:"][0];
+	// _response += "0.0.0.0"; // IP
+	// _response += ":8080\r\n"; // PORT
+	_response += "\r\n";
 }
 
 void	header_handler::gen_CType() /* PROBLEM */
 {
 	_response += "Content-Type: "; // HEADER_LABEL
-	_response += "image/gif\n"; // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
+
+// Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
+	if( _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "/" ||
+		_hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "html" )
+		_response += "text/html; charset=utf-8";
+	if( _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1) == "ico" )
+		_response += "image/x-icon"; // /html; charset=utf-8\r\n";
+	_response += "\r\n";
 }
 
 void	header_handler::gen_CLenght() /* PROBLEM */
 {
 	_response += "Content-Lenght: "; // HEADER_LABEL
 
-	string file("./files/dancing-banana.gif");
+	string file("./files");
+	file.append(_hi["GET"][0] == "/" ? "/index.html" : _hi["GET"][0]);
+	cout << "file looked for : " "Unkown file (header_writer) : " + file << endl;
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open())
 		throw (std::runtime_error( "Unkown file (header_writer) : " + file));
+		// return;
 	stringstream ss;
 	
 	ss << fs.tellg();
 	_response.append(ss.str());
-	_response += "\n";
-	_response += "\r\n";
+	_response += "\r\n\r\n";
 
 	cout << RED "_response : " RESET << _response << endl;
 	if (_hi["GET"].size()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+		cout << RED "File written !" RESET  << endl;
 		fs.seekg(ios_base::beg);
 		_response.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));

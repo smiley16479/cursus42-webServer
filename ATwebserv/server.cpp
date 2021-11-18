@@ -59,6 +59,7 @@ void server::run(void) {
 				socklen_t len = sizeof(clientaddr);
 				if ((client_fd = accept(_events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
 					throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
+				clientaddr.sin_addr;
 				_event.events = EPOLLIN;
 				_event.data.fd = client_fd;
 				if(epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &_event)) {
@@ -87,18 +88,19 @@ void server::run(void) {
 						printf("Written '%s'\n", read_buffer);
 			} */
 			else {
+				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if (recv(_events[i].data.fd, str, sizeof(str), 0) <= 0) {
 						printf("server: client just left\n");
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
 						close(_events[i].data.fd);
-						break; // Pk Break T-ON ?
+						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
-					printf("client msg : " YELLOW "%s\n" RESET, str); 
+					printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
 					header.reader(str);
 					header.writer();
 					send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
-					// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE DEVRAIT VIRER LE CLIENT DE EPOLL SINON PAS DE RELOAD (REFRESH) POSSIBLE
+					close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
 			}
 		}
