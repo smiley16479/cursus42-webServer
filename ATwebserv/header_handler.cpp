@@ -44,7 +44,7 @@ const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent
 	}
 	for (map< string, string>::iterator it = _error.begin(), end = _error.end(); it != end; ++it)
 	cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
-	exit(0);
+//	exit(0);
 }
 
 header_handler::~header_handler()
