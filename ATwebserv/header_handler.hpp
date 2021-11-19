@@ -18,6 +18,7 @@ private:
     std::vector<server_info> &			_si; // server_info
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
+	std::map<string, string>			_error; // Error_Status_Msg
 	std::string							_response; // response_content (response_header + body) OU SLMT BODY ?
 
 

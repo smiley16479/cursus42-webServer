@@ -28,6 +28,23 @@ const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent
 		// _hrx.insert(std::make_pair(array[i], vector<string>()));
 	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
 		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl;
+
+	ifstream fs("configuration_files/HTML_error_msg.txt");
+	if (!fs.is_open()) 
+		throw (std::runtime_error( "Unkown file : configuration_files/HTML_error_msg.txt"));
+	
+	string buf_1, buf_2;
+	while (std::getline(fs, buf_1)) {
+		if (buf_1[0] == '#' || buf_1[0] == '\0')
+			continue ;
+		std::stringstream ss_2(buf_1);
+		ss_2 >> buf_1; 
+		std::getline(ss_2, buf_2);
+		_error[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
+	}
+	for (map< string, string>::iterator it = _error.begin(), end = _error.end(); it != end; ++it)
+	cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
+	exit(0);
 }
 
 header_handler::~header_handler()
@@ -100,7 +117,7 @@ void	header_handler::gen_startLine() /* PROBLEM */
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) {
 		_htx["A"][1] = "404 ";
-		_htx["A"][2] = "NotSoOK\r\n";
+		_htx["A"][2] = "Not Found\r\n";
 	}
 }
 
