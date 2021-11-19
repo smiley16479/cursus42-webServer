@@ -29,10 +29,10 @@ run:
 	./$(NAME)
 
 $(NAME):	$(OBJ)
-	$(CC) $(CFLAGS) -o $(NAME) $(OBJ)
+	$(CC) $(CPP_FLAGS) -o $(NAME) $(OBJ)
 
 %.o:	%.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPP_FLAGS) -c $< -o $@
 
 clean:
 	$(RM) $(OBJ)
