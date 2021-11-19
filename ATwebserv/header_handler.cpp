@@ -16,10 +16,18 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 												"Cache-Control:", "DNT:", "rol:"};
 
 	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
-		_hi[array[i]];
-		// _hi.insert(std::make_pair(array[i], vector<string>()));
-	for (map< string, vector<string> >::iterator it = _hi.begin(), end = _hi.end(); it != end; ++it)
+		_hrx[array[i]];
+		// _hrx.insert(std::make_pair(array[i], vector<string>()));
+	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
 		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; */
+const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent:",
+							"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
+												"Cache-Control:", "DNT:", "rol:"};
+	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
+		_hrx[array[i]];
+		// _hrx.insert(std::make_pair(array[i], vector<string>()));
+	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
+		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl;
 }
 
 header_handler::~header_handler()
@@ -36,10 +44,10 @@ void header_handler::reader(char *str)
 	while (std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
-			// if (_hi.find(buf_2) != _hi.end()) {
+			// if (_hrx.find(buf_2) != _hrx.end()) {
 				string index = buf_2;
 				while (ss_2 >> buf_2)
-					_hi[index].push_back(buf_2);
+					_hrx[index].push_back(buf_2);
 		}
 			// }
 			// else
@@ -54,20 +62,21 @@ void header_handler::reader(char *str)
 	// this->display();
 }
 
-string& header_handler::writer(void) {
+void header_handler::writer(void) {
 
 	gen_startLine();
 	gen_date();
 	gen_serv();
 	gen_CType();
-	gen_CLenght();
-	_hi.clear();
-	return _response;
+	gen_CLength(); // Add ContentLength and Body
+
+	_hrx.clear();
+	_htx.clear();
 }
 
 void header_handler::display(void) {
 	cout << GREEN ITALIC UNDERLINE "DISPLAY HEADER INFORMATION" RESET GREEN " :" RESET << endl;
-	for (map<string, vector<string> >::iterator it = _hi.begin(), end = _hi.end(); it != end; ++it) {
+	for (map<string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it) {
 		cout << it->first << " ";
 		for (size_t i = 0; i < it->second.size(); ++i)
 			cout << it->second[i] << ", ";
@@ -82,9 +91,17 @@ std::string &header_handler::get_response(void) {return _response;}
 
 void	header_handler::gen_startLine() /* PROBLEM */
 {
-	_response = "HTTP/1.1 "; // version (static)
-	_response += "200 "; // status (dynamic)
-	_response += "OK\r\n"; // status msg (dynamic)
+	_htx["A"].push_back("HTTP/1.1 "); // version (static)
+	_htx["A"].push_back("200 "); // status (dynamic)
+	_htx["A"].push_back("OK\r\n"); // status msg (dynamic)
+
+	string file("./files");
+	file.append(_hrx["GET"][0] == "/" ? "/index.html" : _hrx["GET"][0]);
+	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
+	if (!fs.is_open()) {
+		_htx["A"][1] = "404 ";
+		_htx["A"][2] = "NotSoOK\r\n";
+	}
 }
 
 void	header_handler::gen_date()
@@ -100,58 +117,72 @@ void	header_handler::gen_date()
     date.append(timestamp);
     date.append("\r\n");
 
-    _response.append(date);
+    // _response.append(date);
+	_htx["Date"].push_back(date);
 }
 
 void	header_handler::gen_serv() /* PROBLEM */
 {
-	_response += "Server: ";// HEADER_LABEL
-	_response += _hi["Host:"][0];
-	// _response += "0.0.0.0"; // IP
-	// _response += ":8080\r\n"; // PORT
-	_response += "\r\n";
+	//_response += "Server: ";// HEADER_LABEL
+	//_response += _hrx["Host:"][0]; // IP & HOST
+	// //_response += "0.0.0.0"; // IP
+	// //_response += ":8080\r\n"; // PORT
+	//_response += "\r\n";
+
+	_htx["Server"].push_back("Server: ");// HEADER_LABEL
+	_htx["Server"].push_back(_hrx["Host:"][0]);
+	_htx["Server"].push_back("\r\n");
+
 }
 
 void	header_handler::gen_CType() /* PROBLEM */
 {// IF YOU WANT THE BROWSER TO READ WITHOUT SKING TO DOWNLOAD IT, DON'T MENTION ITS FILE TYPE
-	_response += "Content-Type: "; // HEADER_LABEL
-
 // Capture file.ext(ension)
-	string ext = _hi["GET"][0].substr(_hi["GET"][0].find_last_of(".") + 1);
+	string ext = _hrx["GET"][0].substr(_hrx["GET"][0].find_last_of(".") + 1);
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
 #endif
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
-	if( ext == "/" || ext == "html" ) // Default file PROBLEM ?
-		_response += "text/html; charset=utf-8";
-	else if( ext == "ico" ||	ext == "png" ||	ext == "jpeg" || ext == "gif" || ext == "bmp" || ext == "webp" )
-		_response += "image/";
+	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
+		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
+		_htx["Content-Type"].push_back("Content-Type: image/\r\n");
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
-		_response += "audio/";
+		_htx["Content-Type"].push_back("Content-Type: audio/\r\n");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
-		_response += "application/octet-stream";
-	_response += "\r\n";
+		_htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-void	header_handler::gen_CLenght() /* PROBLEM */
+void	header_handler::gen_CLength() /* PROBLEM */
 {
-	_response += "Content-Lenght: "; // HEADER_LABEL
 
 	string file("./files");
-	file.append(_hi["GET"][0] == "/" ? "/index.html" : _hi["GET"][0]);
-	cout << "file looked for : " "Unkown file (header_writer) : " + file << endl;
+	file.append(_hrx["GET"][0] == "/" ? "/index.html" : _hrx["GET"][0]);
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
-	if (!fs.is_open())
-		// throw (std::runtime_error( "Unkown file (header_writer) : " + file));
-		return;
-	stringstream ss;
-	
-	ss << fs.tellg();
-	_response.append(ss.str());
-	_response += "\r\n\r\n";
+	if (!fs.is_open()) {
+		fs.open("./files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
+		if (!fs.is_open())
+			throw (std::runtime_error( "Unkown file (header_writer) : error_4xx.html"));
+		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+	}
 
-	cout << RED "_response : " RESET << _response << endl;
-	if (_hi["GET"].size()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+// GÉNÉRATION DU FIELD CONTENT-LENGTH
+	stringstream ss;
+	ss << fs.tellg();
+	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
+	_htx["Content-Length"].push_back( ss.str());
+	_htx["Content-Length"].push_back( "\r\n");
+
+// AJOUT DE TOUS LES FIELD A LA RESPONSE
+	_response.clear();
+	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
+		for (size_t i = 0, j = it->second.size(); i < j; ++i)
+			_response += it->second[i];
+	_response += "\r\n";
+	cout << RED "Response :\n" RESET << _response << endl;
+
+// AJOUT DU FICHIER À LA RESPONSE
+	if (_hrx["GET"].size()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
 		cout << RED "File written !" RESET  << endl;
 		fs.seekg(ios_base::beg);
 		_response.append((istreambuf_iterator<char>(fs)),

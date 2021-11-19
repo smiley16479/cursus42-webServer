@@ -16,8 +16,9 @@ class header_handler
 {
 private:
     std::vector<server_info> &			_si; // server_info
-	std::map<string, vector<string> >	_hi; // header_info (requets header info)
-	std::string							_response; // response_content (response_header + body)
+	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
+	std::map<string, vector<string> >	_htx; // response_Header
+	std::string							_response; // response_content (response_header + body) OU SLMT BODY ?
 
 
 	/* COPY DES ATTRIBUTS DE QUING_LY */
@@ -65,8 +66,7 @@ public:
 	header_handler(std::vector<server_info>&);
 	~header_handler();
 	void reader(char *);
-	string& writer(void);
-	void header_checker(string&);
+	void writer(void);
 	void display(void);
 
 	/* FONCTION ACCESSEUR */
@@ -79,7 +79,8 @@ private:
 	void gen_startLine(void);
 	void gen_serv(void);
 	void gen_CType(void);
-	void gen_CLenght(void);
+	void gen_CLength(void);
+	// void gen_response(void);
 
 
 };
