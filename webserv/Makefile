@@ -40,7 +40,7 @@ TEMP_FILES      =   server_files/www/temp_files/cgi_in \
 
 OBJECTS 		=	${SOURCES:%.cpp=%.o}
 
-FLAGS 			=	-Wall -Wextra -Werror -Ofast -std=c++98
+FLAGS 			=	-Wall -Wextra -Werror -Ofast #-std=c++98
 
 COMPILE			=	clang++
 

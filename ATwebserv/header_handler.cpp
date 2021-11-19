@@ -20,19 +20,23 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 		// _hrx.insert(std::make_pair(array[i], vector<string>()));
 	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
 		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; */
+
 const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent:",
 							"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
 												"Cache-Control:", "DNT:", "rol:"};
+
 	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
 		_hrx[array[i]];
-		// _hrx.insert(std::make_pair(array[i], vector<string>()));
+#ifdef _debug_
 	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
 		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl;
+#endif
 
+// REMPLI LA MAP _ERROR POUR LA STATUS LIGNE (TX) HTML
 	ifstream fs("configuration_files/HTML_error_msg.txt");
 	if (!fs.is_open()) 
-		throw (std::runtime_error( "Unkown file : configuration_files/HTML_error_msg.txt"));
-	
+		throw (std::runtime_error("Unkown file : configuration_files/HTML_error_msg.txt"));
+
 	string buf_1, buf_2;
 	while (std::getline(fs, buf_1)) {
 		if (buf_1[0] == '#' || buf_1[0] == '\0')
@@ -42,9 +46,10 @@ const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent
 		std::getline(ss_2, buf_2);
 		_error[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
 	}
+#ifdef _debug_
 	for (map< string, string>::iterator it = _error.begin(), end = _error.end(); it != end; ++it)
 	cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
-	exit(0);
+#endif
 }
 
 header_handler::~header_handler()
