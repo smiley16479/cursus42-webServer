@@ -1,0 +1,45 @@
+SRC += main.cpp
+SRC += config_checker.cpp
+SRC += server.cpp
+SRC += header_handler.cpp
+
+OBJ = $(SRC:.cpp=.o)
+
+CC = clang++
+
+RM = rm -f
+
+NAME = webserv
+
+ifeq ($(df), 0)
+CPP_FLAGS += -Wall
+CPP_FLAGS += -Werror
+CPP_FLAGS += -Wextra
+endif
+
+CPP_FLAGS += -std=c++98
+CPP_FLAGS += -g
+CPP_FLAGS += -fsanitize=address
+
+all:	build run
+
+build:	$(NAME)
+
+run:
+	./$(NAME)
+
+$(NAME):	$(OBJ)
+	$(CC) $(CFLAGS) -o $(NAME) $(OBJ)
+
+%.o:	%.cpp
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	$(RM) $(OBJ)
+
+fclean:	clean
+	$(RM) $(NAME)
+
+re: fclean all
+
+.PHONY: clean fclean re
