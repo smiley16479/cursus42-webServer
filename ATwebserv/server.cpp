@@ -96,11 +96,11 @@ void server::run(void) {
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
-					printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
+					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
 					header.reader(str);
 					header.writer();
 					send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
-					close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+					// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
 			}
 		}

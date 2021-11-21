@@ -25,7 +25,7 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 */
 
 // REMPLI LA MAP _STATUS POUR LA STATUS LIGNE (TX) HTML
-	ifstream fs("configuration_files/HTML_error_msg.txt");
+	ifstream fs("configuration_files/HTML_status_msg.txt");
 	if (!fs.is_open()) 
 		throw (std::runtime_error("Unkown file : configuration_files/HTML_error_msg.txt"));
 
@@ -39,8 +39,8 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 		_status[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
 	}
 #ifdef _debug_
-	for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
-	cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
+	// for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
+	// cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
 #endif
 }
 
@@ -54,8 +54,13 @@ void header_handler::reader(char *str)
 {
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
-	cout << RED "DANS HEADER READER" RESET << str << endl;
+	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	while (std::getline(ss_1, buf_1)) {
+		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STACK LE BODY POUR USAGE ULTÉRIEUR
+			while (std::getline(ss_1, buf_1))
+				_hrx["BODY"].push_back(buf_1);
+			break ;
+		}
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
 			// if (_hrx.find(buf_2) != _hrx.end()) {
@@ -67,8 +72,8 @@ void header_handler::reader(char *str)
 			// else
 			// 	throw (std::runtime_error( "Unkown header field (header_reader) : " + buf_2));
 #ifdef _debug_
-		cout << GREEN "ss_2 >> buf_2 : " << buf_2 << RESET << endl;
-		cout << RED << buf_1 << RESET << endl;
+		cout << RED << "buf_1.size : "<< buf_1.size() << RESET "[" << buf_1 << "]" << endl;
+		cout << GREEN "ss_2 >> buf_2 : " RESET << "[" << buf_2 << "]" << endl;
 		cout << MAGENTA << "tour" << RESET << endl;
 #endif
 	}
@@ -89,7 +94,15 @@ void header_handler::writer(void) {
 	}
 	else if (_hrx.find("POST") != _hrx.end()) {
 		if (_hrx.find("Content-Type:") != _hrx.end())
-			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size();
+			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
+		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
+			cout << "[" << *i << "]" << endl;
+		string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
+		cout << "boundary : " << boundary << endl;
+		cout << endl << "BODY : " << endl;
+		for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
+			cout << "[" << *i << "]" << endl;
+
 	}
 	else if (_hrx.find("PUT") != _hrx.end()) {
 		cout << "Facultatif PUT method not implemented yet\n";
@@ -166,7 +179,7 @@ void	header_handler::gen_serv() /* PROBLEM : ? */
 }
 
 void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
-{// IF YOU WANT THE BROWSER TO READ WITHOUT SKING TO DOWNLOAD IT, DON'T MENTION ITS FILE TYPE
+{
 // Capture file.ext(ension)
 	string ext = _hrx["GET"][0].substr(_hrx["GET"][0].find_last_of(".") + 1);
 #ifdef _debug_
@@ -176,11 +189,12 @@ void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un f
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
-		_htx["Content-Type"].push_back("Content-Type: image/\r\n");
+		_htx["Content-Type"].push_back("Content-Type: image\r\n");
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: audio/\r\n");
+		_htx["Content-Type"].push_back("Content-Type: audio\r\n");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
+		_htx["Content-Type"].push_back("Content-Type: video\r\n");
+		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
 void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST PAS BIEN CONÇU*/
