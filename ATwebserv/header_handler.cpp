@@ -24,7 +24,7 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 #endif
 */
 
-// REMPLI LA MAP _ERROR POUR LA STATUS LIGNE (TX) HTML
+// REMPLI LA MAP _STATUS POUR LA STATUS LIGNE (TX) HTML
 	ifstream fs("configuration_files/HTML_error_msg.txt");
 	if (!fs.is_open()) 
 		throw (std::runtime_error("Unkown file : configuration_files/HTML_error_msg.txt"));
@@ -48,7 +48,7 @@ header_handler::~header_handler()
 {
 }
 
-/* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type)
+/* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
 void header_handler::reader(char *str)
 {
@@ -88,6 +88,8 @@ void header_handler::writer(void) {
 		gen_CLength(); // Add ContentLength and Body
 	}
 	else if (_hrx.find("POST") != _hrx.end()) {
+		if (_hrx.find("Content-Type:") != _hrx.end())
+			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size();
 	}
 	else if (_hrx.find("PUT") != _hrx.end()) {
 		cout << "Facultatif PUT method not implemented yet\n";
@@ -153,7 +155,7 @@ void	header_handler::gen_date()
 	_htx["Date"].push_back(date);
 }
 
-void	header_handler::gen_serv() /* PROBLEM */
+void	header_handler::gen_serv() /* PROBLEM : ? */
 {
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
@@ -181,7 +183,7 @@ void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un f
 		_htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-void	header_handler::gen_CLength() /* PROBLEM */
+void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST PAS BIEN CONÇU*/
 {
 
 	string file("./files");
