@@ -4,11 +4,14 @@
 # include <iostream>
 # include <cstdlib>
 # include <vector>
+# include <fstream>
+# include <sstream>
+# include <algorithm>
 //# include <pthread.h>
 # include <sys/wait.h>
 # include <unistd.h>
+# include <cstring>
 //# include <stringstram>
-# include <fstream>
 
 # define CRASH_FORK	-1
 # define CRASH_PIPE	-1

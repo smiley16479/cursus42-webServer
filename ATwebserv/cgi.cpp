@@ -2,6 +2,7 @@
 
 int	main(int ac, char **av, char **env)
 {
+//	cgi_handler	cgi(&av[1]);
 	cgi_handler	cgi(av);
 	std::string	lol;
 	int			bfd[2];

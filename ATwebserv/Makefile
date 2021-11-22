@@ -25,7 +25,9 @@ CPP_FLAGS += -std=c++98
 CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 
-all:	build run nav
+all:	build
+
+exec:	run nav
 
 build:	$(NAME)
 
