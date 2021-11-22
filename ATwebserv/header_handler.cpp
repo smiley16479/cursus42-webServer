@@ -18,21 +18,17 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
 		_hrx[array[i]];
 		// _hrx.insert(std::make_pair(array[i], vector<string>()));
+#ifdef _debug_
 	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
-		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; */
-const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent:",
-							"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
-												"Cache-Control:", "DNT:", "rol:"};
-	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
-		_hrx[array[i]];
-		// _hrx.insert(std::make_pair(array[i], vector<string>()));
-	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
-		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl;
+		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; 
+#endif
+*/
 
-	ifstream fs("configuration_files/HTML_error_msg.txt");
+// REMPLI LA MAP _STATUS POUR LA STATUS LIGNE (TX) HTML
+	ifstream fs("configuration_files/HTML_status_msg.txt");
 	if (!fs.is_open()) 
-		throw (std::runtime_error( "Unkown file : configuration_files/HTML_error_msg.txt"));
-	
+		throw (std::runtime_error("Unkown file : configuration_files/HTML_error_msg.txt"));
+
 	string buf_1, buf_2;
 	while (std::getline(fs, buf_1)) {
 		if (buf_1[0] == '#' || buf_1[0] == '\0')
@@ -40,25 +36,31 @@ const char *array[] = {	"A", "Accept:", "Accept-Language:", "Host:", "User-Agent
 		std::stringstream ss_2(buf_1);
 		ss_2 >> buf_1; 
 		std::getline(ss_2, buf_2);
-		_error[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
+		_status[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
 	}
-	for (map< string, string>::iterator it = _error.begin(), end = _error.end(); it != end; ++it)
-	cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
-//	exit(0);
+#ifdef _debug_
+	// for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
+	// cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
+#endif
 }
 
 header_handler::~header_handler()
 {
 }
 
-/* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type)
+/* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
 void header_handler::reader(char *str)
 {
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
-	cout << RED "DANS HEADER READER" RESET << str << endl;
+	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	while (std::getline(ss_1, buf_1)) {
+		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STACK LE BODY POUR USAGE ULTÉRIEUR
+			while (std::getline(ss_1, buf_1))
+				_hrx["BODY"].push_back(buf_1);
+			break ;
+		}
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
 			// if (_hrx.find(buf_2) != _hrx.end()) {
@@ -70,8 +72,8 @@ void header_handler::reader(char *str)
 			// else
 			// 	throw (std::runtime_error( "Unkown header field (header_reader) : " + buf_2));
 #ifdef _debug_
-		cout << GREEN "ss_2 >> buf_2 : " << buf_2 << RESET << endl;
-		cout << RED << buf_1 << RESET << endl;
+		cout << RED << "buf_1.size : "<< buf_1.size() << RESET "[" << buf_1 << "]" << endl;
+		cout << GREEN "ss_2 >> buf_2 : " RESET << "[" << buf_2 << "]" << endl;
 		cout << MAGENTA << "tour" << RESET << endl;
 #endif
 	}
@@ -81,12 +83,45 @@ void header_handler::reader(char *str)
 
 void header_handler::writer(void) {
 
-	gen_startLine();
+// PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
+	gen_startLine( _status.find("200") );
 	gen_date();
 	gen_serv();
-	gen_CType();
-	gen_CLength(); // Add ContentLength and Body
 
+	if (_hrx.find("GET") != _hrx.end()) {
+		gen_CType();
+		gen_CLength(); // Add ContentLength and Body
+	}
+	else if (_hrx.find("POST") != _hrx.end()) {
+		if (_hrx.find("Content-Type:") != _hrx.end())
+			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
+		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
+			cout << "[" << *i << "]" << endl;
+		string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
+		cout << "boundary : " << boundary << endl;
+		cout << endl << "BODY : " << endl;
+		for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
+			cout << "[" << *i << "]" << endl;
+
+	}
+	else if (_hrx.find("PUT") != _hrx.end()) {
+		cout << "Facultatif PUT method not implemented yet\n";
+	}
+	else if (_hrx.find("HEAD") != _hrx.end()) {
+		cout << "Facultatif HEAD method not implemented yet\n";
+	}
+	else if (_hrx.find("DELETE") != _hrx.end()) {
+		// IF NOT ALLOWED -> 405
+
+		if (_hrx["DELETE"][0][0] == '/')
+			_hrx["DELETE"][0].insert(0, ".");
+		if( remove( _hrx["DELETE"][0].c_str() ) != 0 ) {
+			perror( _hrx["DELETE"][0].c_str() );
+			gen_startLine( _status.find("404") ); //  IF NOT FOUND -> 404
+		}
+		else
+			puts( "File successfully deleted" );
+	}
 	_hrx.clear();
 	_htx.clear();
 }
@@ -106,19 +141,14 @@ std::string &header_handler::get_response(void) {return _response;}
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
-void	header_handler::gen_startLine() /* PROBLEM */
+void	header_handler::gen_startLine(std::map<string, string>::iterator status)
 {
-	_htx["A"].push_back("HTTP/1.1 "); // version (static)
-	_htx["A"].push_back("200 "); // status (dynamic)
-	_htx["A"].push_back("OK\r\n"); // status msg (dynamic)
-
-	string file("./files");
-	file.append(_hrx["GET"][0] == "/" ? "/index.html" : _hrx["GET"][0]);
-	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
-	if (!fs.is_open()) {
-		_htx["A"][1] = "404 ";
-		_htx["A"][2] = "Not Found\r\n";
-	}
+	if (_htx["A"].size() != 3)
+		_htx["A"].resize(3, string());
+	_htx["A"][0] = "HTTP/1.1 "; // version (static)
+	_htx["A"][1] = status->first; // status code (dynamic) -> 200
+	_htx["A"][2] = status->second; // status msg (dynamic) -> OK
+	_htx["A"][2] += "\r\n";
 }
 
 void	header_handler::gen_date()
@@ -138,22 +168,18 @@ void	header_handler::gen_date()
 	_htx["Date"].push_back(date);
 }
 
-void	header_handler::gen_serv() /* PROBLEM */
+void	header_handler::gen_serv() /* PROBLEM : ? */
 {
-	//_response += "Server: ";// HEADER_LABEL
-	//_response += _hrx["Host:"][0]; // IP & HOST
-	// //_response += "0.0.0.0"; // IP
-	// //_response += ":8080\r\n"; // PORT
-	//_response += "\r\n";
-
-	_htx["Server"].push_back("Server: ");// HEADER_LABEL
-	_htx["Server"].push_back(_hrx["Host:"][0]);
-	_htx["Server"].push_back("\r\n");
+	if (_htx["Server"].size() != 3)
+		_htx["Server"].resize(3, string());
+	_htx["Server"][0] = "Server: ";// HEADER_LABEL
+	_htx["Server"][1] = _hrx["Host:"][0];// IP & HOST
+	_htx["Server"][2] = "\r\n";
 
 }
 
-void	header_handler::gen_CType() /* PROBLEM */
-{// IF YOU WANT THE BROWSER TO READ WITHOUT SKING TO DOWNLOAD IT, DON'T MENTION ITS FILE TYPE
+void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
+{
 // Capture file.ext(ension)
 	string ext = _hrx["GET"][0].substr(_hrx["GET"][0].find_last_of(".") + 1);
 #ifdef _debug_
@@ -163,20 +189,22 @@ void	header_handler::gen_CType() /* PROBLEM */
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
-		_htx["Content-Type"].push_back("Content-Type: image/\r\n");
+		_htx["Content-Type"].push_back("Content-Type: image\r\n");
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: audio/\r\n");
+		_htx["Content-Type"].push_back("Content-Type: audio\r\n");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
+		_htx["Content-Type"].push_back("Content-Type: video\r\n");
+		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-void	header_handler::gen_CLength() /* PROBLEM */
+void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST PAS BIEN CONÇU*/
 {
 
 	string file("./files");
 	file.append(_hrx["GET"][0] == "/" ? "/index.html" : _hrx["GET"][0]);
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) {
+		gen_startLine( _status.find("404") );
 		fs.open("./files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
 		if (!fs.is_open())
 			throw (std::runtime_error( "Unkown file (header_writer) : error_4xx.html"));
@@ -199,7 +227,7 @@ void	header_handler::gen_CLength() /* PROBLEM */
 	cout << RED "Response :\n" RESET << _response << endl;
 
 // AJOUT DU FICHIER À LA RESPONSE
-	if (_hrx["GET"].size()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+	if (_hrx.find("GET") != _hrx.end()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
 		cout << RED "File written !" RESET  << endl;
 		fs.seekg(ios_base::beg);
 		_response.append((istreambuf_iterator<char>(fs)),

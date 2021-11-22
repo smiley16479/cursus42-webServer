@@ -23,14 +23,14 @@ cgi_handler::cgi_handler(char **av)	{
 	}
 	args.push_back((char*)query.c_str());
 	*/
-	if ((pos = query.find("?", 1)) >= 0)
+	if ((pos = query.find("?", 1)) > 0)
 	{
-		query = query.substr(0, pos);
+		tmp = query.substr(0, pos);
 		args.push_back((char*)query.c_str());
-		tmp = tmp.substr(pos);
-		while ((pos = tmp.find('&')) >= 0)
+		tmp = tmp.substr(pos, std::string::npos);
+		while ((pos = tmp.find("&", 1)) > 0)
 		{
-			tmp.substr(pos);
+			tmp.substr(pos, std::string::npos);
 			args.push_back((char*)tmp.c_str());
 		}
 	}

@@ -40,9 +40,9 @@ TEMP_FILES      =   server_files/www/temp_files/cgi_in \
 
 OBJECTS 		=	${SOURCES:%.cpp=%.o}
 
-FLAGS 			=	-Wall -Wextra -Werror -Ofast -std=c++98
+FLAGS 			=	-Wall -Wextra -Werror -Ofast #-std=c++98
 
-COMPILE			=	clang++
+COMPILE			=	g++
 
 GREEN 			= 	\033[38;5;46m
 WHITE 			= 	\033[38;5;15m
