@@ -4,7 +4,10 @@
 # binary stuff
 *.o
 *.out
-ATwebser/webserv
+ATwebserv/webserv
+
+# tmp files
+ATwebserv/out.html
 
 # debug
 *.out.dSYM
