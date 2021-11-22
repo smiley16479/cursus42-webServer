@@ -1,7 +1,9 @@
-SRC += main.cpp
-SRC += config_checker.cpp
-SRC += server.cpp
-SRC += header_handler.cpp
+#SRC += main.cpp
+SRC += cgi.cpp
+SRC += cgi_handler.cpp
+#SRC += config_checker.cpp
+#SRC += server.cpp
+#SRC += header_handler.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
