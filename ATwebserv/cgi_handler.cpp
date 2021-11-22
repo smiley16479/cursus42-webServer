@@ -1,5 +1,10 @@
 #include "cgi_handler.hpp"
 
+void	go_cgi(std::map<std::string, std::vector<std::string> mp)
+{
+
+}
+
 cgi_handler::cgi_handler()	{
 	handler = (char*)CGI;
 	args.push_back((char*)handler.c_str());
@@ -8,38 +13,49 @@ cgi_handler::cgi_handler()	{
 
 cgi_handler::cgi_handler(char **av)	{
 	int	pos;
-	std::string	query(av[1]);
-	std::string	tmp(query);
+	std::string	query((char*)av[0]);
+	std::string	path;
+	std::string	tmp;
 
 	handler = (char*)CGI;
 	args.push_back((char*)handler.c_str());
 //	args.push_back((char*)SCRIPT);
 
-/*
-	for (int i = 0; av[i] != NULL; i++)
+	if ((pos = query.find("?")) != std::string::npos)
 	{
-		query += (char*)av[i];
-		query += "&";
-	}
-	args.push_back((char*)query.c_str());
-	*/
-	if ((pos = query.find("?", 1)) > 0)
-	{
-		tmp = query.substr(0, pos);
-		args.push_back((char*)query.c_str());
-		tmp = tmp.substr(pos, std::string::npos);
-		while ((pos = tmp.find("&", 1)) > 0)
+		path = query.substr(0, pos);
+		args.push_back(path);
+		query = query.substr(pos + 1, std::string::npos);
+		while ((pos = query.find("&")) != std::string::npos)
 		{
-			tmp.substr(pos, std::string::npos);
-			args.push_back((char*)tmp.c_str());
+			tmp = query.substr(0, pos);
+			query = query.substr(pos + 1, std::string::npos);
+			args.push_back(tmp);
 		}
+		query = query.substr(pos + 1, std::string::npos);
+		args.push_back(query);
 	}
+	/*
+	else if ((pos = query.find(" ")) != std::string::npos)
+	{
+		path = query.substr(0, pos);
+		args.push_back(path);
+		query = query.substr(pos + 1, std::string::npos);
+		while ((pos = query.find(" ")) != std::string::npos)
+		{
+			tmp = query.substr(0, pos);
+			query = query.substr(pos + 1, std::string::npos);
+			args.push_back(tmp);
+		}
+		query = query.substr(pos + 1, std::string::npos);
+		args.push_back(query);
+	}
+	*/
 	else
 	{
 		for (int i = 0; av[i] != NULL; i++)
-			args.push_back(av[i]);
+			args.push_back((char*)av[i]);
 	}
-	args.push_back(NULL);
 }
 
 cgi_handler::cgi_handler(const cgi_handler& other)	{

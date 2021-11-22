@@ -20,6 +20,6 @@ personalDir
 exam06
 *.swiftdoc
 *.swiftmodule
-*.swp
+.*.swp
 *.vim
 
