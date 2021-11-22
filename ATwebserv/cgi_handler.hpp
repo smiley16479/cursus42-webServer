@@ -14,19 +14,8 @@
 # define CRASH_PIPE	-1
 
 # define CGI "files/cgi/php-cgi"
-# define SCRIPT "files/scripts/hello.php"
-
-# define HEADER	"\
-<!doctype html>\n\
-<html>\n\
-  <head>\n\
-    <title>This is the title of the webpage!</title>\n\
-  </head>\n\
-  	<body>\n"
-
-
-# define FOOTER "</body>\n\
-	</html>"
+//# define SCRIPT "files/scripts/hello.php"
+# define SCRIPT "files/scripts/variables.php"
 
 class	cgi_handler	{
 //	private:
@@ -37,6 +26,7 @@ class	cgi_handler	{
 
 	public:
 		cgi_handler();
+		cgi_handler(char **av);
 		cgi_handler(const cgi_handler& other);
 		~cgi_handler();
 

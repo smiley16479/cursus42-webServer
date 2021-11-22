@@ -13,6 +13,8 @@ RM = rm -f
 
 NAME = webserv
 
+CGI_OUT = out.html
+
 ifeq ($(df), 0)
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
@@ -23,12 +25,15 @@ CPP_FLAGS += -std=c++98
 CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 
-all:	build run
+all:	build run nav
 
 build:	$(NAME)
 
 run:
 	./$(NAME)
+
+nav:
+	google-chrome $(CGI_OUT)
 
 $(NAME):	$(OBJ)
 	$(CC) $(CPP_FLAGS) -o $(NAME) $(OBJ)
