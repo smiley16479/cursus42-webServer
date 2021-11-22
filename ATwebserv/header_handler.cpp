@@ -55,8 +55,17 @@ void header_handler::reader(char *str)
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
 	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
+	// LECTURE DE LA START_LINE
+	if (std::getline(ss_1, buf_1)) {
+		std::stringstream ss_2(buf_1);
+		while (ss_2 >> buf_1)
+			_hrx["A"].push_back(buf_1);
+	}
+	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
+		cout << "*it : " << *it << endl;
+	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
-		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STACK LE BODY POUR USAGE ULTÉRIEUR
+		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			while (std::getline(ss_1, buf_1))
 				_hrx["BODY"].push_back(buf_1);
 			break ;
@@ -88,11 +97,11 @@ void header_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
-	if (_hrx.find("GET") != _hrx.end()) {
+	if (_hrx["A"][0] == "GET") {
 		gen_CType();
 		gen_CLength(); // Add ContentLength and Body
 	}
-	else if (_hrx.find("POST") != _hrx.end()) {
+	else if (_hrx["A"][0] == "POST") {
 		if (_hrx.find("Content-Type:") != _hrx.end())
 			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -104,19 +113,19 @@ void header_handler::writer(void) {
 			cout << "[" << *i << "]" << endl;
 
 	}
-	else if (_hrx.find("PUT") != _hrx.end()) {
+	else if (_hrx["A"][0] == "PUT") {
 		cout << "Facultatif PUT method not implemented yet\n";
 	}
-	else if (_hrx.find("HEAD") != _hrx.end()) {
+	else if (_hrx["A"][0] == "HEAD") {
 		cout << "Facultatif HEAD method not implemented yet\n";
 	}
-	else if (_hrx.find("DELETE") != _hrx.end()) {
+	else if (_hrx["A"][0] == "DELETE") {
 		// IF NOT ALLOWED -> 405
 
-		if (_hrx["DELETE"][0][0] == '/')
-			_hrx["DELETE"][0].insert(0, ".");
-		if( remove( _hrx["DELETE"][0].c_str() ) != 0 ) {
-			perror( _hrx["DELETE"][0].c_str() );
+		if (_hrx["A"][1][0] == '/')
+			_hrx["A"][1].insert(0, ".");
+		if( remove( _hrx["A"][1].c_str() ) != 0 ) {
+			perror( _hrx["A"][1].c_str() );
 			gen_startLine( _status.find("404") ); //  IF NOT FOUND -> 404
 		}
 		else
@@ -181,7 +190,7 @@ void	header_handler::gen_serv() /* PROBLEM : ? */
 void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
 {
 // Capture file.ext(ension)
-	string ext = _hrx["GET"][0].substr(_hrx["GET"][0].find_last_of(".") + 1);
+	string ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
 #endif
@@ -201,7 +210,7 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 {
 
 	string file("./files");
-	file.append(_hrx["GET"][0] == "/" ? "/index.html" : _hrx["GET"][0]);
+	file.append(_hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1]);
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) {
 		gen_startLine( _status.find("404") );
@@ -227,7 +236,7 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 	cout << RED "Response :\n" RESET << _response << endl;
 
 // AJOUT DU FICHIER À LA RESPONSE
-	if (_hrx.find("GET") != _hrx.end()) { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+	if (_hrx["A"][0] == "GET") { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
 		cout << RED "File written !" RESET  << endl;
 		fs.seekg(ios_base::beg);
 		_response.append((istreambuf_iterator<char>(fs)),
