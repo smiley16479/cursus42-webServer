@@ -1,6 +1,5 @@
 SRC += main.cpp
-#SRC += cgi.cpp
-#SRC += cgi_handler.cpp
+SRC += cgi_handler.cpp
 SRC += config_checker.cpp
 SRC += server.cpp
 SRC += header_handler.cpp
@@ -19,9 +18,9 @@ ifeq ($(df), 0)
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
+CPP_FLAGS += -std=c++98
 endif
 
-CPP_FLAGS += -std=c++98
 CPP_FLAGS += -g3
 CPP_FLAGS += -fsanitize=address
 

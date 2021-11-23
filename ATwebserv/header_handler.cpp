@@ -7,6 +7,7 @@
 *      start-line     = request-line (client)/ status-line (server)
 */
 
+#include "cgi_handler.hpp"
 #include "header_handler.hpp"
 
 header_handler::header_handler(std::vector<server_info>& server_info) : _si(server_info)
@@ -61,8 +62,8 @@ void header_handler::reader(char *str)
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
 	}
-	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
-		cout << "*it : " << *it << endl;
+//	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
+//		cout << "*it : " << *it << endl;
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
@@ -97,7 +98,44 @@ void header_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
-	if (_hrx["A"][0] == "GET") {
+	if (is_cgi(_hrx["A"]))
+	{
+		//HERE!
+		go_cgi(_hrx);
+		_response.clear();
+		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
+		{
+			_response += _hrx["A"][i];
+		}
+		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
+		{
+		//	if (it->first != "A" && it->first != "BODY")
+			if (it->first == "Content-Type:")
+			{
+				_response += it->first;
+				_response += " ";
+				for (size_t i = 0, j = it->second.size(); i < j; ++i)
+					_response += it->second[i];
+		//			_response += "\n";
+			}
+		}
+		size_t k = 0;
+		for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+		{
+			k+= _hrx["BODY"][i].size();
+		}
+		_response += "Content-Lenght: ";
+		_response += std::to_string(k);
+		_response += "\r\n";
+		for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+		{
+			std::cout << _hrx["BODY"][i];
+			_response += _hrx["BODY"][i];
+//			_response += "\n";
+		}
+		cout << RED "Response :\n" RESET << _response << endl;
+	}
+	else if (_hrx["A"][0] == "GET") {
 		gen_CType();
 		gen_CLength(); // Add ContentLength and Body
 	}
