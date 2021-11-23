@@ -1,6 +1,7 @@
 #include "server.hpp"
 #include "config_checker.hpp"
 #include "header_handler.hpp"
+#include "client_handler.hpp"
 #include <stdexcept>
 
 #include <unistd.h> // Pour close, À ENLEVER
@@ -45,6 +46,7 @@ void server::initialize(void) {
 void server::run(void) {
 	initialize();
 	header_handler header(_s);
+	client_handler client;
 	int i;
 
 	while(1)
@@ -67,6 +69,7 @@ void server::run(void) {
 					// close(_epoll_fd);
 					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 				}
+				client.clients[client_fd];
 				printf("New client added\n");
 			}
 /*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
@@ -93,6 +96,8 @@ void server::run(void) {
 						printf("server: client just left\n");
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
 						close(_events[i].data.fd);
+
+						client.clients.erase(_events[i].data.fd);
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
