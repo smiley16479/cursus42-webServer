@@ -1,0 +1,45 @@
+body
+{
+	background-color:	#F0F0F5;
+}
+
+#Page
+{
+	background-color:	#F5F5FF;
+	border:	3px solid black;
+	border-radius:	25px;
+	margin-right:	35%;
+	margin-left:	35%;
+	margin-top:	10%;
+	margin-bottom:	10%;
+}
+
+#Title
+{
+	position:	relative;
+	background-color:	#A0A0FF;
+	border:	3px solid black;
+	border-radius:	25px;
+	margin-right:	15%;
+	margin-left:	15%;
+	margin-top:	2%;
+	margin-bottom:	3%;
+}
+
+#Form
+{
+	position:	relative;
+	background-color:	#A0A0FF;
+	border:	3px solid black;
+	border-radius:	25px;
+	margin-right:	15%;
+	margin-left:	15%;
+	margin-bottom:	3%;
+}
+
+h1
+{
+	font-size:	300%;
+	color:	#6666F5;
+	text-align:	center;
+}
