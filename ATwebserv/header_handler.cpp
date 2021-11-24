@@ -57,7 +57,7 @@ void header_handler::reader(char *str)
 	std::stringstream ss_1(str);
 	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
-	if (std::getline(ss_1, buf_1)) {
+	if (ss_1 && std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
@@ -66,7 +66,7 @@ void header_handler::reader(char *str)
 //		cout << "*it : " << *it << endl;
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
-		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
+		if (!buf_1.empty() && buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			while (std::getline(ss_1, buf_1))
 				_hrx["BODY"].push_back(buf_1);
 			break ;
@@ -101,7 +101,7 @@ void header_handler::writer(void) {
 	if (is_cgi(_hrx["A"]))
 	{
 		//HERE!
-		go_cgi(_hrx);
+		go_cgi(_hrx, _si);
 		_response.clear();
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
@@ -220,7 +220,10 @@ void	header_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS L
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
 	_htx["Server"][0] = "Server: ";// HEADER_LABEL
-	_htx["Server"][1] = _hrx["Host:"][0];// IP & HOST
+	if (!_hrx["Host:"].empty())
+		_htx["Server"][1] = _hrx["Host:"][0];// IP & HOST
+	else
+		_htx["Server"][1] = "127.0.0.1";// IP & HOST
 	_htx["Server"][2] = "\r\n";
 
 }

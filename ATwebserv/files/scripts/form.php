@@ -15,7 +15,7 @@
 		print "\n";
 	}
 	else
-		print "undefined variables a and/or b";
+		print "undefined variable stuff";
 	print "\t\t</p>\n";
 	print "\t</body>\n";
 	print "</html>\n"

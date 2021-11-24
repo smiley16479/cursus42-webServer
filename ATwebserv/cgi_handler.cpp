@@ -10,9 +10,9 @@ bool	is_cgi(std::vector<std::string>& query)
 	return (false);
 }
 
-void	go_cgi(std::map<std::string, std::vector<std::string> >& mp)
+void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv)
 {
-	cgi_handler	cgi(mp["A"]);
+	cgi_handler	cgi(mp, serv);
 //	cgi_handler	cgi(av);
 	std::string	lol;
 	int			pos;
@@ -85,9 +85,9 @@ cgi_handler::cgi_handler()	{
 	args.push_back((char*)SCRIPT);
 }
 
-cgi_handler::cgi_handler(std::vector<std::string>& vec)	{
+cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv)	{
 	int	pos;
-	std::string	query(vec[1]);
+	std::string	query(mp["A"][1]);
 	std::string	path;
 	std::string	tmp;
 
@@ -136,8 +136,8 @@ cgi_handler::cgi_handler(std::vector<std::string>& vec)	{
 		}
 		*/
 //		std::cout << "vec = " << vec[1] << std::endl;
-		path = "files/";
-		path += vec[1];
+		path = "files";
+		path += mp["A"][1];
 		args.push_back(path);
 	}
 }
