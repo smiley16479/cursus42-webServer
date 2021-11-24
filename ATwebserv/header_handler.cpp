@@ -215,7 +215,7 @@ void	header_handler::gen_date()
 	_htx["Date"].push_back(date);
 }
 
-void	header_handler::gen_serv() /* PROBLEM : ? */
+void	header_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS LA REQUETE TU SEGV PAR EX POUR UN POST DS GD TAILLE*/
 {
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
