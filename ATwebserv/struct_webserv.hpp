@@ -29,6 +29,11 @@ struct server_info {
 	std::vector<locati_info> location;
 };
 
+struct client_info {
+	std::string rqst;
+	int			time_out;
+};
+
 /* 
 #include <algorithm> 
 #include <functional> 

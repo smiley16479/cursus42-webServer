@@ -69,7 +69,7 @@ void server::run(void) {
 					// close(_epoll_fd);
 					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 				}
-				client.clients[client_fd];
+				client.add(client_fd);
 				printf("New client added\n");
 			}
 /*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
@@ -97,15 +97,19 @@ void server::run(void) {
 						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
 						close(_events[i].data.fd);
 
-						client.clients.erase(_events[i].data.fd);
+						client.remove(_events[i].data.fd);
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-					header.reader(str);
-					header.writer();
-					send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
-					// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+					client.rqst_append(_events[i].data.fd, str);
+					if (client.is_request_fulfilled(_events[i].data.fd)) {
+						cout << "request_fulfilled !!\n";
+						header.reader(str);
+						header.writer();
+						send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+						// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+					}
 				}
 			}
 		}
