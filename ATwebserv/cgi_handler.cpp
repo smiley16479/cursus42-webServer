@@ -119,22 +119,6 @@ cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, s
 		query = query.substr(pos + 1, std::string::npos);
 		args.push_back(query);
 	}
-	/*
-	else if ((pos = query.find(" ")) != std::string::npos)
-	{
-		path = query.substr(0, pos);
-		args.push_back(path);
-		query = query.substr(pos + 1, std::string::npos);
-		while ((pos = query.find(" ")) != std::string::npos)
-		{
-			tmp = query.substr(0, pos);
-			query = query.substr(pos + 1, std::string::npos);
-			args.push_back(tmp);
-		}
-		query = query.substr(pos + 1, std::string::npos);
-		args.push_back(query);
-	}
-	*/
 	else
 	{
 	/*
@@ -148,6 +132,12 @@ cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, s
 		path = "files";
 		path += mp["A"][1];
 		args.push_back(path);
+	}
+	if (!mp["BODY"].empty())
+	{
+		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
+			tmp += *it;
+		args.push_back(tmp);
 	}
 	extract_env(mp, serv);
 }
@@ -211,6 +201,12 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		tmp = "QUERY_STRING=";
 		if ((pos = var.find("?")) != std::string::npos)
 			tmp += var.substr(pos + 1);
+		if (!mp["BODY"].empty())
+		{
+			for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
+				tmp += *it;
+			mp["BODY"].clear();
+		}
 		args.push_back(tmp);
 		tmp = "REMOTE_HOST=";
 		if (!mp["Host:"].empty())
