@@ -1,12 +1,13 @@
 #!/bin/php
+<!doctype html>
+<html>
+	<link href="layout.css" rel="stylesheet" type="text/css">
+	<head>
+		<title>Variables</title>
+	</head>
+	<body>
+		<p>
 <?php
-	print "<!doctype html>\n";
-	print "<html>\n";
-	print "\t<head>\n";
-	print "\t\t<title>Variables</title>\n";
-	print "\t</head>\n";
-	print "\t<body>\n";
-	print "\t\t<p>\n";
 	if ($_GET["stuff"])
 	{
 		print "\t\t\t";
@@ -16,7 +17,7 @@
 	}
 	else
 		print "undefined variable stuff";
-	print "\t\t</p>\n";
-	print "\t</body>\n";
-	print "</html>\n"
 ?>
+		</p>
+	</body>
+</html>

@@ -1,5 +1,14 @@
 #include "cgi_handler.hpp"
 
+void debug_mp_out(std::map<std::string, std::vector<std::string> >& mp)
+{
+	for (std::map<std::string, std::vector<std::string> >::iterator it = mp.begin(); it != mp.end(); it++)
+	{
+		for (std::vector<std::string>::iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
+			std::cout << it->first << "=" << *it1 << std::endl;
+	}
+}
+
 bool	is_cgi(std::vector<std::string>& query)
 {
 	for (std::vector<std::string>::iterator it = query.begin(); it != query.end(); it++)
@@ -140,6 +149,7 @@ cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, s
 		path += mp["A"][1];
 		args.push_back(path);
 	}
+	extract_env(mp, serv);
 }
 
 cgi_handler::cgi_handler(const cgi_handler& other)	{
@@ -188,29 +198,86 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		pos = buf.find(".php");
 		var = buf.substr(pos + 4);
 		buf = buf.substr(0, pos + 4);
-		if ((pos = buf.find("/")) != std::string::npos)
-			tmp += var.substr(pos);
+		if ((pos = var.find("/")) != std::string::npos)
+			tmp += var.substr(pos + 1);
 		args.push_back(tmp);
 		tmp = "PATH_TRANSLATED=";
 		tmp += _s[i].location[0].root;
 		tmp += buf;
 		args.push_back(tmp);
 		tmp = "SCRIPT_NAME=";
-		tmp += buf;
+		tmp += buf.substr(buf.find_last_of("/") + 1);
 		args.push_back(tmp);
 		tmp = "QUERY_STRING=";
-		if ((pos = buf.find("?")) != std::string::npos)
-			tmp += var.substr(pos);
+		if ((pos = var.find("?")) != std::string::npos)
+			tmp += var.substr(pos + 1);
 		args.push_back(tmp);
 		tmp = "REMOTE_HOST=";
-		if (!mp["Host"].empty())
+		if (!mp["Host:"].empty())
 		{
-			for (size_t j = 0; j < mp["Host"].size(); j++)
-				tmp+= mp["Host"][j];
+			for (size_t j = 0; j < mp["Host:"].size(); j++)
+				tmp+= mp["Host:"][j];
 		}
 		args.push_back(tmp);
 		tmp = "REMOTE_ADDR=";
-		tmp += args[args.size() -1].substr(0, args[args.size() -1].find("/"));
+		tmp += args[args.size() -1].substr(args[args.size() -1].find("=")).substr(1, args[args.size() -1].substr(args[args.size() -1].find("=")).find(":") - 1);
+		args.push_back(tmp);
+		tmp = "AUTH_TYPE=";
+		if (!mp["Authorization:"].empty())
+		{
+			tmp+= mp["Authorization:"][0];
+		}
+		args.push_back(tmp);
+		tmp = "REMOTE_USER=";
+		// GET USER NAME FROM SERVER
+		args.push_back(tmp);
+		tmp = "REMOTE_IDENT=";
+		// GET USER ID FROM SERVER
+		args.push_back(tmp);
+		tmp = "CONTENT_TYPE=";
+		if (!mp["Content-type:"].empty())
+		{
+			for (size_t j = 0; j < mp["Content-type:"].size(); j++)
+				tmp+= mp["Content-type:"][j];
+		}
+		args.push_back(tmp);
+		tmp = "CONTENT_LENGTH=";
+		if (!mp["Content-length:"].empty())
+		{
+			for (size_t j = 0; j < mp["Content-length:"].size(); j++)
+				tmp+= mp["Content-length:"][j];
+		}
+		args.push_back(tmp);
+		tmp = "HTTP_ACCEPT=";
+		if (!mp["Accept:"].empty())
+		{
+			for (size_t j = 0; j < mp["Accept:"].size(); j++)
+				tmp+= mp["Accept:"][j];
+		}
+		args.push_back(tmp);
+		tmp = "HTTP_ACCEPT_LANGUAGE=";
+		if (!mp["Accept-Language:"].empty())
+		{
+			for (size_t j = 0; j < mp["Accept-Language:"].size(); j++)
+				tmp+= mp["Accept-Language:"][j];
+		}
+		args.push_back(tmp);
+		tmp = "HTTP_USER_AGENT=";
+		if (!mp["User-Agent:"].empty())
+		{
+			for (size_t j = 0; j < mp["User-Agent:"].size(); j++)
+				tmp+= mp["User-Agent:"][j];
+		}
+		args.push_back(tmp);
+		tmp = "HTTP_COOKIE=";
+		//GET COOKIE FROM SERVER
+		args.push_back(tmp);
+		tmp = "HTTP_REFERER=";
+		if (!mp["Referer:"].empty())
+		{
+			for (size_t j = 0; j < mp["Referer:"].size(); j++)
+				tmp+= mp["Referer:"][j];
+		}
 		args.push_back(tmp);
 		/*
 			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
@@ -227,4 +294,3 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			*/
 	}
 }
-
