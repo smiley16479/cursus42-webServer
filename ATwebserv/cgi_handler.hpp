@@ -16,29 +16,29 @@
 
 # include "struct_webserv.hpp"
 
-# define CGI_ENV	{	\
-	"SERVER_SOFTWARE\n"	\
-	"SERVER_NAME\n"	\
-	"GATEWAY_INTERFACE\n"	\
-	"SERVER_PROTOCOL\n"	\
-	"SERVER_PORT\n"	\
-	"REQUEST_METHOD\n"	\
-	"PATH_INFO\n"	\
-	"PATH_TRANSLATED\n"	\
-	"SCRIPT_NAME\n"	\
-	"QUERY_STRING\n"	\
-	"REMOTE_HOST\n"	\
-	"REMOTE_ADDR\n"	\
-	"AUTH_TYPE\n"	\
-	"REMOTE_USER\n"	\
-	"REMOTE_IDENT\n"	\
-	"CONTENT_TYPE\n"	\
-	"CONTENT_LENGTH\n"	\
-	"HTTP_ACCEPT_LANGUAGE\n"	\
-	"HTTP_USER_AGENT\n"	\
-	"HTTP_COOKIE\n"	\
-	"HTTP_REFERER\n"	\
-	}
+/*
+x	"SERVER_SOFTWARE=";
+x	"SERVER_NAME=";
+x	"GATEWAY_INTERFACE=";
+x	"SERVER_PROTOCOL=";
+x	"SERVER_PORT=";
+x	"REQUEST_METHOD=";
+x	"PATH_INFO=";
+x	"PATH_TRANSLATED=";
+x	"SCRIPT_NAME=";
+x	"QUERY_STRING=";
+x	"REMOTE_HOST=";
+x	"REMOTE_ADDR=";
+	"AUTH_TYPE=";
+	"REMOTE_USER=";
+	"REMOTE_IDENT=";
+	"CONTENT_TYPE=";
+	"CONTENT_LENGTH=";
+	"HTTP_ACCEPT_LANGUAGE=";
+	"HTTP_USER_AGENT=";
+	"HTTP_COOKIE=";
+	"HTTP_REFERER=";
+*/
 
 # define CRASH_FORK	-1
 # define CRASH_PIPE	-1
@@ -65,6 +65,7 @@ class	cgi_handler	{
 		~cgi_handler();
 
 		cgi_handler&	operator=(const cgi_handler& other);
+		void			extract_env(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv);
 };
 
 #endif

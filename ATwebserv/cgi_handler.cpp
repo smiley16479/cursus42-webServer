@@ -157,3 +157,74 @@ cgi_handler&	cgi_handler::operator=(const cgi_handler& other)	{
 	args = other.args;
 	return (*this);
 }
+
+void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& _s)
+{
+	std::string			tmp;
+	std::string			buf(mp["A"][1]);
+	std::string			var;
+	size_t				pos;
+
+	for (size_t i = 0; i < _s.size(); i++)
+	{
+		tmp = "SERVER_SOFTWARE=";
+		for (size_t j = 0; j < _s[i].server_name.size(); j++)
+			tmp+= _s[i].server_name[j];
+		args.push_back(tmp);
+		tmp = "SERVER_NAME=";
+		tmp += _s[i].host;
+		args.push_back(tmp);
+		tmp = "GATEWAY_INTERFACE=CGI/1.1";
+		args.push_back(tmp);
+		tmp = "SERVER_PROTOCOL=HTTP/1.1";
+		args.push_back(tmp);
+		tmp = "SERVER_PORT=";
+		tmp += _s[i].port;
+		args.push_back(tmp);
+		tmp = "REQUEST_METHOD=";
+		tmp += mp["A"][0];
+		args.push_back(tmp);
+		tmp = "PATH_INFO=";
+		pos = buf.find(".php");
+		var = buf.substr(pos + 4);
+		buf = buf.substr(0, pos + 4);
+		if ((pos = buf.find("/")) != std::string::npos)
+			tmp += var.substr(pos);
+		args.push_back(tmp);
+		tmp = "PATH_TRANSLATED=";
+		tmp += _s[i].location[0].root;
+		tmp += buf;
+		args.push_back(tmp);
+		tmp = "SCRIPT_NAME=";
+		tmp += buf;
+		args.push_back(tmp);
+		tmp = "QUERY_STRING=";
+		if ((pos = buf.find("?")) != std::string::npos)
+			tmp += var.substr(pos);
+		args.push_back(tmp);
+		tmp = "REMOTE_HOST=";
+		if (!mp["Host"].empty())
+		{
+			for (size_t j = 0; j < mp["Host"].size(); j++)
+				tmp+= mp["Host"][j];
+		}
+		args.push_back(tmp);
+		tmp = "REMOTE_ADDR=";
+		tmp += args[args.size() -1].substr(0, args[args.size() -1].find("/"));
+		args.push_back(tmp);
+		/*
+			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
+			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
+			cout << "autoindex : " << _s[i].location[j].autoindex << endl;
+			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
+			cout << "allowed_method : ";
+			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
+				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
+			cout << endl << "return : ";
+			for (size_t k = 0; k < _s[i].location[j].retour.size(); k++)
+				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
+			cout << endl;
+			*/
+	}
+}
+
