@@ -58,6 +58,7 @@ class	cgi_handler	{
 		std::string	handler;
 		std::string	script;
 		std::vector<std::string>	args;
+		std::vector<std::string>	env;
 
 	public:
 		cgi_handler();

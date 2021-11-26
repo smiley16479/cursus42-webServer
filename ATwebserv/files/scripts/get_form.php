@@ -3,7 +3,7 @@
 <html>
 	<link href="layout.css" rel="stylesheet" type="text/css">
 	<head>
-		<title>Variables</title>
+		<title>get Form</title>
 	</head>
 	<body>
 		<p>

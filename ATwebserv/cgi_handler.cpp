@@ -23,12 +23,13 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 {
 	cgi_handler	cgi(mp, serv);
 //	cgi_handler	cgi(av);
-	std::string	lol;
+	std::string	tmp;
 	int			pos;
 	int			bfd[2];
 	int			fd[2];
 	pid_t		pid;
 	char		**plop = new char*[cgi.args.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+	char		**lol = new char*[cgi.env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
@@ -36,6 +37,10 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 	for (std::vector<std::string>::iterator it = cgi.args.begin(); it != cgi.args.end(); it++, i++)
 		plop[i] = (char*)it->c_str();
 	plop[i] = NULL;
+	i = 0;
+	for (std::vector<std::string>::iterator it = cgi.env.begin(); it != cgi.env.end(); it++, i++)
+		lol[i] = (char*)it->c_str();
+	lol[i] = NULL;
 	bfd[0] = dup(STDIN_FILENO);
 	bfd[1] = dup(STDOUT_FILENO);
 	if (pipe(fd) == -1)
@@ -50,8 +55,9 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 		close(fd[0]);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(plop[0], plop, NULL);
+		execve(plop[0], plop, lol);
 		close(STDOUT_FILENO);
+		exit(1);
 	}
 	else
 	{
@@ -62,23 +68,25 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 			return ;;
 		close(fd[0]);
 //		out << (char*)HEADER;
-		while (getline(std::cin, lol))
+		while (getline(std::cin, tmp))
 		{
-			lol += "\n";
-			if ((pos = lol.find("Content-type: ")) != std::string::npos)
+			tmp += "\n";
+			if ((pos = tmp.find("Content-type: ")) != std::string::npos)
 			{
-				lol = lol.replace(0, strlen("Content-type: "), "");
+				tmp = tmp.replace(0, strlen("Content-type: "), "");
 				mp["Content-Type:"].clear();
-				mp["Content-Type:"].push_back(lol);
+				mp["Content-Type:"].push_back(tmp);
 			}
 			else
 			{
-				mp["BODY"].push_back(lol);
+				mp["BODY"].push_back(tmp);
 			}
 		}
-		(waitpid(pid, NULL, 0));
+		waitpid(pid, NULL, 0);
 		dup2(bfd[0], STDIN_FILENO);
 		dup2(bfd[1], STDOUT_FILENO);
+		close(bfd[0]);
+		close(bfd[1]);
 //		out << (char*)FOOTER;
 	}
 	mp["A"].erase(mp["A"].begin());
@@ -86,6 +94,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 	mp["A"].push_back(" 200");
 	mp["A"].push_back(" OK\n");
 	delete [] plop;
+	delete [] lol;
 }
 
 cgi_handler::cgi_handler()	{
@@ -149,6 +158,9 @@ cgi_handler::cgi_handler(const cgi_handler& other)	{
 }
 
 cgi_handler::~cgi_handler()	{
+	handler.clear();
+	script.clear();
+	args.clear();
 }
 
 cgi_handler&	cgi_handler::operator=(const cgi_handler& other)	{
@@ -167,37 +179,41 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 
 	for (size_t i = 0; i < _s.size(); i++)
 	{
+		tmp =  "REDIRECT_STATUS=200";
+		env.push_back(tmp);
 		tmp = "SERVER_SOFTWARE=";
 		for (size_t j = 0; j < _s[i].server_name.size(); j++)
 			tmp+= _s[i].server_name[j];
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "SERVER_NAME=";
 		tmp += _s[i].host;
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "GATEWAY_INTERFACE=CGI/1.1";
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "SERVER_PROTOCOL=HTTP/1.1";
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "SERVER_PORT=";
 		tmp += _s[i].port;
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "REQUEST_METHOD=";
 		tmp += mp["A"][0];
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "PATH_INFO=";
 		pos = buf.find(".php");
 		var = buf.substr(pos + 4);
 		buf = buf.substr(0, pos + 4);
 		if ((pos = var.find("/")) != std::string::npos)
 			tmp += var.substr(pos + 1);
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "PATH_TRANSLATED=";
 		tmp += _s[i].location[0].root;
-		tmp += buf;
-		args.push_back(tmp);
+		tmp += (buf[0] == '/' ? buf.substr(1) : buf);
+		env.push_back(tmp);
 		tmp = "SCRIPT_NAME=";
-		tmp += buf.substr(buf.find_last_of("/") + 1);
-		args.push_back(tmp);
+		tmp += _s[i].location[0].root;
+		tmp += (buf[0] == '/' ? buf.substr(1) : buf);
+//		tmp += buf.substr(buf.find_last_of("/") + 1);
+		env.push_back(tmp);
 		tmp = "QUERY_STRING=";
 		if ((pos = var.find("?")) != std::string::npos)
 			tmp += var.substr(pos + 1);
@@ -207,74 +223,74 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 				tmp += *it;
 			mp["BODY"].clear();
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "REMOTE_HOST=";
 		if (!mp["Host:"].empty())
 		{
 			for (size_t j = 0; j < mp["Host:"].size(); j++)
 				tmp+= mp["Host:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "REMOTE_ADDR=";
 		tmp += args[args.size() -1].substr(args[args.size() -1].find("=")).substr(1, args[args.size() -1].substr(args[args.size() -1].find("=")).find(":") - 1);
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "AUTH_TYPE=";
 		if (!mp["Authorization:"].empty())
 		{
 			tmp+= mp["Authorization:"][0];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "REMOTE_USER=";
 		// GET USER NAME FROM SERVER
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "REMOTE_IDENT=";
 		// GET USER ID FROM SERVER
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "CONTENT_TYPE=";
 		if (!mp["Content-type:"].empty())
 		{
 			for (size_t j = 0; j < mp["Content-type:"].size(); j++)
 				tmp+= mp["Content-type:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "CONTENT_LENGTH=";
 		if (!mp["Content-length:"].empty())
 		{
 			for (size_t j = 0; j < mp["Content-length:"].size(); j++)
 				tmp+= mp["Content-length:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "HTTP_ACCEPT=";
 		if (!mp["Accept:"].empty())
 		{
 			for (size_t j = 0; j < mp["Accept:"].size(); j++)
 				tmp+= mp["Accept:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "HTTP_ACCEPT_LANGUAGE=";
 		if (!mp["Accept-Language:"].empty())
 		{
 			for (size_t j = 0; j < mp["Accept-Language:"].size(); j++)
 				tmp+= mp["Accept-Language:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "HTTP_USER_AGENT=";
 		if (!mp["User-Agent:"].empty())
 		{
 			for (size_t j = 0; j < mp["User-Agent:"].size(); j++)
 				tmp+= mp["User-Agent:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "HTTP_COOKIE=";
 		//GET COOKIE FROM SERVER
-		args.push_back(tmp);
+		env.push_back(tmp);
 		tmp = "HTTP_REFERER=";
 		if (!mp["Referer:"].empty())
 		{
 			for (size_t j = 0; j < mp["Referer:"].size(); j++)
 				tmp+= mp["Referer:"][j];
 		}
-		args.push_back(tmp);
+		env.push_back(tmp);
 		/*
 			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
 			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;

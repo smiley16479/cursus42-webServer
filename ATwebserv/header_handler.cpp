@@ -124,15 +124,16 @@ void header_handler::writer(void) {
 		{
 			k+= _hrx["BODY"][i].size();
 		}
+	///	_response += "Connection: close\n";
 		_response += "Content-Lenght: ";
-		_response += std::to_string(k);
+		_response += std::to_string(k - 1);
 		_response += "\r\n";
 		for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
 		{
 			std::cout << _hrx["BODY"][i];
 			_response += _hrx["BODY"][i];
-//			_response += "\n";
 		}
+		_response += "\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 	}
 	else if (_hrx["A"][0] == "GET") {
