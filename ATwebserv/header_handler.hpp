@@ -69,7 +69,7 @@ private:
 public:
 	header_handler(std::vector<server_info>&);
 	~header_handler();
-	void reader(char *);
+	void reader(const char *);
 	void writer(void);
 	void display(void);
 

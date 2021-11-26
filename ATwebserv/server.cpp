@@ -23,7 +23,7 @@ server::~server()
 void server::initialize(void) {
 	struct sockaddr_in servaddr;
 
-	if ((_epoll_fd = epoll_create(1)) == -1) /* INITIALISATION DE L'INSTANCE EPOLL */
+	if ((_epoll._epoll_fd = epoll_create(1)) == -1) /* INITIALISATION DE L'INSTANCE EPOLL */
 		throw std::runtime_error("ERROR IN EPOLL INSTANCE CREATION");
 /* INITIALISATION DES SOCKET DES SERVER(S) VIRTUEL(S) */
 	for (size_t i = 0; i < _s.size(); i++) {
@@ -36,9 +36,9 @@ void server::initialize(void) {
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		_event.events = EPOLLIN;
-		_event.data.fd = _s[i].socket;
-		if(epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_event))
+		_epoll._event.events = EPOLLIN;
+		_epoll._event.data.fd = _s[i].socket;
+		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 }
@@ -47,29 +47,16 @@ void server::run(void) {
 	initialize();
 	header_handler header(_s);
 	client_handler client;
-	int i;
+	int serv_id;
 
 	while(1)
 	{
 		printf("\nPolling for input...\n");
-		_event_count = epoll_wait(_epoll_fd, _events, MAX_EVENTS, 30000);
-		printf("%d ready events\n", _event_count);
-		for(int i = 0; i < _event_count; i++) {
-			if (is_new_client(_events[i].data.fd) && (_events[i].events & EPOLLIN) == EPOLLIN) {
-				int client_fd;
-				struct sockaddr_in clientaddr;
-				socklen_t len = sizeof(clientaddr);
-				if ((client_fd = accept(_events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
-					throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-				clientaddr.sin_addr;
-				_event.events = EPOLLIN;
-				_event.data.fd = client_fd;
-				if(epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &_event)) {
-					fprintf(stderr, "Failed to add file descriptor to epoll\n");
-					// close(_epoll_fd);
-					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
-				}
-				client.add(client_fd);
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000);
+		printf("%d ready events\n", _epoll._event_count);
+		for(int i = 0; i < _epoll._event_count; i++) {
+			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
+				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
 /*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
@@ -92,31 +79,30 @@ void server::run(void) {
 			} */
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-				if (recv(_events[i].data.fd, str, sizeof(str), 0) <= 0) {
+				if (recv(_epoll._events[i].data.fd, str, sizeof(str), 0) <= 0) {
+						client.remove(_epoll, i);
 						printf("server: client just left\n");
-						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _events[i].data.fd, &_event);
-						close(_events[i].data.fd);
-
-						client.remove(_events[i].data.fd);
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-					client.rqst_append(_events[i].data.fd, str);
-					if (client.is_request_fulfilled(_events[i].data.fd)) {
+					client.rqst_append(_epoll._events[i].data.fd, str);
+					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
 						cout << "request_fulfilled !!\n";
-						header.reader(str);
+						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
 						header.writer();
-						send(_events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+
+						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 						// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}
 			}
 		}
-	printf(RED "_event_count : %d\n" RESET, _event_count);
+	printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 
-	if(close(_epoll_fd))
+	if(close(_epoll._epoll_fd))
 	{
 		fprintf(stderr, "Failed to close epoll file descriptor\n");
 		throw std::runtime_error("ERROR IN FD (CLOSE) MANIPULATION");
@@ -124,12 +110,16 @@ void server::run(void) {
 	return;
 }
 
-bool server::is_new_client(int fd) {
+int server::is_new_client(int fd) {
 	for (int i = 0; i < _s.size(); ++i)
 		if (fd == _s[i].socket)
-			return true;
-	return false;
+			return i;
+	return -1;
 }
+
+int server::get_time_out(int id_serv) {
+	return atoi(_s[id_serv].time_out.c_str());
+};
 
 /* 
 * AFFICHE TOUTES LES INFORMATIONS CONTENUES DS LES STRUCTURES GÉNÉRÉES PAR LE FICHIER DE .CONF

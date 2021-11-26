@@ -1,6 +1,5 @@
 #ifndef _SERVER_HPP_ 
 #define _SERVER_HPP_
-#include <netdb.h>		// pour struct sockaddr_in 
 #include <sys/socket.h>	// pour socket()
 #include <sys/types.h>	// 
 #include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
@@ -15,9 +14,8 @@ class server
 private:
 // https://stackoverflow.com/questions/6946217/how-to-access-the-contents-of-a-vector-from-a-pointer-to-the-vector-in-c
     std::vector<server_info> _s;
-    int _epoll_fd;
-    int _event_count;
-	epoll_event _event, _events[MAX_EVENTS];
+    struct_epoll _epoll;
+ 
     char str[BUF_LEN];
     char msg[BUF_LEN];
 
@@ -29,7 +27,8 @@ public:
     void run(void); // lance les étapes de configuration des sockets initialize(), de run
 
     /* PRIVATE */
-    bool is_new_client(int fd);
+    int is_new_client(int fd);
+    int get_time_out(int id_serv);
 };
 
 #endif

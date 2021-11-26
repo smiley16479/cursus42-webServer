@@ -50,7 +50,7 @@ header_handler::~header_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void header_handler::reader(char *str)
+void header_handler::reader(const char *str)
 {
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
