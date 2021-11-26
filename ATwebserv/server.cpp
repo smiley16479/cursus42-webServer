@@ -99,6 +99,7 @@ void server::run(void) {
 				}
 			}
 		}
+		client.check_all_timeout(_epoll);
 	printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 

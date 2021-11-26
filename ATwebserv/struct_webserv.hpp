@@ -34,6 +34,7 @@ struct server_info {
 
 struct client_info {
 	std::string rqst;
+	time_t		rqst_time_start;
 	int			time_out;
 };
 

@@ -25,29 +25,43 @@ bool client_handler::is_request_fulfilled(int client_fd)
 	return false ;
 }
 
-void client_handler::clear(int client_fd){	
+void client_handler::clear(int client_fd)
+{	
 	clients[client_fd].rqst.clear();
 	/* REFRESH TIME_OUT STILL TO BE IMPLEMENTED */ // PROBLEM
 }
 
-void client_handler::remove(struct_epoll& _epoll,int i){	
+void client_handler::remove(struct_epoll& _epoll,int i)
+{	
 	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
 	clients.erase(_epoll._events[i].data.fd);
 	if (close(_epoll._events[i].data.fd)) 
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
 }
 
-void client_handler::rqst_append(int client_fd, char *str){	clients[client_fd].rqst.append(str);}
-string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
-
-void client_handler::check_all_timeout(){	
-	for (size_t i = 0; i < clients.size(); i++)
-	{
-		/* code */  // PROBLEM
-	}
+void client_handler::rqst_append(int client_fd, char *str)
+{
+	if (clients[client_fd].rqst.empty())
+		time(&clients[client_fd].rqst_time_start);
+	clients[client_fd].rqst.append(str);
 }
 
-void client_handler::add(struct_epoll& _epoll, int time_out, int i){
+string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
+
+// SI LA REQUETE D'UN DES CLIENTS EST PLUS LONGUE A TRAITER QUE SON TIME_OUT (SET DS LA CONFIG) ON FERME LA CONNEXION
+void client_handler::check_all_timeout(struct_epoll& _epoll) 
+{	
+	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
+		if (time(NULL) - it->second.rqst_time_start > it->second.time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
+			epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
+				clients.erase(it->first);
+			if (close(it->first)) 
+				throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+		}
+}
+
+void client_handler::add(struct_epoll& _epoll, int time_out, int i)
+{
 	int client_fd;
 	struct sockaddr_in clientaddr;
 	socklen_t len = sizeof(clientaddr);

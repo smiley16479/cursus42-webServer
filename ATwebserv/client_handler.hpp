@@ -22,7 +22,7 @@ public:
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
 	void rqst_append(int , char *); // APPEND DIFFERENT REQUEST CHUNK
 	string get_rqst(int); // RETURN FINAL REQUEST
-	void check_all_timeout(void);
+	void check_all_timeout(struct_epoll& _epoll);
 
 };
 
