@@ -1,8 +1,11 @@
 #ifndef _STRUCT_WEBSERV_HPP_
 #define _STRUCT_WEBSERV_HPP_
+#include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
 #include <string>
 #include <iostream>
 #include <vector>
+
+#define MAX_EVENTS 1000
 
 struct locati_info {
 	std::string location;										// dossier reférent
@@ -33,6 +36,15 @@ struct client_info {
 	std::string rqst;
 	int			time_out;
 };
+
+struct struct_epoll
+{
+    int _epoll_fd;
+    int _event_count;
+	epoll_event _event;
+	epoll_event _events[MAX_EVENTS];
+};
+
 
 /* 
 #include <algorithm> 
