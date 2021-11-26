@@ -1,0 +1,12 @@
+version: '3'
+services:
+  webserv:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "9090:9090"
+      - "443:443"
+    volumes:
+      - ./ATwebserv:/webserv
+

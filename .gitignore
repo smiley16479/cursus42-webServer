@@ -4,5 +4,5 @@
 personalDir
 .vscode
 a.out.dSYM
-.o
+*.o
 exam06

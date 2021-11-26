@@ -5,8 +5,9 @@ RUN apt-get -y update && apt-get install -y
 RUN apt-get -y install clang
 RUN apt-get -y install build-essential
 
-COPY . /webserv
+# COPY ./ATwebserv /webserv
 
-WORKDIR /webserv
+# WORKDIR /webserv
 
-CMD ["./compil.sh"]
+# CMD ["./compil.sh"]
+# CMD ["bash"]
