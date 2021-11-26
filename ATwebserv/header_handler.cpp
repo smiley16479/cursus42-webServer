@@ -107,6 +107,7 @@ void header_handler::writer(void) {
 		{
 			_response += _hrx["A"][i];
 		}
+		_response += "Status: 200 Success\n";
 		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 		{
 		//	if (it->first != "A" && it->first != "BODY")
@@ -124,7 +125,7 @@ void header_handler::writer(void) {
 		{
 			k+= _hrx["BODY"][i].size();
 		}
-	///	_response += "Connection: close\n";
+	//	_response += "Connection: close\n";
 		_response += "Content-Lenght: ";
 		_response += std::to_string(k - 1);
 		_response += "\r\n";

@@ -28,15 +28,18 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 	int			bfd[2];
 	int			fd[2];
 	pid_t		pid;
-	char		**plop = new char*[cgi.args.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+//	char		**plop = new char*[cgi.args.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+	char		*plop = (char*)CGI;
 	char		**lol = new char*[cgi.env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
+/*
 	i = 0;
 	for (std::vector<std::string>::iterator it = cgi.args.begin(); it != cgi.args.end(); it++, i++)
 		plop[i] = (char*)it->c_str();
 	plop[i] = NULL;
+	*/
 	i = 0;
 	for (std::vector<std::string>::iterator it = cgi.env.begin(); it != cgi.env.end(); it++, i++)
 		lol[i] = (char*)it->c_str();
@@ -55,18 +58,19 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 		close(fd[0]);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(plop[0], plop, lol);
+		execve(plop, &plop, lol);
 		close(STDOUT_FILENO);
 		exit(1);
 	}
 	else
 	{
-		for (int i = 0; plop[i]; i++)
-			printf("plop=%s\n", plop[i]);
+//		for (int i = 0; plop[i]; i++)
+//			printf("plop=%s\n", plop[i]);
 		close(fd[1]);
 		if (dup2(fd[0], STDIN_FILENO) == -1)
-			return ;;
+			return ;
 		close(fd[0]);
+		waitpid(pid, NULL, 0);
 //		out << (char*)HEADER;
 		while (getline(std::cin, tmp))
 		{
@@ -82,7 +86,6 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 				mp["BODY"].push_back(tmp);
 			}
 		}
-		waitpid(pid, NULL, 0);
 		dup2(bfd[0], STDIN_FILENO);
 		dup2(bfd[1], STDOUT_FILENO);
 		close(bfd[0]);
@@ -93,7 +96,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<se
 	mp["A"].erase(mp["A"].begin());
 	mp["A"].push_back(" 200");
 	mp["A"].push_back(" OK\n");
-	delete [] plop;
+//	delete [] plop;
 	delete [] lol;
 }
 
@@ -161,6 +164,7 @@ cgi_handler::~cgi_handler()	{
 	handler.clear();
 	script.clear();
 	args.clear();
+	env.clear();
 }
 
 cgi_handler&	cgi_handler::operator=(const cgi_handler& other)	{
@@ -179,7 +183,7 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 
 	for (size_t i = 0; i < _s.size(); i++)
 	{
-		tmp =  "REDIRECT_STATUS=200";
+		tmp =  "REDIRECT_STATUS=CGI";
 		env.push_back(tmp);
 		tmp = "SERVER_SOFTWARE=";
 		for (size_t j = 0; j < _s[i].server_name.size(); j++)
@@ -231,9 +235,11 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 				tmp+= mp["Host:"][j];
 		}
 		env.push_back(tmp);
+		/*
 		tmp = "REMOTE_ADDR=";
 		tmp += args[args.size() -1].substr(args[args.size() -1].find("=")).substr(1, args[args.size() -1].substr(args[args.size() -1].find("=")).find(":") - 1);
 		env.push_back(tmp);
+		*/
 		tmp = "AUTH_TYPE=";
 		if (!mp["Authorization:"].empty())
 		{
@@ -281,9 +287,10 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 				tmp+= mp["User-Agent:"][j];
 		}
 		env.push_back(tmp);
-		tmp = "HTTP_COOKIE=";
+//		tmp = "HTTP_COOKIE=";
 		//GET COOKIE FROM SERVER
-		env.push_back(tmp);
+		//C EST UN BONUS !!!
+//		env.push_back(tmp);
 		tmp = "HTTP_REFERER=";
 		if (!mp["Referer:"].empty())
 		{
