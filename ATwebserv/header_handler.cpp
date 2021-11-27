@@ -86,16 +86,7 @@ void header_handler::reader(const char *str)
 		cout << MAGENTA << "tour" << RESET << endl;
 #endif
 	}
-	for (size_t i = 0; i < _si.size(); ++i) {// RECONNAIT QUEL SERVER_VIRTUEL VA TRAITER LA REQUETE
-		size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
-		string host(_hrx["Host:"][0].substr(0,colon_pos));
-		string port(_hrx["Host:"][0].substr(colon_pos +1));
-		if ( _si[i].host == host && _si[i].port == port ) {
-			_s_id = i;
-			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
-			break ;
-		}
-	}
+	set_server_id();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 }
@@ -241,10 +232,25 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 	}
 }
 
+	/* FUNCTION SECONDAIRE : UTILITAIRES */
+
+// reconnait quel server_virtuel va traiter la requete et initialise _s_id
+void header_handler::set_server_id(void) {
+	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
+	string host(_hrx["Host:"][0].substr(0,colon_pos));
+	string port(_hrx["Host:"][0].substr(colon_pos +1));
+	for (size_t i = 0; i < _si.size(); ++i) {
+		if ( _si[i].host == host && _si[i].port == port ) {
+			_s_id = i;
+			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
+			break ;
+		}
+	}
+}
+
 	/* FUNCTION GETTER / SETTER */
 
 std::string &header_handler::get_response(void) {return _response;}
-
 
 	/* FUNCTION DE DEBUG */
 

@@ -72,13 +72,13 @@ public:
 	~header_handler();
 	void reader(const char *);
 	void writer(void);
-	void display(void);
 
 	/* FONCTION ACCESSEUR */
 
 	string &get_response(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
+
 private:
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
@@ -87,7 +87,13 @@ private:
 	void gen_CLength(void);
 	// void gen_response(void);
 
+	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
+	void set_server_id(void);
+
+	/* FUNCTION DE DEBUG */
+	
+	void display(void);
 };
 
 #endif
