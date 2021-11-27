@@ -19,9 +19,10 @@ class header_handler
 	typedef std::map<string, string> error_it;
 private:
     std::vector<server_info> &			_si; // server_info
+	int									_s_id; // server id <- quel server doit répondre à la requete actuelle : '_s_id' est l'index de '_si'
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
-	std::map<string, string>			_status; // Response_Status_Msg
+	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
 	std::string							_response; // response_content (response_header + body) OU SLMT BODY ?
 
 

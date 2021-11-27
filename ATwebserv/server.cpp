@@ -52,9 +52,9 @@ void server::run(void) {
 	while(1)
 	{
 		printf("\nPolling for input...\n");
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000);
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000); //500
 		printf("%d ready events\n", _epoll._event_count);
-		for(int i = 0; i < _epoll._event_count; i++) {
+		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
@@ -100,7 +100,7 @@ void server::run(void) {
 			}
 		}
 		client.check_all_timeout(_epoll);
-	printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
+		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 
 	if(close(_epoll._epoll_fd))
