@@ -55,7 +55,7 @@ void header_handler::reader(const char *str)
 {
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
-	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
+	cout << RED "DANS HEADER READER" RESET "\r\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (ss_1 && std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
@@ -102,40 +102,66 @@ void header_handler::writer(void) {
 	if (is_cgi(_hrx["A"]))
 	{
 		//HERE!
-		go_cgi(_hrx, _si);
+		if (_s_id == -1)
+		{
+			std::cout << "Invalid server id: " << _s_id << std::endl;
+			return ;
+		}
+		else
+			go_cgi(_hrx, _si[_s_id]);
 		_response.clear();
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
 			_response += _hrx["A"][i];
 		}
-		_response += "Status: 200 Success\n";
+		_response += "Status: 200 Success\r\n";
+		size_t k = 0;
+		if (!_hrx["BODY"].empty())
+		{
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			{
+//				std::cout << _hrx["BODY"][i] << std::endl;
+				k += _hrx["BODY"][i].size() - 1;
+			}
+		//	_response += "Connection: close\r\n";
+		}
+		_response += "Content-Lenght: ";
+		_response += std::to_string(k - 1);
+		_response += "\r\n";
 		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 		{
-		//	if (it->first != "A" && it->first != "BODY")
 			if (it->first == "Content-Type:")
 			{
 				_response += it->first;
 				_response += " ";
 				for (size_t i = 0, j = it->second.size(); i < j; ++i)
 					_response += it->second[i];
-		//			_response += "\n";
+		//			_response += "\r\n";
 			}
 		}
-		size_t k = 0;
-		for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+		if (!_htx["Date"].empty())
 		{
-			k+= _hrx["BODY"][i].size();
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				_response += _htx["Date"][i];
+			}
 		}
-	//	_response += "Connection: close\n";
-		_response += "Content-Lenght: ";
-		_response += std::to_string(k - 1);
+		if (!_htx["Server"].empty())
+		{
+			for (size_t i = 0, j = _htx["Server"].size(); i < j; i++)
+			{
+				_response += _htx["Server"][i];
+			}
+		}
 		_response += "\r\n";
-		for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+		if (!_hrx["BODY"].empty())
 		{
-			std::cout << _hrx["BODY"][i];
-			_response += _hrx["BODY"][i];
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			{
+			//	std::cout << _hrx["BODY"][i];
+				_response += _hrx["BODY"][i];
+			}
 		}
-		_response += "\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 	}
 	else if (_hrx["A"][0] == "GET") {
@@ -174,12 +200,15 @@ void header_handler::writer(void) {
 	}
 	_hrx.clear();
 	_htx.clear();
+//	_status.clear();
 }
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 void	header_handler::gen_startLine(std::map<string, string>::iterator status)
 {
+	if (_htx["A"].empty())
+		_htx["A"] = std::vector<std::string>();
 	if (_htx["A"].size() != 3)
 		_htx["A"].resize(3, string());
 	_htx["A"][0] = "HTTP/1.1 "; // version (static)
@@ -202,6 +231,8 @@ void	header_handler::gen_date()
     date.append("\r\n");
 
     // _response.append(date);
+	if (_htx["Date"].empty())
+		_htx["Date"] = std::vector<std::string>();
 	_htx["Date"].push_back(date);
 }
 
@@ -282,10 +313,12 @@ void header_handler::set_server_id(void) {
 	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
+	_s_id = -1;
 	for (size_t i = 0; i < _si.size(); ++i) {
+		if (_si[i].host == "localhost")
+			_si[i].host = "127.0.0.1";
 		if ( _si[i].host == host && _si[i].port == port ) {
 			_s_id = i;
-			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
 			break ;
 		}
 	}

@@ -49,7 +49,7 @@ x	"HTTP_REFERER=";
 # define SCRIPT "files/scripts/variables.php"
 
 bool	is_cgi(std::vector<std::string>& query);
-void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv);
+void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 
 
 class	cgi_handler	{
@@ -57,17 +57,16 @@ class	cgi_handler	{
 	public:
 		std::string	handler;
 		std::string	script;
-		std::vector<std::string>	args;
 		std::vector<std::string>	env;
 
 	public:
 		cgi_handler();
-		cgi_handler(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv);
+		cgi_handler(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 		cgi_handler(const cgi_handler& other);
 		~cgi_handler();
 
 		cgi_handler&	operator=(const cgi_handler& other);
-		void			extract_env(std::map<std::string, std::vector<std::string> >& mp, std::vector<server_info>& serv);
+		void			extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 };
 
 #endif
