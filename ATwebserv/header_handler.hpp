@@ -19,9 +19,10 @@ class header_handler
 	typedef std::map<string, string> error_it;
 private:
     std::vector<server_info> &			_si; // server_info
+	int									_s_id; // server id <- quel server doit répondre à la requete actuelle : '_s_id' est l'index de '_si'
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
-	std::map<string, string>			_status; // Response_Status_Msg
+	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
 	std::string							_response; // response_content (response_header + body) OU SLMT BODY ?
 
 
@@ -71,13 +72,13 @@ public:
 	~header_handler();
 	void reader(const char *);
 	void writer(void);
-	void display(void);
 
 	/* FONCTION ACCESSEUR */
 
 	string &get_response(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
+
 private:
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
@@ -86,7 +87,13 @@ private:
 	void gen_CLength(void);
 	// void gen_response(void);
 
+	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
+	void set_server_id(void);
+
+	/* FUNCTION DE DEBUG */
+	
+	void display(void);
 };
 
 #endif

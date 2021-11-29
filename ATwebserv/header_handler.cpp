@@ -87,6 +87,7 @@ void header_handler::reader(const char *str)
 		cout << MAGENTA << "tour" << RESET << endl;
 #endif
 	}
+	set_server_id();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 }
@@ -175,19 +176,6 @@ void header_handler::writer(void) {
 	_htx.clear();
 }
 
-void header_handler::display(void) {
-	cout << GREEN ITALIC UNDERLINE "DISPLAY HEADER INFORMATION" RESET GREEN " :" RESET << endl;
-	for (map<string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it) {
-		cout << it->first << " ";
-		for (size_t i = 0; i < it->second.size(); ++i)
-			cout << it->second[i] << ", ";
-		cout << endl;
-	}
-}
-
-std::string &header_handler::get_response(void) {return _response;}
-
-
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 void	header_handler::gen_startLine(std::map<string, string>::iterator status)
@@ -255,9 +243,9 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 	string file("./files");
 	file.append(_hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1]);
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
-	if (!fs.is_open()) {
+	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
 		gen_startLine( _status.find("404") );
-		fs.open("./files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
+		fs.open(_si[_s_id].error_page,  std::ifstream::binary | std::ifstream::ate);
 		if (!fs.is_open())
 			throw (std::runtime_error( "Unkown file (header_writer) : error_4xx.html"));
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
@@ -284,5 +272,37 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 		fs.seekg(ios_base::beg);
 		_response.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
+	}
+}
+
+	/* FUNCTION SECONDAIRE : UTILITAIRES */
+
+// reconnait quel server_virtuel va traiter la requete et initialise _s_id
+void header_handler::set_server_id(void) {
+	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
+	string host(_hrx["Host:"][0].substr(0,colon_pos));
+	string port(_hrx["Host:"][0].substr(colon_pos +1));
+	for (size_t i = 0; i < _si.size(); ++i) {
+		if ( _si[i].host == host && _si[i].port == port ) {
+			_s_id = i;
+			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
+			break ;
+		}
+	}
+}
+
+	/* FUNCTION GETTER / SETTER */
+
+std::string &header_handler::get_response(void) {return _response;}
+
+	/* FUNCTION DE DEBUG */
+
+void header_handler::display(void) {
+	cout << GREEN ITALIC UNDERLINE "DISPLAY HEADER INFORMATION" RESET GREEN " :" RESET << endl;
+	for (map<string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it) {
+		cout << it->first << " ";
+		for (size_t i = 0; i < it->second.size(); ++i)
+			cout << it->second[i] << ", ";
+		cout << endl;
 	}
 }
