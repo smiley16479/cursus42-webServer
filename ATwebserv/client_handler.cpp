@@ -34,7 +34,9 @@ void client_handler::remove(struct_epoll& _epoll,int i)
 }
 
 void client_handler::clear(int client_fd) {	clients[client_fd].rqst.clear();}
+
 void client_handler::rqst_append(int client_fd, char *str) {clients[client_fd].rqst.append(str);}
+
 string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
 
 // si la requete d'un des clients est plus longue a traiter que son time_out (set ds la config) on ferme la connexion ... puis on remove le client
@@ -56,7 +58,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	int client_fd;
 	struct sockaddr_in clientaddr;
 	socklen_t len = sizeof(clientaddr);
-	if ((client_fd = accept(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
+	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	clientaddr.sin_addr;
 	_epoll._event.events = EPOLLIN;

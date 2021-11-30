@@ -101,6 +101,7 @@ void header_handler::writer(void) {
 
 	if (is_cgi(_hrx["A"]))
 	{
+		size_t	pos;
 		//HERE!
 		if (_s_id == -1)
 		{
@@ -110,23 +111,27 @@ void header_handler::writer(void) {
 		else
 			go_cgi(_hrx, _si[_s_id]);
 		_response.clear();
+		_response += (char*)"HTTP/1.1 200 OK\r\n";
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
 			_response += _hrx["A"][i];
 		}
 		_response += "Status: 200 Success\r\n";
+		_response += "Pragma: no-cache\r\n";
+//		_response += "Location:\r\n";
 		size_t k = 0;
 		if (!_hrx["BODY"].empty())
 		{
 			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
 			{
 //				std::cout << _hrx["BODY"][i] << std::endl;
-				k += _hrx["BODY"][i].size() - 1;
+				if (!_hrx["BODY"][i].empty())
+					k += _hrx["BODY"][i].size() + 1;
 			}
-		//	_response += "Connection: close\r\n";
+//			_response += "Connection: close\r\n";
 		}
 		_response += "Content-Lenght: ";
-		_response += std::to_string(k - 1);
+		_response += std::to_string(k);
 		_response += "\r\n";
 		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 		{
@@ -139,11 +144,20 @@ void header_handler::writer(void) {
 		//			_response += "\r\n";
 			}
 		}
+		_response += "Content-Language: en\r\n";
 		if (!_htx["Date"].empty())
 		{
 			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
 			{
 				_response += _htx["Date"][i];
+			}
+			_response += "Last-Modified:";
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
+					_response += _htx["Date"][i].substr(pos + 5);
+				else
+					_response += _htx["Date"][i];
 			}
 		}
 		if (!_htx["Server"].empty())
@@ -156,12 +170,17 @@ void header_handler::writer(void) {
 		_response += "\r\n";
 		if (!_hrx["BODY"].empty())
 		{
-			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; ++i)
 			{
 			//	std::cout << _hrx["BODY"][i];
-				_response += _hrx["BODY"][i];
+				if (!_hrx["BODY"][i].empty() && _hrx["BODY"][i][0] != '\r')
+				{
+					_response += _hrx["BODY"][i];
+					_response += "\r\n";
+				}
 			}
 		}
+//		_response += "\r\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 	}
 	else if (_hrx["A"][0] == "GET") {
@@ -259,8 +278,16 @@ void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un f
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+	else if ( ext == "css" ) // Default file PROBLEM ?
+	{
+		_htx["Content-Type"].push_back("Content-Type: text/css\r\n");
+//		_htx["Connection"].push_back("Connection: close\r\n");
+	}
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
+	{
 		_htx["Content-Type"].push_back("Content-Type: image\r\n");
+//		_htx["Connection"].push_back("Connection: close\r\n");
+	}
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
 		_htx["Content-Type"].push_back("Content-Type: audio\r\n");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )

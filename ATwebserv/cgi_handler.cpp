@@ -1,4 +1,5 @@
 #include "cgi_handler.hpp"
+#include "color.hpp"
 
 void debug_mp_out(std::map<std::string, std::vector<std::string> >& mp)
 {
@@ -29,21 +30,24 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
-	char		*plop = (char*)CGI;
-	char		*yo = NULL;
-	char		**lol = new char*[cgi.env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+	char		**plop = new char*[2];
+	char		**lol = new char*[cgi.envSize() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
+	plop[0] = (char*)CGI;
+	plop[1] = NULL;
+//	plop[1] = (char*)CGI_MODE;
+//	plop[2] = NULL;
 	i = 0;
-	for (std::vector<std::string>::iterator it = cgi.env.begin(); it != cgi.env.end(); it++, i++)
+	for (std::vector<std::string>::iterator it = cgi.envBegin(); it != cgi.envEnd(); it++, i++)
 	{
-//		std::cout << it->c_str() << std::endl;
+		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		lol[i] = (char*)it->c_str();
-		}
+	}
 	lol[i] = NULL;
 	bfd[0] = dup(STDIN_FILENO);
-	bfd[1] = dup(STDOUT_FILENO);
+//	bfd[1] = dup(STDOUT_FILENO);
 	if (pipe(fd) == -1)
 		return ;
 //		return (CRASH_PIPE);
@@ -53,52 +57,62 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 //		return (CRASH_FORK);
 	if (pid == 0)
 	{
-		close(fd[0]);
+
+		dup2(bfd[0], STDIN_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
-		execve(plop, &yo, lol);
+		close(fd[0]);
 		close(fd[1]);
+		execve(plop[0], NULL, lol);
+		close(STDIN_FILENO);
 		close(STDOUT_FILENO);
 		exit(1);
 	}
 	else
 	{
-		close(fd[1]);
 		if (dup2(fd[0], STDIN_FILENO) == -1)
 			return ;
+		close(fd[1]);
+		close(fd[0]);
+		std::cout << "coucou" << std::endl;
 		waitpid(pid, &ret, 0);
 		/*
 		if (WIFEXITED(ret))
-			std::cout << "good" << std::endl;
-		if (WIFSIGNALED(ret))
+		{
+			if (WEXITSTATUS(ret) == 1)
+				std::cout << "bad" << std::endl;
+			else
+				std::cout << "good" << std::endl;
+		}
+		else if (WIFSIGNALED(ret))
 			std::cout << "bad" << std::endl;
-			*/
-//		out << (char*)HEADER;
+		*/
 		while (getline(std::cin, tmp))
 		{
 			if ((pos = tmp.find("Content-type: ")) != std::string::npos)
 			{
 				tmp = tmp.replace(0, strlen("Content-type: "), "");
 				mp["Content-Type:"].clear();
-				tmp += "\r\n";
 				mp["Content-Type:"].push_back(tmp);
 			}
 			else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
 			{
-				tmp += "\r\n";
+				if (mp["BODY"].empty())
+					mp["BODY"] = std::vector<std::string>();
 				mp["BODY"].push_back(tmp);
 			}
 		}
-		close(fd[0]);
 		dup2(bfd[0], STDIN_FILENO);
-		dup2(bfd[1], STDOUT_FILENO);
-		close(bfd[0]);
-		close(bfd[1]);
-//		out << (char*)FOOTER;
+//		dup2(bfd[1], STDOUT_FILENO);
+//		close(bfd[0]);
+//		close(bfd[1]);
 	}
+	mp["A"].clear();
+	/*
 	mp["A"].erase(mp["A"].begin());
 	mp["A"].erase(mp["A"].begin());
 	mp["A"].push_back(" 200");
 	mp["A"].push_back(" OK\r\n");
+	*/
 	delete [] lol;
 }
 
@@ -111,19 +125,15 @@ cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, c
 
 cgi_handler::cgi_handler(const cgi_handler& other)	{
 	handler = (char*)CGI;
-	script = other.script;
 	env = other.env;
 }
 
 cgi_handler::~cgi_handler()	{
 	handler.clear();
-	script.clear();
 	env.clear();
 }
 
 cgi_handler&	cgi_handler::operator=(const cgi_handler& other)	{
-	handler = (char*)CGI;
-	script = other.script;
 	return (*this);
 }
 
@@ -172,12 +182,14 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	tmp = "QUERY_STRING=";
 	if ((pos = var.find("?")) != std::string::npos)
 		tmp += var.substr(pos + 1);
+		/*
 	if (!mp["BODY"].empty())
 	{
 		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
 			tmp += *it;
 		mp["BODY"].clear();
 	}
+	*/
 	env.push_back(tmp);
 	tmp = "REMOTE_HOST=";
 	if (!mp["Host:"].empty())
@@ -238,10 +250,10 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	//C EST UN BONUS !!!
 //	env.push_back(tmp);
 	tmp = "HTTP_REFERER=";
-	if (!mp["Referer:"].empty())
+	if (!mp["Referer"].empty())
 	{
-		for (size_t j = 0; j < mp["Referer:"].size(); j++)
-			tmp+= mp["Referer:"][j];
+		for (size_t j = 0; j < mp["Referer"].size(); j++)
+			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
 	/*

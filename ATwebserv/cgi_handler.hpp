@@ -45,6 +45,7 @@ x	"HTTP_REFERER=";
 # define CRASH_PIPE	-1
 
 # define CGI "files/cgi/php-cgi"
+//# define CGI_MODE "-f"
 //# define SCRIPT "files/scripts/hello.php"
 # define SCRIPT "files/scripts/variables.php"
 
@@ -54,9 +55,8 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 
 class	cgi_handler	{
 //	private:
-	public:
+	private:
 		std::string	handler;
-		std::string	script;
 		std::vector<std::string>	env;
 
 	public:
@@ -67,6 +67,10 @@ class	cgi_handler	{
 
 		cgi_handler&	operator=(const cgi_handler& other);
 		void			extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
+
+		size_t envSize()	{ return (env.size()); }
+		std::vector<std::string>::iterator	envBegin()	{return (env.begin());}
+		std::vector<std::string>::iterator	envEnd()	{return (env.end());}
 };
 
 #endif

@@ -31,7 +31,8 @@ void server::initialize(void) {
 		servaddr.sin_family = AF_INET; 
 		servaddr.sin_addr.s_addr = htonl(0); //127.0.0.1 -> 2130706433
 		servaddr.sin_port = htons(atoi(_s[i].port.c_str()));
-		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
+	//	if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
+		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
@@ -91,10 +92,11 @@ void server::run(void) {
 						cout << "request_fulfilled !!\n";
 						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
 						header.writer();
-						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
 
+			//			client.remove(_epoll, i);
 						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
-						close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}
 			}
