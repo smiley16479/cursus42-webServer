@@ -26,6 +26,9 @@ public:
 	void rqst_append(int , char *); // APPEND DIFFERENT REQUEST CHUNK
 	string get_rqst(int); // RETURN FINAL REQUEST
 
+	/* FUNCTION SECONDAIRE : UTILITAIRES */
+
+	bool is_post_rqst_fulfilled(int client_fd);
 };
 
 

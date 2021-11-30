@@ -90,6 +90,7 @@ private:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	void set_server_id(void);
+	void handle_post_rqst(void);
 
 	/* FUNCTION DE DEBUG */
 	
