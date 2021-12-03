@@ -37,7 +37,7 @@ void server::initialize(void) {
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		_epoll._event.events = EPOLLIN;
+		_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

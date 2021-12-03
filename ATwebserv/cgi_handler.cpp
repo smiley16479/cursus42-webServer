@@ -57,7 +57,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 //		return (CRASH_FORK);
 	if (pid == 0)
 	{
-
+		std::cout << "coucou" << std::endl;
 		dup2(bfd[0], STDIN_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[0]);
@@ -73,7 +73,6 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 			return ;
 		close(fd[1]);
 		close(fd[0]);
-		std::cout << "coucou" << std::endl;
 		waitpid(pid, &ret, 0);
 		/*
 		if (WIFEXITED(ret))
@@ -101,6 +100,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 				mp["BODY"].push_back(tmp);
 			}
 		}
+		std::cout << "coucou" << std::endl;
 		dup2(bfd[0], STDIN_FILENO);
 //		dup2(bfd[1], STDOUT_FILENO);
 //		close(bfd[0]);
