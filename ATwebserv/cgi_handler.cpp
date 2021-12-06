@@ -197,6 +197,7 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		for (size_t j = 0; j < mp["Host:"].size(); j++)
 			tmp+= mp["Host:"][j];
 	}
+	/*
 	env.push_back(tmp);
 	tmp = "AUTH_TYPE=";
 	if (!mp["Authorization:"].empty())
@@ -224,6 +225,7 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			tmp+= mp["Content-length:"][j];
 	}
 	env.push_back(tmp);
+	*/
 	tmp = "HTTP_ACCEPT=";
 	if (!mp["Accept:"].empty())
 	{
@@ -249,6 +251,7 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	//GET COOKIE FROM SERVER
 	//C EST UN BONUS !!!
 //	env.push_back(tmp);
+	/*
 	tmp = "HTTP_REFERER=";
 	if (!mp["Referer"].empty())
 	{
@@ -256,7 +259,6 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
-	/*
 		cout << "auth_basic : " << _s.location[j].auth_basic << endl;
 		cout << "auth_user_file : " << _s.location[j].auth_user_file << endl;
 		cout << "autoindex : " << _s.location[j].autoindex << endl;

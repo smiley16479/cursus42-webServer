@@ -187,18 +187,8 @@ void header_handler::writer(void) {
 		gen_CType();
 		gen_CLength(); // Add ContentLength and Body
 	}
-	else if (_hrx["A"][0] == "POST") {
-		if (_hrx.find("Content-Type:") != _hrx.end())
-			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
-		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
-			cout << "[" << *i << "]" << endl;
-		string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
-		cout << "boundary : " << boundary << endl;
-		cout << endl << "BODY : " << endl;
-		for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
-			cout << "[" << *i << "]" << endl;
-
-	}
+	else if (_hrx["A"][0] == "POST")
+		handle_post_rqst();
 	else if (_hrx["A"][0] == "PUT") {
 		cout << "Facultatif PUT method not implemented yet\n";
 	}
@@ -346,9 +336,24 @@ void header_handler::set_server_id(void) {
 			_si[i].host = "127.0.0.1";
 		if ( _si[i].host == host && _si[i].port == port ) {
 			_s_id = i;
+#ifdef _debug_
+			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
+#endif
 			break ;
 		}
 	}
+}
+
+void header_handler::handle_post_rqst(void) {
+	if (_hrx.find("Content-Type:") != _hrx.end())
+		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
+	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
+		cout << "[" << *i << "]" << endl;
+	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
+	cout << "boundary : " << boundary << endl;
+	cout << endl << "BODY : " << endl;
+	for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
+		cout << "[" << *i << "]" << endl;
 }
 
 	/* FUNCTION GETTER / SETTER */
