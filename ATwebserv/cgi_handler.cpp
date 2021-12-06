@@ -20,7 +20,50 @@ bool	is_cgi(std::vector<std::string>& query)
 	return (false);
 }
 
-void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv)
+
+static int		line_init(char **line, int offset, int ret)
+{
+	if (!(*line = (char*)malloc((offset + 1) * sizeof(char))))
+		return (-1);
+	((*line)[offset]) = '\0';
+	return (ret);
+}
+
+static int		recursive_get_line(char **line, int fd, int offset)
+{
+	char	buffer;
+	int		ret;
+
+	ret = read(fd, &buffer, 1);
+	if (ret == 1)
+	{
+		if (buffer == '\n' || buffer == '\0')
+			return (line_init(line, offset, 1));
+		else
+		{
+			ret = recursive_get_line(line, fd, offset + 1);
+			if ((*line) != NULL)
+				((*line)[offset]) = buffer;
+			return (ret);
+		}
+	}
+	else if (ret == 0)
+		return (line_init(line, offset, 0));
+	return (-1);
+}
+
+int				rec_gnl(int fd, char **line)
+{
+	char	buffer;
+
+	if (fd < 0 || !line || read(fd, &buffer, 0) < 0)
+		return (-1);
+	*line = NULL;
+	return (recursive_get_line(line, fd, 0));
+}
+
+
+void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv, int fd_in)
 {
 	cgi_handler	cgi(mp, serv);
 //	cgi_handler	cgi(av);
@@ -57,36 +100,26 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 //		return (CRASH_FORK);
 	if (pid == 0)
 	{
-		std::cout << "coucou" << std::endl;
-		dup2(bfd[0], STDIN_FILENO);
-		dup2(fd[1], STDOUT_FILENO);
+		dup2(fd[0], fd_in);
 		close(fd[0]);
+//		close(STDOUT_FILENO);
+		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
+		close(fd_in);
 		execve(plop[0], NULL, lol);
-		close(STDIN_FILENO);
-		close(STDOUT_FILENO);
 		exit(1);
 	}
 	else
 	{
-		if (dup2(fd[0], STDIN_FILENO) == -1)
-			return ;
+		char *sd;
 		close(fd[1]);
+		dup2(fd[0], fd_in);
 		close(fd[0]);
-		waitpid(pid, &ret, 0);
-		/*
-		if (WIFEXITED(ret))
+//		while (getline(std::cin, tmp))
+		while (rec_gnl(fd_in, &sd) != 0)
 		{
-			if (WEXITSTATUS(ret) == 1)
-				std::cout << "bad" << std::endl;
-			else
-				std::cout << "good" << std::endl;
-		}
-		else if (WIFSIGNALED(ret))
-			std::cout << "bad" << std::endl;
-		*/
-		while (getline(std::cin, tmp))
-		{
+			tmp = (char*)sd;
+			std::cout << tmp << std::endl;
 			if ((pos = tmp.find("Content-type: ")) != std::string::npos)
 			{
 				tmp = tmp.replace(0, strlen("Content-type: "), "");
@@ -99,12 +132,8 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 					mp["BODY"] = std::vector<std::string>();
 				mp["BODY"].push_back(tmp);
 			}
+			free(sd);
 		}
-		std::cout << "coucou" << std::endl;
-		dup2(bfd[0], STDIN_FILENO);
-//		dup2(bfd[1], STDOUT_FILENO);
-//		close(bfd[0]);
-//		close(bfd[1]);
 	}
 	mp["A"].clear();
 	/*
