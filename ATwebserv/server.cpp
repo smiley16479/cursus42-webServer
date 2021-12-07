@@ -95,7 +95,7 @@ void server::run(void) {
 						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
 
 						client.remove(_epoll, i);
-		//				client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
+	//					client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}

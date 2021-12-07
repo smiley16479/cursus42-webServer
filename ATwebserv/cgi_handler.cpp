@@ -89,9 +89,9 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 		lol[i] = (char*)it->c_str();
 	}
 	lol[i] = NULL;
-	bfd[0] = dup(STDIN_FILENO);
-//	bfd[1] = dup(STDOUT_FILENO);
 	if (pipe(fd) == -1)
+		return ;
+	if (pipe(bfd) == -1)
 		return ;
 //		return (CRASH_PIPE);
 	pid = fork();
@@ -100,26 +100,47 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 //		return (CRASH_FORK);
 	if (pid == 0)
 	{
-		dup2(fd[0], fd_in);
 		close(fd[0]);
 		if (!mp["BODY"].empty())
 		{
-			for (size_t i = 0; i < mp["BODY"].size(); i++)
+			for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
 			{
-				const char	*tmp = mp["BODY"][i].c_str();
-				write(fd_in, &tmp, strlen(tmp));
+				int post = it->size();
+				std::cout << "post: " << post << std::endl;
+				std::cout << "cLen: " << cgi._cLen << std::endl;
+				if (post > cgi._cLen)
+				{
+					post = cgi._cLen;
+					cgi._cLen = 0;
+				}
+				else
+					cgi._cLen -= post;
+				if (!it->empty())
+				{
+					write(bfd[1], it->c_str(), post);
+					write(2, it->c_str(), post);
+				}
+				if (cgi._cLen == 0)
+					break ;
 			}
 		}
-		close(fd_in);
+		close(bfd[1]);
+		dup2(bfd[0], STDIN_FILENO);
+		close(bfd[0]);
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		close(fd_in);
 		execve(plop[0], NULL, lol);
 		exit(1);
 	}
 	else
 	{
+		waitpid(pid, NULL, 0);
+		close(bfd[0]);
+		close(bfd[1]);
+		if (!mp["BODY"].empty())
+			mp["BODY"].clear();
+		mp["BODY"] = std::vector<std::string>();
 		char *sd;
 		close(fd[1]);
 		dup2(fd[0], fd_in);
@@ -136,8 +157,6 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 			}
 			else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
 			{
-				if (mp["BODY"].empty())
-					mp["BODY"] = std::vector<std::string>();
 				mp["BODY"].push_back(tmp);
 			}
 			free(sd);
@@ -219,12 +238,14 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	tmp = "QUERY_STRING=";
 	if ((pos = var.find("?")) != std::string::npos)
 		tmp += var.substr(pos + 1);
+		/*
 	if (!mp["BODY"].empty())
 	{
 		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
 			tmp += *it;
 		mp["BODY"].clear();
 	}
+	*/
 	env.push_back(tmp);
 	tmp = "REMOTE_HOST=";
 	if (!mp["Host:"].empty())
@@ -246,17 +267,19 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	// GET USER ID FROM SERVER
 	env.push_back(tmp);
 	tmp = "CONTENT_TYPE=";
-	if (!mp["Content-type:"].empty())
+	if (!mp["Content-Type:"].empty())
 	{
-		for (size_t j = 0; j < mp["Content-type:"].size(); j++)
-			tmp+= mp["Content-type:"][j];
+		for (size_t j = 0; j < mp["Content-Type:"].size(); j++)
+			tmp+= mp["Content-Type:"][j];
 	}
 	env.push_back(tmp);
 	tmp = "CONTENT_LENGTH=";
-	if (!mp["Content-length:"].empty())
+	if (!mp["Content-Length:"].empty())
 	{
-		for (size_t j = 0; j < mp["Content-length:"].size(); j++)
-			tmp+= mp["Content-length:"][j];
+		for (size_t j = 0; j < mp["Content-Length:"].size(); j++)
+			tmp+= mp["Content-Length:"][j];
+		std::stringstream	ss(tmp.substr(strlen("CONTENT_LENGTH=")));
+		ss >> _cLen;
 	}
 	env.push_back(tmp);
 	tmp = "HTTP_ACCEPT=";
@@ -284,7 +307,6 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	//GET COOKIE FROM SERVER
 	//C EST UN BONUS !!!
 //	env.push_back(tmp);
-	/*
 	tmp = "HTTP_REFERER=";
 	if (!mp["Referer"].empty())
 	{
@@ -292,6 +314,7 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
+	/*
 		cout << "auth_basic : " << _s.location[j].auth_basic << endl;
 		cout << "auth_user_file : " << _s.location[j].auth_user_file << endl;
 		cout << "autoindex : " << _s.location[j].autoindex << endl;

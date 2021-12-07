@@ -8,11 +8,11 @@
 	<body>
 		<p>
 <?php
-	if ($_GET["things"])
+	if ($_POST["things"])
 	{
 		print "\t\t\t";
 		print "things=";
-		print $_GET["things"];
+		print $_POST["things"];
 		print "\n";
 	}
 	else

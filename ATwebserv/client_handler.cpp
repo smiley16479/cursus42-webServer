@@ -75,6 +75,8 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 
 bool client_handler::is_post_rqst_fulfilled(int client_fd)
 {cout << YELLOW "DANS IS_POST_REQUEST_FULFILLED\n";
+return true;
+/*
 	if (clients[client_fd].post_boundary.empty()) {
 		size_t bundary_pos;
 		if ((bundary_pos = clients[client_fd].rqst.find("boundary")) != string::npos && (bundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
@@ -86,6 +88,7 @@ bool client_handler::is_post_rqst_fulfilled(int client_fd)
 	if	(clients[client_fd].rqst.rfind(clients[client_fd].post_boundary + "--") != string::npos)
 		return true;
 	return false;
+	*/
 }
 
 // POST / HTTP/1.1^M$

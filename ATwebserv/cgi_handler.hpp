@@ -60,6 +60,7 @@ class	cgi_handler	{
 		std::vector<std::string>	env;
 
 	public:
+		int	_cLen;
 		cgi_handler();
 		cgi_handler(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 		cgi_handler(const cgi_handler& other);
