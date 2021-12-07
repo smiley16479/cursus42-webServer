@@ -80,9 +80,9 @@ void server::run(void) {
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if (recv(_epoll._events[i].data.fd, str, sizeof(str), 0) <= 0) {
-						client.remove(_epoll, i);
-						printf("server: client just left\n");
-						// break; // Pk Break T-ON ?
+					client.remove(_epoll, i);
+					printf("server: client just left\n");
+					// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
