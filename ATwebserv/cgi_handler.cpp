@@ -102,6 +102,15 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 	{
 		dup2(fd[0], fd_in);
 		close(fd[0]);
+		if (!mp["BODY"].empty())
+		{
+			for (size_t i = 0; i < mp["BODY"].size(); i++)
+			{
+				const char	*tmp = mp["BODY"][i].c_str();
+				write(fd_in, &tmp, strlen(tmp));
+			}
+		}
+		close(fd_in);
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
@@ -115,7 +124,6 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 		close(fd[1]);
 		dup2(fd[0], fd_in);
 		close(fd[0]);
-//		while (getline(std::cin, tmp))
 		while (rec_gnl(fd_in, &sd) != 0)
 		{
 			tmp = (char*)sd;
@@ -211,14 +219,12 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	tmp = "QUERY_STRING=";
 	if ((pos = var.find("?")) != std::string::npos)
 		tmp += var.substr(pos + 1);
-		/*
 	if (!mp["BODY"].empty())
 	{
 		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
 			tmp += *it;
 		mp["BODY"].clear();
 	}
-	*/
 	env.push_back(tmp);
 	tmp = "REMOTE_HOST=";
 	if (!mp["Host:"].empty())
@@ -226,7 +232,6 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		for (size_t j = 0; j < mp["Host:"].size(); j++)
 			tmp+= mp["Host:"][j];
 	}
-	/*
 	env.push_back(tmp);
 	tmp = "AUTH_TYPE=";
 	if (!mp["Authorization:"].empty())
@@ -254,7 +259,6 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			tmp+= mp["Content-length:"][j];
 	}
 	env.push_back(tmp);
-	*/
 	tmp = "HTTP_ACCEPT=";
 	if (!mp["Accept:"].empty())
 	{

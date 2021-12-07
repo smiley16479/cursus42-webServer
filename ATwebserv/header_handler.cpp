@@ -123,14 +123,12 @@ void header_handler::writer(void) {
 		}
 		_response.clear();
 		_response += (char*)"HTTP/1.1 200 OK\r\n";
-		/*
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
 			_response += _hrx["A"][i];
 		}
 		_response += "Status: 200 Success\r\n";
 		_response += "Pragma: no-cache\r\n";
-		*/
 //		_response += "Location:\r\n";
 		size_t k = 0;
 		if (!_hrx["BODY"].empty())
@@ -157,7 +155,6 @@ void header_handler::writer(void) {
 		//			_response += "\r\n";
 			}
 		}
-		/*
 		_response += "Content-Language: en\r\n";
 		if (!_htx["Date"].empty())
 		{
@@ -181,8 +178,6 @@ void header_handler::writer(void) {
 				_response += _htx["Server"][i];
 			}
 		}
-		*/
-		_response += "\r\n";
 		_response += "\r\n";
 		if (!_hrx["BODY"].empty())
 		{
