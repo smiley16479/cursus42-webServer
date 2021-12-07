@@ -28,7 +28,7 @@ class config_checker
 	  ~configException() throw() {};
 	  virtual const char* what() const throw()
 	  {
-		delete _si;
+		// delete _si;
 	    return  _str.c_str();
 	  }
 	  private :

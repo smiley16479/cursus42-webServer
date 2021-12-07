@@ -2,8 +2,10 @@
 #define _HEADER_HANDLER_HPP_
 #include <limits.h> /* PATH_MAX */
 #include <string>
+// #include <string.h> // bzero sb = {0} à la place
 #include <fstream>
 #include <sstream>
+#include <sys/stat.h>
 #include <iostream>
 #include <algorithm>
 #include <exception>
@@ -90,6 +92,9 @@ private:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	void set_server_id(void);
+	void handle_get_rqst(void);
+		void	verify_file_openess(ifstream& fs);
+			void 	resolve_path(string &);
 	void handle_post_rqst(void);
 
 	/* FUNCTION DE DEBUG */

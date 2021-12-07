@@ -58,18 +58,18 @@
   <!-- This file lives in public/404.html -->
   <div class="logo"><bold>Déjà vu ?</bold></div>
   <!-- <div class="logo"><img src="42_logo.svg" alt="logo"></div> -->
-  <div class="title"><img src="error_pages/404.png" alt=""></div>
+  <div class="title"><img src="/error_pages/404.png" alt=""></div>
   <div class="screen">
     <div class="main-image">
 
     </div>
-    <img src="error_pages/macbook.png" alt="">
+    <img src="/error_pages/macbook.png" alt="">
   </div>
   <h1>Seems like your page doesn't exist anymore !</h1>
   <script>
     $(document).ready(function() {
       var image = "" + (Math.floor(Math.random() * 100 % 6) + 1) + "-sorry.gif";
-      $(".main-image").css("background-image", "url(error_pages/" + image + ")");
+      $(".main-image").css("background-image", "url(/error_pages/" + image + ")");
     });
   </script>
 </body>

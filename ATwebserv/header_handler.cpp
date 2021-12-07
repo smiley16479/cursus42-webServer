@@ -66,9 +66,10 @@ void header_handler::reader(const char *str)
 //		cout << "*it : " << *it << endl;
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
-		if (!buf_1.empty() && buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
+		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
+			_hrx["BODY"].resize(1, string());
 			while (std::getline(ss_1, buf_1))
-				_hrx["BODY"].push_back(buf_1);
+				_hrx["BODY"][0].append(buf_1);
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -82,9 +83,9 @@ void header_handler::reader(const char *str)
 			// else
 			// 	throw (std::runtime_error( "Unkown header field (header_reader) : " + buf_2));
 #ifdef _debug_
-		cout << RED << "buf_1.size : "<< buf_1.size() << RESET "[" << buf_1 << "]" << endl;
-		cout << GREEN "ss_2 >> buf_2 : " RESET << "[" << buf_2 << "]" << endl;
-		cout << MAGENTA << "tour" << RESET << endl;
+	// cout << RED << "buf_1.size : "<< buf_1.size() << RESET "[" << buf_1 << "]" << endl;
+	// cout << GREEN "ss_2 >> buf_2 : " RESET << "[" << buf_2 << "]" << endl;
+	// cout << MAGENTA << "tour" << RESET << endl;
 #endif
 	}
 	set_server_id();
@@ -194,10 +195,8 @@ void header_handler::writer(void) {
 //		_response += "\r\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 	}
-	else if (_hrx["A"][0] == "GET") {
-		gen_CType();
-		gen_CLength(); // Add ContentLength and Body
-	}
+	else if (_hrx["A"][0] == "GET")
+		handle_get_rqst();
 	else if (_hrx["A"][0] == "POST")
 		handle_post_rqst();
 	else if (_hrx["A"][0] == "PUT") {
@@ -299,7 +298,7 @@ void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un f
 void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST PAS BIEN CONÇU*/
 {
 
-	string file("./files");
+/* 	string file("./files");
 	file.append(_hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1]);
 	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
@@ -308,8 +307,12 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 		if (!fs.is_open())
 			throw (std::runtime_error( "Unkown file (header_writer) : error_4xx.html"));
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
-	}
+	} */
 
+/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
+
+	ifstream fs;
+	verify_file_openess(fs);
 // GÉNÉRATION DU FIELD CONTENT-LENGTH
 	stringstream ss;
 	ss << fs.tellg();
@@ -337,25 +340,35 @@ void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST P
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 // reconnait quel server_virtuel va traiter la requete et initialise _s_id
-void header_handler::set_server_id(void) {
+void header_handler::set_server_id(void)
+{
 	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
-	_s_id = -1;
-	for (size_t i = 0; i < _si.size(); ++i) {
-		if (_si[i].host == "localhost")
-			_si[i].host = "127.0.0.1";
-		if ( _si[i].host == host && _si[i].port == port ) {
-			_s_id = i;
+	for (size_t i = _si.size(); i ; --i) {
+		if (_si[i - 1].host == "localhost")
+			_si[i - 1].host = "127.0.0.1";
+		if ( _si[i - 1].host == host && _si[i - 1].port == port ) {
+			_s_id = i - 1;
+// SI LE SERVER_NAME EST == ON BREAK SINON ON CONTINUE JUSQU'AU PREMIER SERVER /* PROBLEM ? */
+			for (size_t j = 0; i < _si[i - 1].server_name.size(); ++j)
+				if ( _si[i - 1].server_name[j] == host )
+					break ;
 #ifdef _debug_
 			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
 #endif
-			break ;
 		}
 	}
 }
 
-void header_handler::handle_post_rqst(void) {
+void header_handler::handle_get_rqst(void)
+{
+	gen_CType();
+	gen_CLength(); // Add ContentLength and Body
+}
+
+void header_handler::handle_post_rqst(void) 
+{
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -363,9 +376,123 @@ void header_handler::handle_post_rqst(void) {
 	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 	cout << "boundary : " << boundary << endl;
 	cout << endl << "BODY : " << endl;
-	for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
-		cout << "[" << *i << "]" << endl;
+	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
+	// 	cout << "[" << *i << "]" << endl;
+	cout << _hrx["BODY"][0] << endl;
+
+	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
+	if ( _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+		gen_startLine( _status.find("413") ); 
+		return ;
+	}
+	// sinon on execute les cgi ?
 }
+
+// vérification de la bonne ouverture du fichier (maj de la statut-line si besoin)
+// Si erreur lors de l'ouverture du fichier renvoie fichier ouvert sur les pages d'erreurs
+// Le curseur du fichier pointe sur sa fin pour que fs.tellg() donne sa taille à Content-Length
+void	header_handler::verify_file_openess(ifstream& fs)
+{
+	string path;
+	resolve_path(path);
+
+	// path.append( _hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1] );
+	fs.open(path.c_str(), std::ifstream::binary | std::ifstream::ate);
+	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
+		gen_startLine( _status.find("404") );
+		if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
+			fs.open("files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
+		else
+			fs.open(_si[_s_id].error_page,  std::ifstream::binary | std::ifstream::ate);
+		if (!fs.is_open())
+			throw (std::runtime_error( "Unkown path (header_writer) : error_4xx.html"));
+		if (_htx["Content-Type"].empty())
+			_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+		else
+			_htx["Content-Type"][0] = "Content-Type: text/html; charset=utf-8\r\n";
+	}
+}
+
+
+// Permet de séléctionner la location qui partage le plus avec l'url (comme le fait nginx)
+void	header_handler::resolve_path(string& path)
+{
+// REMOVE TRAILING '/' AT URL'S END
+	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
+		_hrx["A"][1].pop_back();
+
+	size_t pos;
+	string url, uri;
+	if (_hrx["A"][1] == "/") {
+		cout << "ds if\n";
+		path =  "." + _si[_s_id].location[0].location + "/" + _si[_s_id].location[0].root + "/" + _si[_s_id].location[0].index;
+	}
+	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
+		cout << "ds else if\n";
+		path = "." + _si[_s_id].location[0].location + _si[_s_id].location[0].root + _hrx["A"][1];
+	}
+	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
+		cout << "ds else\n";
+		url = _hrx["A"][1].substr(0, pos);
+		uri = _hrx["A"][1].substr(pos);
+		cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
+		for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
+			if ( _si[_s_id].location[i].location.find(url) == 0 && _si[_s_id].location[i].location.size() > len ) {
+				len = _si[_s_id].location[i].location.size();
+				path = "." + _si[_s_id].location[0].location + (_si[_s_id].location[i].root.back() == '/' ? _si[_s_id].location[i].root : _si[_s_id].location[i].root + "/");
+				path += uri;//(_si[_s_id].location[i].location.back() == '/' ? _si[_s_id].location[i].location : _si[_s_id].location[i].location + "/");
+				cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
+				// if (len == )
+					break ;
+			}
+	}
+	// SI ON EST DIRECTEMENT SUR L'URI
+/* 	else if (pos == 0) {
+		cout << "ds else if\n";
+		path = _si[_s_id].location[0].root + (_hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1]);
+	}
+	else {
+		cout << "ds else\n";
+		url = _hrx["A"][1];
+	} */
+
+	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
+
+	if (path.empty()) {
+		path = "." + ((_si[_s_id].location[0].location.back() == '/') ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/");
+		path += _si[_s_id].location[0].root;
+		// path += url; // c'est ici que "/test" se mets ds le path
+	}
+	path += uri;
+
+	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
+
+	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
+	if (lstat(path.c_str(), &sb) == -1) {
+		perror("lstat");
+		// exit(EXIT_FAILURE);
+	}
+	switch (sb.st_mode & S_IFMT) {
+		// case S_IFBLK:  printf("block device\n");            break;
+		// case S_IFCHR:  printf("character device\n");        break;
+		case S_IFDIR:  printf("directory\n");	path = "./files/if_folder.html";		break;
+		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
+		// case S_IFLNK:  printf("symlink\n");                 break;
+		case S_IFREG:  printf("regular file\n");            break;
+		// case S_IFSOCK: printf("socket\n");                  break;
+		default:
+			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
+			if (lstat(path.c_str(), &sb) == -1)
+				uri = "error_4xx.html";
+			path = _si[_s_id].error_page.empty() ? "./files/error_pages/" + uri : _si[_s_id].error_page + uri;
+			break;
+	}
+
+#ifdef _debug_
+	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
+#endif
+}
+
 
 	/* FUNCTION GETTER / SETTER */
 
