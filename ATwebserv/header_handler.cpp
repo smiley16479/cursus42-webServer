@@ -319,18 +319,7 @@ void	header_handler::resolve_path(string& path)
 	}
 	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
 		cout << "ds else\n";
-		url = _hrx["A"][1].substr(0, pos);
-		uri = _hrx["A"][1].substr(pos);
-		cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
-		for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
-			if ( _si[_s_id].location[i].location.find(url) == 0 && _si[_s_id].location[i].location.size() > len ) {
-				len = _si[_s_id].location[i].location.size();
-				path = "." + _si[_s_id].location[0].location + (_si[_s_id].location[i].root.back() == '/' ? _si[_s_id].location[i].root : _si[_s_id].location[i].root + "/");
-				path += uri;//(_si[_s_id].location[i].location.back() == '/' ? _si[_s_id].location[i].location : _si[_s_id].location[i].location + "/");
-				cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
-				// if (len == )
-					break ;
-			}
+		location_lookup(path);
 	}
 	// SI ON EST DIRECTEMENT SUR L'URI
 /* 	else if (pos == 0) {
@@ -353,6 +342,34 @@ void	header_handler::resolve_path(string& path)
 
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
+	int file_tp = file_type(path, uri);
+
+#ifdef _debug_
+	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
+#endif
+}
+
+
+// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
+int header_handler::location_lookup(string& path)
+{
+	string url, uri;
+	url = _hrx["A"][1].substr(0, pos);
+	uri = _hrx["A"][1].substr(pos);
+	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
+	for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
+		if ( _si[_s_id].location[i].location.find(url) == 0 && _si[_s_id].location[i].location.size() > len ) {
+			len = _si[_s_id].location[i].location.size();
+			path = "." + _si[_s_id].location[0].location + (_si[_s_id].location[i].root.back() == '/' ? _si[_s_id].location[i].root : _si[_s_id].location[i].root + "/");
+			path += uri;//(_si[_s_id].location[i].location.back() == '/' ? _si[_s_id].location[i].location : _si[_s_id].location[i].location + "/");
+			cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
+			// if (len == )
+				break ;
+		}
+}
+
+int header_handler::file_type(string &path, string &uri)
+{
 	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
 	if (lstat(path.c_str(), &sb) == -1) {
 		perror("lstat");
@@ -370,14 +387,12 @@ void	header_handler::resolve_path(string& path)
 			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
 			if (lstat(path.c_str(), &sb) == -1)
 				uri = "error_4xx.html";
-			path = _si[_s_id].error_page.empty() ? "./files/error_pages/" + uri : _si[_s_id].error_page + uri;
+			path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + uri;
+			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
 			break;
 	}
-
-#ifdef _debug_
-	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
-#endif
 }
+
 
 
 	/* FUNCTION GETTER / SETTER */
