@@ -5,6 +5,8 @@
 *                      [ message-body ]
 *
 *      start-line     = request-line (client)/ status-line (server)
+
+		http://127.0.0.1:8080/ <- c'est ca qui fait bugger
 */
 
 #include "header_handler.hpp"
@@ -311,15 +313,19 @@ void	header_handler::resolve_path(string& path)
 	string url, uri;
 	if (_hrx["A"][1] == "/") {
 		cout << "ds if\n";
-		path =  "." + _si[_s_id].location[0].location + "/" + _si[_s_id].location[0].root + "/" + _si[_s_id].location[0].index;
+		path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
+		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		path += _si[_s_id].location[0].index;
 	}
 	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
 		cout << "ds else if\n";
-		path = "." + _si[_s_id].location[0].location + _si[_s_id].location[0].root + _hrx["A"][1];
+		path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
+		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		path += _hrx["A"][1];
 	}
 	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
 		cout << "ds else\n";
-		location_lookup(path);
+		location_lookup(path, pos);
 	}
 	// SI ON EST DIRECTEMENT SUR L'URI
 /* 	else if (pos == 0) {
@@ -334,7 +340,7 @@ void	header_handler::resolve_path(string& path)
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
 	if (path.empty()) {
-		path = "." + (_si[_s_id].location[0].location.back() == '/') ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		path = "." + (_si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/");
 		path += _si[_s_id].location[0].root;
 		// path += url; // c'est ici que "/test" se mets ds le path
 	}
@@ -351,10 +357,39 @@ void	header_handler::resolve_path(string& path)
 
 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-int header_handler::location_lookup(string& path)
+void header_handler::location_lookup(string& path, size_t pos)
 {
-	string url, uri;
-	url = _hrx["A"][1].substr(0, pos);
+// URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
+	string url(_hrx["A"][1]), uri(url.substr(url.find_last_of("/")));
+	for (int pos_cut, brak = 0; url.size();) {
+		for (size_t i = _si[_s_id].location.size(); i ; --i) {
+
+			if (url == _si[_s_id].location[i - 1].location) {
+				path = "." + (_si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/");
+				path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
+				brak = 1;
+				break ;
+			}
+		}
+		if (brak)
+			break;
+		cout << MAGENTA "url : " RESET "[" << url << "]" << endl;
+		pos_cut = url.find_last_of("/");
+		url.resize(pos_cut);
+		cout << GREEN "url : " RESET << url << endl;
+		if (url.empty()) {
+			path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
+			path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+			path += _hrx["A"][1];
+			brak = 1;
+			cout << BLUE "EMPTY path : " RESET << path << endl;
+			break ;	
+		}
+	}
+	cout << BLUE "url : " RESET  "[" << url << "]" << BLUE " uri : " RESET << uri << endl;
+
+
+/* 	url = _hrx["A"][1].substr(0, pos);
 	uri = _hrx["A"][1].substr(pos);
 	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
 	for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
@@ -365,7 +400,7 @@ int header_handler::location_lookup(string& path)
 			cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
 			// if (len == )
 				break ;
-		}
+		} */
 }
 
 int header_handler::file_type(string &path, string &uri)
@@ -391,6 +426,7 @@ int header_handler::file_type(string &path, string &uri)
 			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
 			break;
 	}
+	return 0;
 }
 
 
