@@ -284,7 +284,10 @@ void	header_handler::verify_file_openess(ifstream& fs)
 	string path;
 	resolve_path(path);
 
-	// path.append( _hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1] );
+// AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
+	while (path[0] == '/')
+		path.erase(path.begin());
+
 	fs.open(path.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
 		gen_startLine( _status.find("404") );
@@ -305,43 +308,42 @@ void	header_handler::verify_file_openess(ifstream& fs)
 // Permet de séléctionner la location qui partage le plus avec l'url (comme le fait nginx)
 void	header_handler::resolve_path(string& path)
 {
-// REMOVE TRAILING '/' AT URL'S END
-	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
-		_hrx["A"][1].pop_back();
+// REMOVE MULTIPLE '/' AND THE '/' AT URL'S END
+	for (size_t i = 0; i < _hrx["A"][1].size(); ++i)
+		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0'))
+			_hrx["A"][1].erase(i, 1);
+
+
+	// path.append( _hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1] );
+// SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
 
 	size_t pos;
 	string url, uri;
 	if (_hrx["A"][1] == "/") {
 		cout << "ds if\n";
-		path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
+		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
 		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
 		path += _si[_s_id].location[0].index;
 	}
 	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
 		cout << "ds else if\n";
-		path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
-		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
+// ON ENLEVE LE '/' FINAL CAR L'URL (_hrx["A"][1]) EN A TJRS UN AU DÉBUT
+		if (_si[_s_id].location[0].location.back() == '/')
+			_si[_s_id].location[0].location.pop_back();
+		path += _si[_s_id].location[0].location;
 		path += _hrx["A"][1];
 	}
 	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
 		cout << "ds else\n";
 		location_lookup(path, pos);
 	}
-	// SI ON EST DIRECTEMENT SUR L'URI
-/* 	else if (pos == 0) {
-		cout << "ds else if\n";
-		path = _si[_s_id].location[0].root + (_hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1]);
-	}
-	else {
-		cout << "ds else\n";
-		url = _hrx["A"][1];
-	} */
 
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
 	if (path.empty()) {
-		path = "." + (_si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/");
-		path += _si[_s_id].location[0].root;
+		path = _si[_s_id].location[0].root;
+		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
 		// path += url; // c'est ici que "/test" se mets ds le path
 	}
 	path += uri;
@@ -356,37 +358,32 @@ void	header_handler::resolve_path(string& path)
 }
 
 
-// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
+// si l'url a plusieurs niveau de dossiers : choisir le plus adapté test
 void header_handler::location_lookup(string& path, size_t pos)
 {
 // URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
 	string url(_hrx["A"][1]), uri(url.substr(url.find_last_of("/")));
-	for (int pos_cut, brak = 0; url.size();) {
+	for (int pos_cut; url.size();) {
 		for (size_t i = _si[_s_id].location.size(); i ; --i) {
-
 			if (url == _si[_s_id].location[i - 1].location) {
-				path = "." + (_si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/");
-				path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
-				brak = 1;
-				break ;
+				path = _si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/";
+				path += _si[_s_id].location[i - 1].location;
+				path += _hrx["A"][1].substr(url.size());
+				return ;
 			}
 		}
-		if (brak)
-			break;
 		cout << MAGENTA "url : " RESET "[" << url << "]" << endl;
 		pos_cut = url.find_last_of("/");
 		url.resize(pos_cut);
 		cout << GREEN "url : " RESET << url << endl;
-		if (url.empty()) {
-			path = "." + (_si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/");
-			path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-			path += _hrx["A"][1];
-			brak = 1;
-			cout << BLUE "EMPTY path : " RESET << path << endl;
-			break ;	
-		}
 	}
-	cout << BLUE "url : " RESET  "[" << url << "]" << BLUE " uri : " RESET << uri << endl;
+	if (url.empty()) {
+		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
+		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		path += _hrx["A"][1];
+		cout << BLUE "EMPTY path : " RESET << path << endl;
+	}
+	cout << BLUE "url : " RESET  "[" << url << "]" BLUE " uri : " RESET << uri << endl;
 
 
 /* 	url = _hrx["A"][1].substr(0, pos);
