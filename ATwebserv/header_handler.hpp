@@ -95,6 +95,9 @@ private:
 	void handle_get_rqst(void);
 		void	verify_file_openess(ifstream& fs);
 			void 	resolve_path(string &);
+				int	location_lookup(string &path, size_t pos);
+				int	file_type(string &path, string &uri);
+
 	void handle_post_rqst(void);
 
 	/* FUNCTION DE DEBUG */

@@ -4,11 +4,11 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <map>
 
 #define MAX_EVENTS 1000
 
 struct locati_info {
-	std::string location;							// dossier reférent
 	std::string auth_basic;							// ?
 	std::string auth_user_file;						// fichiers autorisés à l'utilisateur
 	std::string autoindex;							// présentation du fileSystem => val (on/off)
@@ -18,6 +18,7 @@ struct locati_info {
 	std::string root;								// dossier racine
 	std::vector<std::string> allowed_method;		// méthodes (GET, POST, etc) permises
 	std::vector<std::string> retour;				// directive return
+	std::map<std::string, locati_info>	location;
 };
 
 struct server_info {
@@ -29,7 +30,7 @@ struct server_info {
 	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
 	std::string time_out;
 	std::vector<std::string> cgi_file_types;		// type de file gérées pour les cgi
-	std::vector<locati_info> location;
+	std::map<std::string, locati_info> location;
 };
 
 struct client_info {
