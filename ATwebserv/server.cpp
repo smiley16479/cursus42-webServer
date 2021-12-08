@@ -139,22 +139,22 @@ void server::display_server(void)
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
 		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
-		for (size_t j = 0; j < _s[i].location.size(); j++) {
+		for (std::map<std::string, locati_info>::iterator it = _s[i].location.begin(); it != _s[i].location.end(); it++) {
 			cout << GREEN "LOCATION : " RESET << endl;
-			cout << "location : " << _s[i].location[j].location << endl;
-			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
-			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
-			cout << "autoindex : " << _s[i].location[j].autoindex << endl;
-			cout << "index : " << _s[i].location[j].index << endl;
-			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
-			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
-			cout << "root : " << _s[i].location[j].root << endl;
+			cout << "location : " << it->first << endl;
+			cout << "auth_basic : " << it->second.auth_basic << endl;
+			cout << "auth_user_file : " << it->second.auth_user_file << endl;
+			cout << "autoindex : " << it->second.autoindex << endl;
+			cout << "index : " << it->second.index << endl;
+			cout << "max_file_size : " << it->second.max_file_size << endl;
+			cout << "return_directive : " << it->second.return_directive << endl;
+			cout << "root : " << it->second.root << endl;
 			cout << "allowed_method : ";
-			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
-				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
+			for (size_t k = 0; k < it->second.allowed_method.size(); k++)
+				cout << it->second.allowed_method[k] << (k < it->second.allowed_method.size() - 1 ? ", " : "");
 			cout << endl << "return : ";
-			for (size_t k = 0; k < _s[i].location[j].retour.size(); k++)
-				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
+			for (size_t k = 0; k < it->second.retour.size(); k++)
+				cout << it->second.retour[k] << (k < it->second.retour.size() - 1 ? ", " : "");
 			cout << endl;
 		}
 	}

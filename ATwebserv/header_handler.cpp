@@ -234,8 +234,14 @@ void header_handler::set_server_id(void)
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
 	for (size_t i = _si.size(); i ; --i) {
+		cout << "_si[i - 1].host : " << _si[i - 1].host << endl;
+		cout << "_si: " << i - 1 << std::endl;
+		if (_si[i - 1].host == "localhost")
+			_si[i - 1].host = "127.0.0.1";
 		if ( _si[i - 1].host == host && _si[i - 1].port == port ) {
 			_s_id = i - 1;
+			cout << "id = " << _s_id << std::endl;
+
 // SI LE SERVER_NAME EST == ON BREAK SINON ON CONTINUE JUSQU'AU PREMIER SERVER /* PROBLEM ? */
 			for (size_t j = 0; i < _si[i - 1].server_name.size(); ++j)
 				if ( _si[i - 1].server_name[j] == host )
@@ -289,7 +295,7 @@ void	header_handler::verify_file_openess(ifstream& fs)
 		if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
 			fs.open("files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
 		else
-			fs.open(_si[_s_id].error_page,  std::ifstream::binary | std::ifstream::ate);
+			fs.open(_si[_s_id].error_page.c_str(),  std::ifstream::binary | std::ifstream::ate);
 		if (!fs.is_open())
 			throw (std::runtime_error( "Unkown path (header_writer) : error_4xx.html"));
 		if (_htx["Content-Type"].empty())
@@ -308,25 +314,31 @@ void	header_handler::resolve_path(string& path)
 		_hrx["A"][1].pop_back();
 
 	size_t pos;
+	size_t len = 0;
 	string url, uri;
 	if (_hrx["A"][1] == "/") {
 		cout << "ds if\n";
-		path =  "." + _si[_s_id].location[0].location + "/" + _si[_s_id].location[0].root + "/" + _si[_s_id].location[0].index;
+		path =  "." + _si[_s_id].location.begin()->first + "/" + _si[_s_id].location.begin()->second.root + "/" + _si[_s_id].location.begin()->second.index;
 	}
 	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
+		//NEED ONE MORE CHECK for case where string is a location
 		cout << "ds else if\n";
-		path = "." + _si[_s_id].location[0].location + _si[_s_id].location[0].root + _hrx["A"][1];
+		cout << _s_id << std::endl;
+	//	cout << _si[0].location.begin()->second.location.begin()->first << std::endl;	
+	//	cout << "_si[_s_id].location[0].location" << _si[_s_id].location[0].location << endl;
+			path = "." + _si[_s_id].location.begin()->first + _si[_s_id].location.begin()->second.root + _hrx["A"][1];
 	}
 	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
 		cout << "ds else\n";
 		url = _hrx["A"][1].substr(0, pos);
 		uri = _hrx["A"][1].substr(pos);
 		cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
-		for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
-			if ( _si[_s_id].location[i].location.find(url) == 0 && _si[_s_id].location[i].location.size() > len ) {
-				len = _si[_s_id].location[i].location.size();
-				path = "." + _si[_s_id].location[0].location + (_si[_s_id].location[i].root.back() == '/' ? _si[_s_id].location[i].root : _si[_s_id].location[i].root + "/");
-				path += uri;//(_si[_s_id].location[i].location.back() == '/' ? _si[_s_id].location[i].location : _si[_s_id].location[i].location + "/");
+		for (std::map<std::string, locati_info>::iterator it = _si[_s_id].location.begin(); it != _si[_s_id].location.end(); it++)
+			if ( it->second.location.find(url) != _si[_s_id].location.end() && it->second.location.size() > len ) {
+				len = it->second.location.size();
+				path = "." + _si[_s_id].location[0].location.begin()->first +
+				(it->second.root.back() == '/' ? it->second.root : it->second.root + "/");
+				path += uri;//(it->second.location.back() == '/' ? it->second.location : it->second.location + "/");
 				cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
 				// if (len == )
 					break ;
@@ -345,8 +357,8 @@ void	header_handler::resolve_path(string& path)
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
 	if (path.empty()) {
-		path = "." + (_si[_s_id].location[0].location.back() == '/') ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-		path += _si[_s_id].location[0].root;
+		path = "." + (_si[_s_id].location.begin()->second.root.back() == '/' ? _si[_s_id].location.begin()->second.root : _si[_s_id].location.begin()->second.root + "/");
+		path += _si[_s_id].location.begin()->second.root;
 		// path += url; // c'est ici que "/test" se mets ds le path
 	}
 	path += uri;
@@ -369,13 +381,15 @@ void	header_handler::resolve_path(string& path)
 		default:
 			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
 			if (lstat(path.c_str(), &sb) == -1)
+			{
 				uri = "error_4xx.html";
-			path = _si[_s_id].error_page.empty() ? "./files/error_pages/" + uri : _si[_s_id].error_page + uri;
+				path = (_si[_s_id].error_page.empty() ? ("./files/error_pages/" + uri) : (_si[_s_id].error_page + uri));
+			}
 			break;
 	}
 
 #ifdef _debug_
-	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
+	cout << std::endl << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
 #endif
 }
 
