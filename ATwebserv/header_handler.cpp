@@ -346,11 +346,8 @@ void header_handler::set_server_id(void)
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
 	for (size_t i = _si.size(); i ; --i) {
-<<<<<<< HEAD
-=======
 		cout << "_si[i - 1].host : " << _si[i - 1].host << endl;
 		cout << "_si: " << i - 1 << std::endl;
->>>>>>> 33b379e707cba363c20b7858f5594083f1f24312
 		if (_si[i - 1].host == "localhost")
 			_si[i - 1].host = "127.0.0.1";
 		if ( _si[i - 1].host == host && _si[i - 1].port == port ) {
