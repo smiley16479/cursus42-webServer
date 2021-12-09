@@ -491,6 +491,8 @@ int header_handler::location_lookup(string& path, string url, string uri, std::m
 		if (loc.find(url) != loc.end())
 		{
 			path = loc[url].root;
+			if (path.back() != '/')
+				path += "/";
 			path += uri;
 		}
 	}
