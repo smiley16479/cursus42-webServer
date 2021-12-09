@@ -290,7 +290,7 @@ void	header_handler::verify_file_openess(ifstream& fs)
 		if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
 			fs.open("files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
 		else
-			fs.open(_si[_s_id].error_page,  std::ifstream::binary | std::ifstream::ate);
+			fs.open(_si[_s_id].error_page + "error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
 		if (!fs.is_open())
 			throw (std::runtime_error( "Unkown path (header_writer) : error_4xx.html"));
 		if (_htx["Content-Type"].empty())
@@ -309,7 +309,7 @@ void	header_handler::resolve_path(string& path)
 		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0') && _hrx["A"][1].size() > 1)
 			_hrx["A"][1].erase(i, 1);
 
-		location_lookup(path);
+	int loc_id = location_lookup(path);
 
 	cout << BLUE ", path : " RESET << path << endl;
 
@@ -317,7 +317,7 @@ void	header_handler::resolve_path(string& path)
 	while (path[0] == '/')
 		path.erase(path.begin());
 
-	int file_tp = file_type(path);
+	int file_tp = file_type(path, loc_id);
 
 #ifdef _debug_
 	cout << BLUE "resolved_path : " RESET << path << endl;
@@ -326,7 +326,7 @@ void	header_handler::resolve_path(string& path)
 
 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-void header_handler::location_lookup(string& path)
+int header_handler::location_lookup(string& path)
 {
 // URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
 	string url(_hrx["A"][1]);
@@ -339,12 +339,12 @@ void header_handler::location_lookup(string& path)
 				path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
 				path += _hrx["A"][1].substr(url.size());
 // SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
-				if (_si[_s_id].location[i - 1].location.size() == url.size()) {
+				if (_si[_s_id].location[i - 1].location.size() == _hrx["A"][1].size()) {
 					cout << GREEN "DS LOCATION_LOOKUP IF" RESET << endl;
 					path += _si[_s_id].location[i - 1].index;
 				}
 cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) URL : " RESET + url + " location : " + _si[_s_id].location[i - 1].location << endl; 
-				return ;
+				return i - 1;
 			}
 		}
 		cout << MAGENTA "url : " RESET "[" << url << "]" << endl;
@@ -358,9 +358,10 @@ cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) 
 		path += _hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1];
 		cout << BLUE "EMPTY path : " RESET << path << endl;
 	}
+	return 0;
 }
 
-int header_handler::file_type(string &path)
+int header_handler::file_type(string &path, int loc_id)
 {
 	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
 	if (lstat(path.c_str(), &sb) == -1) {
@@ -370,7 +371,21 @@ int header_handler::file_type(string &path)
 	switch (sb.st_mode & S_IFMT) {
 		// case S_IFBLK:  printf("block device\n");            break;
 		// case S_IFCHR:  printf("character device\n");        break;
-		case S_IFDIR:  printf("directory\n");	path = "./files/if_folder.html";		break;
+		case S_IFDIR:  printf("directory\n");
+			if (_si[_s_id].location[loc_id].autoindex == "on") {
+// PROBLEM
+
+				DIR *dpdf;
+				struct dirent *epdf;
+
+				dpdf = opendir("./");
+				if (dpdf != NULL)
+				   while ((epdf = readdir(dpdf)))
+				      std::cout << epdf->d_name << std::endl;
+				closedir(dpdf);
+				return 1;
+			}
+			path = "./files/if_folder.html";		break;
 		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
 		// case S_IFLNK:  printf("symlink\n");                 break;
 		case S_IFREG:  printf("regular file\n");            break;

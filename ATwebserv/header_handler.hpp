@@ -13,6 +13,8 @@
 #include <vector>
 #include "struct_webserv.hpp"
 #include "color.hpp"
+#include <dirent.h> // readdir et struct DIR etc.. 
+
 using namespace std;
 
 class header_handler
@@ -95,8 +97,8 @@ private:
 	void handle_get_rqst(void);
 		void	verify_file_openess(ifstream& fs);
 			void 	resolve_path(string &);
-				void	location_lookup(string &path);
-				int	file_type(string &path);
+				int	location_lookup(string &path);
+				int	file_type(string &path, int);
 
 	void handle_post_rqst(void);
 
