@@ -427,21 +427,20 @@ void	header_handler::resolve_path(string& path)
 
 	size_t pos;
 	string url, uri;
+
 	if (_hrx["A"][1] == "/") {
 		cout << "ds if\n";
-		path =  "." + _si[_s_id].location.begin()->first + "/" + _si[_s_id].location.begin()->second.root + "/" + _si[_s_id].location.begin()->second.index;
-	}
-	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
-		//NEED ONE MORE CHECK for case where string is a location
-		cout << "ds else if\n";
-		cout << _s_id << std::endl;
-	//	cout << _si[0].location.begin()->second.location.begin()->first << std::endl;	
-	//	cout << "_si[_s_id].location[0].location" << _si[_s_id].location[0].location << endl;
-			path = "." + _si[_s_id].location.begin()->first + _si[_s_id].location.begin()->second.root + _hrx["A"][1];
+		path =  "./" + _si[_s_id].location["/"].root + "/" + _si[_s_id].location["/"].index;
 	}
 	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
 		cout << "ds else\n";
-		location_lookup(path, pos);
+		pos = _hrx["A"][1].find("/");
+		if (pos != std::string::npos)
+		{
+			url = _hrx["A"][1].substr(0, pos + 1);
+			uri = _hrx["A"][1].substr(pos + 1);
+			location_lookup(path, url, uri, _si[_s_id].location);
+		}
 	}
 	// SI ON EST DIRECTEMENT SUR L'URI
 /* 	else if (pos == 0) {
@@ -456,8 +455,7 @@ void	header_handler::resolve_path(string& path)
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
 	if (path.empty()) {
-		path = "." + (_si[_s_id].location.begin()->second.root.back() == '/' ? _si[_s_id].location.begin()->second.root : _si[_s_id].location.begin()->second.root + "/");
-		path += _si[_s_id].location.begin()->second.root;
+		path = "./" + (_si[_s_id].location["/"].root.back() == '/' ? _si[_s_id].location["/"].root : _si[_s_id].location["/"].root + "/");
 		// path += url; // c'est ici que "/test" se mets ds le path
 	}
 	path += uri;
@@ -473,25 +471,30 @@ void	header_handler::resolve_path(string& path)
 
 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-int header_handler::location_lookup(string& path, size_t pos)
+int header_handler::location_lookup(string& path, string url, string uri, std::map<std::string, locati_info>& loc)
 {
-	string url, uri;
-	size_t len = 0;
+	size_t	pos;
 
-	url = _hrx["A"][1].substr(0, pos);
-	uri = _hrx["A"][1].substr(pos);
 	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
-	for (std::map<std::string, locati_info>::iterator it = _si[_s_id].location.begin(); it != _si[_s_id].location.end(); it++)
-		if ( it->second.location.find(url) != _si[_s_id].location.end() && it->second.location.size() > len ) {
-			len = it->second.location.size();
-			path = "." + _si[_s_id].location[0].location.begin()->first +
-			(it->second.root.back() == '/' ? it->second.root : it->second.root + "/");
-			path += uri;//(it->second.location.back() == '/' ? it->second.location : it->second.location + "/");
-			cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
-			// if (len == )
-				break ;
+	if (loc.find(url) != loc.end())
+	{
+		return (location_lookup(path, url, uri, loc[url].location));
+	}
+	else if ((pos = uri.find("/")) != std::string::npos)
+	{
+		url = uri.substr(0, pos + 1);
+		uri = uri.substr(pos + 1);
+		return (location_lookup(path, url, uri, loc));
+	}
+	else
+	{
+		if (path.empty())
+		{
+			if (loc.find(url) != loc.end())
+				path = loc[url].root;
 		}
-	return (0);
+		return (0);
+	}
 }
 
 int header_handler::file_type(string &path, string &uri)

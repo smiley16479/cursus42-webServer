@@ -227,11 +227,11 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		tmp += var.substr(pos + 1);
 	env.push_back(tmp);
 	tmp = "PATH_TRANSLATED=";
-	tmp += _s.location[0].root;
+	tmp += _s.location.begin()->second.root;
 	tmp += (buf[0] == '/' ? buf.substr(1) : buf);
 	env.push_back(tmp);
 	tmp = "SCRIPT_NAME=";
-	tmp += _s.location[0].root;
+	tmp += _s.location.begin()->second.root;
 	tmp += (buf[0] == '/' ? buf.substr(1) : buf);
 //	tmp += buf.substr(buf.find_last_of("/") + 1);
 	env.push_back(tmp);

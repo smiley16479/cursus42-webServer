@@ -197,7 +197,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
-			check_loca_part(ifs, si);  // ?
+			check_loca_part(ifs, si.location);  // ?
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
@@ -214,13 +214,13 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		throw (configException(_si, )); */
 }
 
-void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
+void config_checker::check_loca_part(std::ifstream& ifs, std::map<std::string, locati_info>& loc){
 
 	string	name;
 	string	word;
 	ifs >> name;
-	si.location.insert(std::make_pair(name, locati_info()));
-	std::cout << RED "location : " RESET << si.location.find(name)->first << std::endl;
+	loc.insert(std::make_pair(name, locati_info()));
+	std::cout << RED "location : " RESET << loc.find(name)->first << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException(_si, "bad formating (location_part1) around : " + word));
@@ -228,36 +228,40 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 	
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
 		if (word == "allowed_method")
-			extract_to_vector(ifs, si.location[name].allowed_method);
+			extract_to_vector(ifs, loc[name].allowed_method);
 		else if (word == "auth_basic") {
-			extract_to_string(ifs, si.location[name].auth_basic);
-			std::cout << GREEN "auth_basic : " RESET << si.location[name].auth_basic << std::endl;
+			extract_to_string(ifs, loc[name].auth_basic);
+			std::cout << GREEN "auth_basic : " RESET << loc[name].auth_basic << std::endl;
 		}
 		else if (word == "auth_user_file") {
-			extract_to_string(ifs, si.location[name].auth_user_file);
-			std::cout << GREEN "auth_user_file : " RESET << si.location[name].auth_user_file << std::endl;
+			extract_to_string(ifs, loc[name].auth_user_file);
+			std::cout << GREEN "auth_user_file : " RESET << loc[name].auth_user_file << std::endl;
 		}
 		else if (word == "autoindex") {
-			extract_to_string(ifs, si.location[name].autoindex);
-			std::cout << GREEN "autoindex : " RESET << si.location[name].autoindex << std::endl;
+			extract_to_string(ifs, loc[name].autoindex);
+			std::cout << GREEN "autoindex : " RESET << loc[name].autoindex << std::endl;
 		}
 		else if (word == "index") {
-			extract_to_string(ifs, si.location[name].index);
-			std::cout << GREEN "index : " RESET << si.location[name].index << std::endl;
+			extract_to_string(ifs, loc[name].index);
+			std::cout << GREEN "index : " RESET << loc[name].index << std::endl;
 		}
 		else if (word == "max_file_size") {
-			extract_to_string(ifs, si.location[name].max_file_size);
-			std::cout << GREEN "max_file_size : " RESET << si.location[name].max_file_size << std::endl;
+			extract_to_string(ifs, loc[name].max_file_size);
+			std::cout << GREEN "max_file_size : " RESET << loc[name].max_file_size << std::endl;
 		}
 		else if (word == "return_directive") {
-			extract_to_string(ifs, si.location[name].return_directive);
-			std::cout << GREEN "return_directive : " RESET << si.location[name].return_directive << std::endl;
+			extract_to_string(ifs, loc[name].return_directive);
+			std::cout << GREEN "return_directive : " RESET << loc[name].return_directive << std::endl;
 		}
 		else if (word == "return") 
-			extract_to_vector(ifs, si.location[name].retour);
+			extract_to_vector(ifs, loc[name].retour);
 		else if (word == "root") {
-			extract_to_string(ifs, si.location[name].root);
-			std::cout << GREEN "root : " RESET << si.location[name].root << std::endl;
+			extract_to_string(ifs, loc[name].root);
+			std::cout << GREEN "root : " RESET << loc[name].root << std::endl;
+		}
+		else if (word == "location")
+		{
+			check_loca_part(ifs, loc[name].location);
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
