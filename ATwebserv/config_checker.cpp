@@ -197,7 +197,9 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
-			check_loca_part(ifs, si.location);  // ?
+			string	name;
+			ifs >> name;
+			check_loca_part(ifs, name, si.location);  // ?
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
@@ -214,12 +216,39 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		throw (configException(_si, )); */
 }
 
-void config_checker::check_loca_part(std::ifstream& ifs, std::map<std::string, locati_info>& loc){
-
-	string	name;
+void config_checker::check_loca_part(std::ifstream& ifs, std::string& path, std::map<std::string, locati_info>& loc){
+	size_t	pos;
 	string	word;
-	ifs >> name;
-	loc.insert(std::make_pair(name, locati_info()));
+	string	name, rest;
+
+	std::cout << "path= " << path << std::endl;
+	if (loc.find(path) != loc.end())
+		return ;
+	else
+	{
+		pos = path.find("/");
+		if (pos != std::string::npos)
+		{
+			name = path.substr(0, pos + 1);
+			rest = path.substr(pos + 1);
+			if (name.back() != '/')
+				name += "/";
+			if (loc.find(name) != loc.end())
+			{
+				check_loca_part(ifs, rest, loc[name].location);
+				return ;
+			}
+			else
+				loc.insert(std::make_pair(name, locati_info()));
+		}
+		else
+		{
+			name = path;
+			if (name.back() != '/')
+				name += "/";
+			loc.insert(std::make_pair(name, locati_info()));
+		}
+	}
 	std::cout << RED "location : " RESET << loc.find(name)->first << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
@@ -261,7 +290,8 @@ void config_checker::check_loca_part(std::ifstream& ifs, std::map<std::string, l
 		}
 		else if (word == "location")
 		{
-			check_loca_part(ifs, loc[name].location);
+			ifs >> word;
+			check_loca_part(ifs, word, loc[name].location);
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;

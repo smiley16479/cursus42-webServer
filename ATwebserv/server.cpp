@@ -124,6 +124,17 @@ int server::get_time_out(int id_serv) {
 	return atoi(_s[id_serv].time_out.c_str());
 };
 
+void	display_loc(std::pair<const std::string, locati_info>& loc)
+{
+	cout << "location : " << loc.first << std::endl;
+	if (!loc.second.location.empty())
+	{
+		for (std::map<std::string, locati_info>::iterator it = loc.second.location.begin(); it != loc.second.location.end(); it++)
+		display_loc(*it);
+	}
+	cout << endl;
+}
+
 /* 
 * AFFICHE TOUTES LES INFORMATIONS CONTENUES DS LES STRUCTURES GÉNÉRÉES PAR LE FICHIER DE .CONF
 */
@@ -143,7 +154,7 @@ void server::display_server(void)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (std::map<std::string, locati_info>::iterator it = _s[i].location.begin(); it != _s[i].location.end(); it++) {
 			cout << GREEN "LOCATION : " RESET << endl;
-			cout << "location : " << it->first << endl;
+			display_loc(*it);
 			cout << "auth_basic : " << it->second.auth_basic << endl;
 			cout << "auth_user_file : " << it->second.auth_user_file << endl;
 			cout << "autoindex : " << it->second.autoindex << endl;
@@ -161,10 +172,3 @@ void server::display_server(void)
 		}
 	}
 }
-
-
-
-
-
-
-

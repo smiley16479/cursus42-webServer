@@ -457,8 +457,8 @@ void	header_handler::resolve_path(string& path)
 	if (path.empty()) {
 		path = "./" + (_si[_s_id].location["/"].root.back() == '/' ? _si[_s_id].location["/"].root : _si[_s_id].location["/"].root + "/");
 		// path += url; // c'est ici que "/test" se mets ds le path
+		path += uri;
 	}
-	path += uri;
 
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
@@ -478,23 +478,23 @@ int header_handler::location_lookup(string& path, string url, string uri, std::m
 	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
 	if (loc.find(url) != loc.end())
 	{
-		return (location_lookup(path, url, uri, loc[url].location));
+		location_lookup(path, url, uri, loc[url].location);
 	}
 	else if ((pos = uri.find("/")) != std::string::npos)
 	{
 		url = uri.substr(0, pos + 1);
 		uri = uri.substr(pos + 1);
-		return (location_lookup(path, url, uri, loc));
+		location_lookup(path, url, uri, loc);
 	}
-	else
+	if (path.empty())
 	{
-		if (path.empty())
+		if (loc.find(url) != loc.end())
 		{
-			if (loc.find(url) != loc.end())
-				path = loc[url].root;
+			path = loc[url].root;
+			path += uri;
 		}
-		return (0);
 	}
+	return (0);
 }
 
 int header_handler::file_type(string &path, string &uri)

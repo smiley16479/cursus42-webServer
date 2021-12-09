@@ -32,5 +32,3 @@ public:
 
 	bool is_post_rqst_fulfilled(int client_fd);
 };
-
-
