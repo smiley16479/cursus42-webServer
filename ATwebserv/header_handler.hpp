@@ -99,6 +99,7 @@ private:
 				int	file_type(string &path, string &uri);
 
 	void handle_post_rqst(void);
+	void	handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */
 	

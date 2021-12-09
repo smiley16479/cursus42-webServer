@@ -62,6 +62,15 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	clientaddr.sin_addr;
+	//SET NON BLOCK
+	int opt = 1;
+	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		perror("fcntl F_SETFL, FNDELAY | FASYNC ");
+		exit(EXIT_FAILURE);
+	}
+	//END
 	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {

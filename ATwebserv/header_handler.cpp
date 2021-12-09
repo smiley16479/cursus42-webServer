@@ -102,98 +102,7 @@ void header_handler::writer(void) {
 
 	if (is_cgi(_hrx["A"]))
 	{
-		size_t	pos;
-		int		bfd[2];
-		//HERE!
-		if (_s_id == -1)
-		{
-			std::cout << "Invalid server id: " << _s_id << std::endl;
-			return ;
-		}
-		else
-		{
-			bfd[0] = dup(STDIN_FILENO);
-			bfd[1] = dup(STDOUT_FILENO);
-			go_cgi(_hrx, _si[_s_id], STDIN_FILENO);
-			dup2(bfd[0], STDIN_FILENO);
-			dup2(bfd[1], STDOUT_FILENO);
-			close(bfd[0]);
-			close(bfd[1]);
-	//		dup2(STDOUT_FILENO, bfd[1]);
-	//		dup2(STDIN_FILENO, bfd[0]);
-		}
-		_response.clear();
-		_response += (char*)"HTTP/1.1 200 OK\r\n";
-		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
-		{
-			_response += _hrx["A"][i];
-		}
-		_response += "Status: 200 Success\r\n";
-		_response += "Pragma: no-cache\r\n";
-//		_response += "Location:\r\n";
-		size_t k = 0;
-		if (!_hrx["BODY"].empty())
-		{
-			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
-			{
-//				std::cout << _hrx["BODY"][i] << std::endl;
-				if (!_hrx["BODY"][i].empty())
-					k += _hrx["BODY"][i].size() + 1;
-			}
-//			_response += "Connection: close\r\n";
-		}
-		_response += "Content-Lenght: ";
-		_response += std::to_string(k);
-		_response += "\r\n";
-		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
-		{
-			if (it->first == "Content-Type:")
-			{
-				_response += it->first;
-				_response += " ";
-				for (size_t i = 0, j = it->second.size(); i < j; ++i)
-					_response += it->second[i];
-		//			_response += "\r\n";
-			}
-		}
-		_response += "Content-Language: en\r\n";
-		if (!_htx["Date"].empty())
-		{
-			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
-			{
-				_response += _htx["Date"][i];
-			}
-			_response += "Last-Modified:";
-			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
-			{
-				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
-					_response += _htx["Date"][i].substr(pos + 5);
-				else
-					_response += _htx["Date"][i];
-			}
-		}
-		if (!_htx["Server"].empty())
-		{
-			for (size_t i = 0, j = _htx["Server"].size(); i < j; i++)
-			{
-				_response += _htx["Server"][i];
-			}
-		}
-		_response += "\r\n";
-		if (!_hrx["BODY"].empty())
-		{
-			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; ++i)
-			{
-			//	std::cout << _hrx["BODY"][i];
-				if (!_hrx["BODY"][i].empty() && _hrx["BODY"][i][0] != '\r')
-				{
-					_response += _hrx["BODY"][i];
-					_response += "\r\n";
-				}
-			}
-		}
-//		_response += "\r\n";
-		cout << RED "Response :\n" RESET << _response << endl;
+		handle_cgi();
 	}
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
@@ -392,6 +301,107 @@ void header_handler::handle_post_rqst(void)
 	// sinon on execute les cgi ?
 }
 
+void	header_handler::handle_cgi(void)
+{
+		size_t	pos;
+		int		bfd[2];
+		string	path;
+
+		//HERE!
+		resolve_path(path);
+		_hrx.insert(std::make_pair("query", std::vector<std::string>()));
+		_hrx["query"].push_back(path);
+		if (_s_id == -1)
+		{
+			std::cout << "Invalid server id: " << _s_id << std::endl;
+			return ;
+		}
+		else
+		{
+			bfd[0] = dup(STDIN_FILENO);
+			bfd[1] = dup(STDOUT_FILENO);
+			go_cgi(_hrx, _si[_s_id], STDIN_FILENO);
+			dup2(bfd[0], STDIN_FILENO);
+			dup2(bfd[1], STDOUT_FILENO);
+			close(bfd[0]);
+			close(bfd[1]);
+	//		dup2(STDOUT_FILENO, bfd[1]);
+	//		dup2(STDIN_FILENO, bfd[0]);
+		}
+		_response.clear();
+		_response += (char*)"HTTP/1.1 200 OK\r\n";
+		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
+		{
+			_response += _hrx["A"][i];
+		}
+		_response += "Status: 200 Success\r\n";
+		_response += "Pragma: no-cache\r\n";
+//		_response += "Location:\r\n";
+		size_t k = 0;
+		if (!_hrx["BODY"].empty())
+		{
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			{
+//				std::cout << _hrx["BODY"][i] << std::endl;
+				if (!_hrx["BODY"][i].empty())
+					k += _hrx["BODY"][i].size() + 1;
+			}
+//			_response += "Connection: close\r\n";
+		}
+		_response += "Content-Lenght: ";
+		_response += std::to_string(k - 1);
+		_response += "\r\n";
+		for (std::map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
+		{
+			if (it->first == "Content-Type:")
+			{
+				_response += it->first;
+				_response += " ";
+				for (size_t i = 0, j = it->second.size(); i < j; ++i)
+					_response += it->second[i];
+		//			_response += "\r\n";
+			}
+		}
+		_response += "Content-Language: en\r\n";
+		if (!_htx["Date"].empty())
+		{
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				_response += _htx["Date"][i];
+			}
+			_response += "Last-Modified:";
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
+					_response += _htx["Date"][i].substr(pos + 5);
+				else
+					_response += _htx["Date"][i];
+			}
+		}
+		if (!_htx["Server"].empty())
+		{
+			for (size_t i = 0, j = _htx["Server"].size(); i < j; i++)
+			{
+				_response += _htx["Server"][i];
+			}
+		}
+		_response += "\r\n";
+		if (!_hrx["BODY"].empty())
+		{
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; ++i)
+			{
+			//	std::cout << _hrx["BODY"][i];
+				if (!_hrx["BODY"][i].empty() && _hrx["BODY"][i][0] != '\r')
+				{
+					_response += _hrx["BODY"][i];
+					_response += "\r\n";
+				}
+			}
+		}
+//		_response += "\r\n";
+		cout << RED "Response :\n" RESET << _response << endl;
+}
+
 // vérification de la bonne ouverture du fichier (maj de la statut-line si besoin)
 // Si erreur lors de l'ouverture du fichier renvoie fichier ouvert sur les pages d'erreurs
 // Le curseur du fichier pointe sur sa fin pour que fs.tellg() donne sa taille à Content-Length
@@ -422,8 +432,8 @@ void	header_handler::verify_file_openess(ifstream& fs)
 void	header_handler::resolve_path(string& path)
 {
 // REMOVE TRAILING '/' AT URL'S END
-	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
-		_hrx["A"][1].pop_back();
+//	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
+//		_hrx["A"][1].pop_back();
 
 	size_t pos;
 	string url, uri;
@@ -462,6 +472,9 @@ void	header_handler::resolve_path(string& path)
 
 	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
 
+	pos = path.find(".php");
+	if (pos != std::string::npos)
+		path = path.substr(0, pos + 4);
 	int file_tp = file_type(path, uri);
 
 #ifdef _debug_

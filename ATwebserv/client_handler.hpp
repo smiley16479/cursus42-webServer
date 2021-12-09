@@ -6,6 +6,8 @@
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
 
+#include <fcntl.h>
+
 #include <string>
 
 using namespace std;

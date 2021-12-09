@@ -37,7 +37,7 @@ void server::initialize(void) {
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+		_epoll._event.events = EPOLLIN | EPOLLET;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
@@ -94,8 +94,8 @@ void server::run(void) {
 						header.writer();
 						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
 
-						client.remove(_epoll, i);
-	//					client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
+	//					client.remove(_epoll, i);
+						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}
@@ -124,15 +124,17 @@ int server::get_time_out(int id_serv) {
 	return atoi(_s[id_serv].time_out.c_str());
 };
 
-void	display_loc(std::pair<const std::string, locati_info>& loc)
+void	display_loc(std::pair<const std::string, locati_info>& loc, int depth)
 {
 	cout << "location : " << loc.first << std::endl;
 	if (!loc.second.location.empty())
 	{
+		for (int i = 0; i < depth; i++)
+			std::cout << "\t";
 		for (std::map<std::string, locati_info>::iterator it = loc.second.location.begin(); it != loc.second.location.end(); it++)
-		display_loc(*it);
+			display_loc(*it, depth + 1);
+		cout << endl;
 	}
-	cout << endl;
 }
 
 /* 
@@ -154,7 +156,7 @@ void server::display_server(void)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (std::map<std::string, locati_info>::iterator it = _s[i].location.begin(); it != _s[i].location.end(); it++) {
 			cout << GREEN "LOCATION : " RESET << endl;
-			display_loc(*it);
+			display_loc(*it, 0);
 			cout << "auth_basic : " << it->second.auth_basic << endl;
 			cout << "auth_user_file : " << it->second.auth_user_file << endl;
 			cout << "autoindex : " << it->second.autoindex << endl;
