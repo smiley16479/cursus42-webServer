@@ -284,10 +284,6 @@ void	header_handler::verify_file_openess(ifstream& fs)
 	string path;
 	resolve_path(path);
 
-// AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
-	while (path[0] == '/')
-		path.erase(path.begin());
-
 	fs.open(path.c_str(), std::ifstream::binary | std::ifstream::ate);
 	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
 		gen_startLine( _status.find("404") );
@@ -310,65 +306,44 @@ void	header_handler::resolve_path(string& path)
 {
 // REMOVE MULTIPLE '/' AND THE '/' AT URL'S END
 	for (size_t i = 0; i < _hrx["A"][1].size(); ++i)
-		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0'))
+		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0') && _hrx["A"][1].size() > 1)
 			_hrx["A"][1].erase(i, 1);
 
+		location_lookup(path);
 
-	// path.append( _hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1] );
-// SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
+	cout << BLUE ", path : " RESET << path << endl;
 
-	size_t pos;
-	string url, uri;
-	if (_hrx["A"][1] == "/") {
-		cout << "ds if\n";
-		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
-		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-		path += _si[_s_id].location[0].index;
-	}
-	else if ((pos = _hrx["A"][1].find("/", 1, 1)) == string::npos) {
-		cout << "ds else if\n";
-		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
-// ON ENLEVE LE '/' FINAL CAR L'URL (_hrx["A"][1]) EN A TJRS UN AU DÉBUT
-		if (_si[_s_id].location[0].location.back() == '/')
-			_si[_s_id].location[0].location.pop_back();
-		path += _si[_s_id].location[0].location;
-		path += _hrx["A"][1];
-	}
-	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
-		cout << "ds else\n";
-		location_lookup(path, pos);
-	}
+// AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
+	while (path[0] == '/')
+		path.erase(path.begin());
 
-	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
-
-	if (path.empty()) {
-		path = _si[_s_id].location[0].root;
-		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-		// path += url; // c'est ici que "/test" se mets ds le path
-	}
-	path += uri;
-
-	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
-
-	int file_tp = file_type(path, uri);
+	int file_tp = file_type(path);
 
 #ifdef _debug_
-	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
+	cout << BLUE "resolved_path : " RESET << path << endl;
 #endif
 }
 
 
-// si l'url a plusieurs niveau de dossiers : choisir le plus adapté test
-void header_handler::location_lookup(string& path, size_t pos)
+// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
+void header_handler::location_lookup(string& path)
 {
 // URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
-	string url(_hrx["A"][1]), uri(url.substr(url.find_last_of("/")));
+	string url(_hrx["A"][1]);
+	cout << GREEN "DS LOCATION_LOOKUP URL : " RESET << url + " [" + _hrx["A"][1] + "]" << endl;
+	string uri(url.substr(url.find_last_of("/")));
 	for (int pos_cut; url.size();) {
 		for (size_t i = _si[_s_id].location.size(); i ; --i) {
 			if (url == _si[_s_id].location[i - 1].location) {
 				path = _si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/";
-				path += _si[_s_id].location[i - 1].location;
+				path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
 				path += _hrx["A"][1].substr(url.size());
+// SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
+				if (_si[_s_id].location[i - 1].location.size() == url.size()) {
+					cout << GREEN "DS LOCATION_LOOKUP IF" RESET << endl;
+					path += _si[_s_id].location[i - 1].index;
+				}
+cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) URL : " RESET + url + " location : " + _si[_s_id].location[i - 1].location << endl; 
 				return ;
 			}
 		}
@@ -380,27 +355,12 @@ void header_handler::location_lookup(string& path, size_t pos)
 	if (url.empty()) {
 		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
 		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-		path += _hrx["A"][1];
+		path += _hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1];
 		cout << BLUE "EMPTY path : " RESET << path << endl;
 	}
-	cout << BLUE "url : " RESET  "[" << url << "]" BLUE " uri : " RESET << uri << endl;
-
-
-/* 	url = _hrx["A"][1].substr(0, pos);
-	uri = _hrx["A"][1].substr(pos);
-	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
-	for ( size_t i = 0, len = 0; i < _si[_s_id].location.size() ; ++i )
-		if ( _si[_s_id].location[i].location.find(url) == 0 && _si[_s_id].location[i].location.size() > len ) {
-			len = _si[_s_id].location[i].location.size();
-			path = "." + _si[_s_id].location[0].location + (_si[_s_id].location[i].root.back() == '/' ? _si[_s_id].location[i].root : _si[_s_id].location[i].root + "/");
-			path += uri;//(_si[_s_id].location[i].location.back() == '/' ? _si[_s_id].location[i].location : _si[_s_id].location[i].location + "/");
-			cout << BLUE "should never come out unless url and location share path : " RESET << path << " (== location + uri)" << endl;
-			// if (len == )
-				break ;
-		} */
 }
 
-int header_handler::file_type(string &path, string &uri)
+int header_handler::file_type(string &path)
 {
 	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
 	if (lstat(path.c_str(), &sb) == -1) {
@@ -416,11 +376,9 @@ int header_handler::file_type(string &path, string &uri)
 		case S_IFREG:  printf("regular file\n");            break;
 		// case S_IFSOCK: printf("socket\n");                  break;
 		default:
-			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
-			if (lstat(path.c_str(), &sb) == -1)
-				uri = "error_4xx.html";
-			path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + uri;
-			printf("unknown? path : %s, uri : %s\n", path.c_str(), uri.c_str());
+			printf("unknown? path : %s\n", path.c_str());
+			path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+			printf("unknown? path : %s\n", path.c_str());
 			break;
 	}
 	return 0;
