@@ -1,6 +1,6 @@
 #include "server.hpp"
 #include "config_checker.hpp"
-#include "header_handler.hpp"
+#include "request_handler.hpp"
 #include "client_handler.hpp"
 #include <stdexcept>
 
@@ -45,7 +45,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	header_handler header(_s);
+	request_handler header(_s);
 	client_handler client;
 	int serv_id;
 

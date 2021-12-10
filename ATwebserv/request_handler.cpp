@@ -9,9 +9,9 @@
 		http://127.0.0.1:8080/ <- c'est ca qui fait bugger
 */
 
-#include "header_handler.hpp"
+#include "request_handler.hpp"
 
-header_handler::header_handler(std::vector<server_info>& server_info) : _si(server_info)
+request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
 {// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
 /* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
 												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
@@ -46,13 +46,13 @@ header_handler::header_handler(std::vector<server_info>& server_info) : _si(serv
 #endif
 }
 
-header_handler::~header_handler()
+request_handler::~request_handler()
 {
 }
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void header_handler::reader(const char *str)
+void request_handler::reader(const char *str)
 {
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
@@ -94,7 +94,7 @@ void header_handler::reader(const char *str)
 	// this->display();
 }
 
-void header_handler::writer(void) {
+void request_handler::writer(void) {
 
 // PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
 	gen_startLine( _status.find("200") );
@@ -129,7 +129,7 @@ void header_handler::writer(void) {
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
-void	header_handler::gen_startLine(std::map<string, string>::iterator status)
+void	request_handler::gen_startLine(std::map<string, string>::iterator status)
 {
 	if (_htx["A"].size() != 3)
 		_htx["A"].resize(3, string());
@@ -139,24 +139,24 @@ void	header_handler::gen_startLine(std::map<string, string>::iterator status)
 	_htx["A"][2] += "\r\n";
 }
 
-void	header_handler::gen_date()
+void	request_handler::gen_date()
 {
-    std::string	date = "Date: ";
-    time_t		timer;
-    struct tm	*info;
-    char		timestamp[36];
+	std::string	date = "Date: ";
+	time_t		timer;
+	struct tm	*info;
+	char		timestamp[36];
 
-    timer = time(NULL);
-    info = localtime(&timer);
-    strftime(timestamp, 36, "%a, %d %h %Y %H:%M:%S GMT", info);
-    date.append(timestamp);
-    date.append("\r\n");
+	timer = time(NULL);
+	info = localtime(&timer);
+	strftime(timestamp, 36, "%a, %d %h %Y %H:%M:%S GMT", info);
+	date.append(timestamp);
+	date.append("\r\n");
 
-    // _response.append(date);
+	// _response.append(date);
 	_htx["Date"].push_back(date);
 }
 
-void	header_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS LA REQUETE TU SEGV PAR EX POUR UN POST DS GD TAILLE*/
+void	request_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS LA REQUETE TU SEGV PAR EX POUR UN POST DS GD TAILLE*/
 {
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
@@ -166,10 +166,11 @@ void	header_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS L
 
 }
 
-void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
+void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
 {
 // Capture file.ext(ension)
-	string ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
+	if (ext.empty())
+		ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
 #endif
@@ -182,80 +183,64 @@ void	header_handler::gen_CType() /* PROBLEM : mieux vaudrait extraire ça d'un f
 		_htx["Content-Type"].push_back("Content-Type: audio\r\n");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
 		_htx["Content-Type"].push_back("Content-Type: video\r\n");
+	else // DEFAULT PAREIL QUE L EPREMIER À ARRANGER :) POUR LE TOI DU FUTUR BISOU
+		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-void	header_handler::gen_CLength() /* PROBLEM : C'EST UN FOURRE TOUT QUI N'EST PAS BIEN CONÇU*/
-{
+// génération du field content-length
+void	request_handler::gen_CLength()
+{/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
 
-/* 	string file("./files");
-	file.append(_hrx["A"][1] == "/" ? "/index.html" : _hrx["A"][1]);
-	ifstream fs(file.c_str(), std::ifstream::binary | std::ifstream::ate);
-	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
-		gen_startLine( _status.find("404") );
-		fs.open(_si[_s_id].error_page,  std::ifstream::binary | std::ifstream::ate);
-		if (!fs.is_open())
-			throw (std::runtime_error( "Unkown file (header_writer) : error_4xx.html"));
-		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
-	} */
-
-/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
-
-	ifstream fs;
-	verify_file_openess(fs);
-// GÉNÉRATION DU FIELD CONTENT-LENGTH
-	stringstream ss;
-	ss << fs.tellg();
+	_htx["Content-Length"].clear();
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
-	_htx["Content-Length"].push_back( ss.str());
-	_htx["Content-Length"].push_back( "\r\n");
 
-// AJOUT DE TOUS LES FIELD A LA RESPONSE
-	_response.clear();
-	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
-		for (size_t i = 0, j = it->second.size(); i < j; ++i)
-			_response += it->second[i];
-	_response += "\r\n";
-	cout << RED "Response :\n" RESET << _response << endl;
-
-// AJOUT DU FICHIER À LA RESPONSE
-	if (_hrx["A"][0] == "GET") { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
-		cout << RED "File written !" RESET  << endl;
-		fs.seekg(ios_base::beg);
-		_response.append((istreambuf_iterator<char>(fs)),
-						 (istreambuf_iterator<char>() ));
+	stringstream ss;
+	if (_body.empty()) {
+		ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate);
+		ss << fs.tellg();
+		fs.close();
 	}
+	else
+		ss << _body.size();
+	_htx["Content-Length"].push_back( ss.str());
+	_htx["Content-Length"].push_back( "\r\n"  );
 }
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 // reconnait quel server_virtuel va traiter la requete et initialise _s_id
-void header_handler::set_server_id(void)
+void request_handler::set_server_id(void)
 {
 	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
+	// PROBLEM : SPARADRAP
+	if (host == "127.0.0.1") host = "localhost";
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
-	for (size_t i = _si.size(); i ; --i) {
+	for (int i = _si.size(); i ; --i) {
 		if ( _si[i - 1].host == host && _si[i - 1].port == port ) {
 			_s_id = i - 1;
 // SI LE SERVER_NAME EST == ON BREAK SINON ON CONTINUE JUSQU'AU PREMIER SERVER /* PROBLEM ? */
-			for (size_t j = 0; i < _si[i - 1].server_name.size(); ++j)
+			for (int j = 0; i < _si[i - 1].server_name.size(); ++j)
 				if ( _si[i - 1].server_name[j] == host )
 					break ;
+		}
+	}
 #ifdef _debug_
 			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
 #endif
-		}
-	}
 }
 
-void header_handler::handle_get_rqst(void)
+void request_handler::handle_get_rqst(void)
 {
-	gen_CType();
+	gen_CType(string());
+	verify_file_openess();
 	gen_CLength(); // Add ContentLength and Body
+	add_all_field();
+	add_body();
 }
 
-void header_handler::handle_post_rqst(void) 
+void request_handler::handle_post_rqst(void) 
 {
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
@@ -279,12 +264,14 @@ void header_handler::handle_post_rqst(void)
 // vérification de la bonne ouverture du fichier (maj de la statut-line si besoin)
 // Si erreur lors de l'ouverture du fichier renvoie fichier ouvert sur les pages d'erreurs
 // Le curseur du fichier pointe sur sa fin pour que fs.tellg() donne sa taille à Content-Length
-void	header_handler::verify_file_openess(ifstream& fs)
+void	request_handler::verify_file_openess()
 {
-	string path;
-	resolve_path(path);
+	_path.clear();
+	if (resolve_path()) // Resolve _path s'occupe d'écrire le contenu des dossiers aussi
+		return ;
 
-	fs.open(path.c_str(), std::ifstream::binary | std::ifstream::ate);
+	// ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate); // Ancienne version ne sait plus pk ct là...
+	ifstream fs(_path, std::ifstream::binary /* | std::ifstream::ate */);
 	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
 		gen_startLine( _status.find("404") );
 		if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
@@ -292,7 +279,7 @@ void	header_handler::verify_file_openess(ifstream& fs)
 		else
 			fs.open(_si[_s_id].error_page + "error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
 		if (!fs.is_open())
-			throw (std::runtime_error( "Unkown path (header_writer) : error_4xx.html"));
+			throw (std::runtime_error( "Unkown _path (header_writer) : error_4xx.html"));
 		if (_htx["Content-Type"].empty())
 			_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 		else
@@ -300,48 +287,51 @@ void	header_handler::verify_file_openess(ifstream& fs)
 	}
 }
 
-
 // Permet de séléctionner la location qui partage le plus avec l'url (comme le fait nginx)
-void	header_handler::resolve_path(string& path)
+int	request_handler::resolve_path()
 {
 // REMOVE MULTIPLE '/' AND THE '/' AT URL'S END
 	for (size_t i = 0; i < _hrx["A"][1].size(); ++i)
 		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0') && _hrx["A"][1].size() > 1)
 			_hrx["A"][1].erase(i, 1);
+// INDEX DE LA LOCATION CONCERNÉE (loc_id)
+	int loc_id = location_lookup();
 
-	int loc_id = location_lookup(path);
-
-	cout << BLUE ", path : " RESET << path << endl;
+	cout << BLUE ", _path : " RESET << _path << endl;
 
 // AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
-	while (path[0] == '/')
-		path.erase(path.begin());
-
-	int file_tp = file_type(path, loc_id);
+	while (_path[0] == '/')
+		_path.erase(_path.begin());
+// REMOVE MULTIPLE '/' AND THE '/' AT PATH'S END
+	for (size_t i = 0; i < _path.size(); ++i)
+		while (_path[i] == '/' && (_path[i + 1] == '/' || _path[i + 1] == '\0') && _path.size() > 1)
+			_path.erase(i, 1);
 
 #ifdef _debug_
-	cout << BLUE "resolved_path : " RESET << path << endl;
+	cout << BLUE "resolved_path : " RESET << _path << endl;
 #endif
+
+	return file_type(loc_id);
 }
 
 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-int header_handler::location_lookup(string& path)
+int request_handler::location_lookup()
 {
 // URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
 	string url(_hrx["A"][1]);
-	cout << GREEN "DS LOCATION_LOOKUP URL : " RESET << url + " [" + _hrx["A"][1] + "]" << endl;
+	cout << GREEN "DS LOCATION_LOOKUP URL : " RESET << url + " [" + _hrx["A"][1] + "], _s_id : " << _s_id << endl;
 	string uri(url.substr(url.find_last_of("/")));
 	for (int pos_cut; url.size();) {
 		for (size_t i = _si[_s_id].location.size(); i ; --i) {
 			if (url == _si[_s_id].location[i - 1].location) {
-				path = _si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/";
-				path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
-				path += _hrx["A"][1].substr(url.size());
+				_path = _si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/";
+				_path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
+				_path += _hrx["A"][1].substr(url.size());
 // SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
 				if (_si[_s_id].location[i - 1].location.size() == _hrx["A"][1].size()) {
 					cout << GREEN "DS LOCATION_LOOKUP IF" RESET << endl;
-					path += _si[_s_id].location[i - 1].index;
+					_path += _si[_s_id].location[i - 1].index;
 				}
 cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) URL : " RESET + url + " location : " + _si[_s_id].location[i - 1].location << endl; 
 				return i - 1;
@@ -353,18 +343,19 @@ cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) 
 		cout << GREEN "url : " RESET << url << endl;
 	}
 	if (url.empty()) {
-		path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
-		path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
-		path += _hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1];
-		cout << BLUE "EMPTY path : " RESET << path << endl;
+		_path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
+		_path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		_path += _hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1];
+		cout << BLUE "EMPTY _path : " RESET << _path << endl;
 	}
 	return 0;
 }
 
-int header_handler::file_type(string &path, int loc_id)
+// Détecte si c'est un dossier ou un fichier normal
+int request_handler::file_type(int loc_id)
 {
 	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
-	if (lstat(path.c_str(), &sb) == -1) {
+	if (lstat(_path.c_str(), &sb) == -1) {
 		perror("lstat");
 		// exit(EXIT_FAILURE);
 	}
@@ -374,40 +365,92 @@ int header_handler::file_type(string &path, int loc_id)
 		case S_IFDIR:  printf("directory\n");
 			if (_si[_s_id].location[loc_id].autoindex == "on") {
 // PROBLEM
-
-				DIR *dpdf;
-				struct dirent *epdf;
-
-				dpdf = opendir("./");
-				if (dpdf != NULL)
-				   while ((epdf = readdir(dpdf)))
-				      std::cout << epdf->d_name << std::endl;
-				closedir(dpdf);
+				generate_folder_list();
 				return 1;
 			}
-			path = "./files/if_folder.html";		break;
+			_path = "./files/if_folder.html";		break;
 		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
 		// case S_IFLNK:  printf("symlink\n");                 break;
 		case S_IFREG:  printf("regular file\n");            break;
 		// case S_IFSOCK: printf("socket\n");                  break;
 		default:
-			printf("unknown? path : %s\n", path.c_str());
-			path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
-			printf("unknown? path : %s\n", path.c_str());
+			gen_startLine( _status.find("404") );
+			printf("unknown? _path : %s\n", _path.c_str());
+			_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+			printf("unknown? _path : %s\n", _path.c_str());
 			break;
 	}
 	return 0;
 }
 
+// execute le script perl er pipe sont résultat ds _body
+void request_handler::generate_folder_list()
+{
+	int fd[2], pid;
+	if (pipe(fd) == -1 || (pid = fork()) == -1)
+		throw runtime_error("pipe || fork failed");
+	if (pid == 0) {// Child
+		char const *argv[] = {"files/cgi/perlFolderLister.pl", _path.c_str(), NULL};
+		close(fd[0]);	/* Close unused read end */
+		dup2(fd[1], STDOUT_FILENO);
+		if (execv(*argv, (char *const *)argv) == -1)
+			_exit(EXIT_FAILURE);
+		close(fd[1]);
+	}
+	else {
+		close(fd[1]);          /* Close unused write end */
+		char buf[1000];
+		int n;
+		_body.clear();
+		while ((n = read(fd[0], buf, 999))) {
+			buf[n] = '\0';
+			cout << "buf :" << buf << endl;
+			_body.append(buf);
+		}
+		gen_CType("html");
+		// gen_CType("html");
+		cout <<  CYAN "folder_ response" RESET << _body << endl;
+		close(fd[0]);          /* Reader will see EOF */
+		wait(NULL);            /* Wait for child */
+		return ;
+	}
+}
 
+// Clear la string (response) et y ajoute tous les field, puis clear _hrx
+void request_handler::add_all_field()
+{
+	_response.clear();
+	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
+		for (size_t i = 0, j = it->second.size(); i < j; ++i)
+			_response += it->second[i];
+	_response += "\r\n";
+	cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _response << endl;
+}
+
+// Ajout du fichier ou du body À LA SUITE des header dans response
+void request_handler::add_body()
+{
+	if (!_body.empty()) {
+		_response += _body;
+		_body.clear();
+		return ;
+	}
+
+	if (_hrx["A"][0] == "GET") { // S'IL S'AGIT D'UN GET ON JOINS LE FICHIER
+		cout << RED "File written !" RESET  << endl;
+		ifstream fs(_path);
+		_response.append((istreambuf_iterator<char>(fs)),
+						 (istreambuf_iterator<char>() ));
+	}
+}
 
 	/* FUNCTION GETTER / SETTER */
 
-std::string &header_handler::get_response(void) {return _response;}
+std::string &request_handler::get_response(void) {return _response;}
 
 	/* FUNCTION DE DEBUG */
 
-void header_handler::display(void) {
+void request_handler::display(void) {
 	cout << GREEN ITALIC UNDERLINE "DISPLAY HEADER INFORMATION" RESET GREEN " :" RESET << endl;
 	for (map<string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it) {
 		cout << it->first << " ";
