@@ -501,7 +501,7 @@ int header_handler::location_lookup(string& path, string url, string uri, std::m
 	}
 	if (path.empty())
 	{
-		if (loc.find(url) != loc.end())
+		if (url != "/" && loc.find(url) != loc.end())
 		{
 			path = loc[url].root;
 			if (path.back() != '/')

@@ -253,6 +253,12 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 			tmp+= mp["Host:"][j];
 	}
 	env.push_back(tmp);
+	tmp = "DOCUMENT_ROOT=";
+	pos = mp["query"][0].find_last_of("/");
+	var = mp["query"][0].substr(0, pos);
+	if (var.substr(0, 2) == "./")
+		var = var.substr(2);
+	env.push_back(tmp);
 	tmp = "AUTH_TYPE=";
 	if (!mp["Authorization:"].empty())
 	{
