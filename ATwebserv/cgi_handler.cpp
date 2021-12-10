@@ -230,9 +230,8 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	tmp += mp["query"][0];
 	env.push_back(tmp);
 	tmp = "SCRIPT_NAME=";
-	tmp += _s.location.begin()->second.root;
+//	tmp += buf;
 	tmp += (buf[0] == '/' ? buf.substr(1) : buf);
-//	tmp += buf.substr(buf.find_last_of("/") + 1);
 	env.push_back(tmp);
 	tmp = "QUERY_STRING=";
 	if ((pos = var.find("?")) != std::string::npos)
@@ -254,10 +253,11 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 	}
 	env.push_back(tmp);
 	tmp = "DOCUMENT_ROOT=";
-	pos = mp["query"][0].find_last_of("/");
-	var = mp["query"][0].substr(0, pos);
+	pos = buf.find_last_of("/");
+	var = buf.substr(0, pos);
 	if (var.substr(0, 2) == "./")
 		var = var.substr(2);
+	tmp += var;
 	env.push_back(tmp);
 	tmp = "AUTH_TYPE=";
 	if (!mp["Authorization:"].empty())

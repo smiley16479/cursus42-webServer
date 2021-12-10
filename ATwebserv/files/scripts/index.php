@@ -12,6 +12,8 @@
 					$dir = "./";
 					$addr = $_SERVER["REMOTE_HOST"];
 					$path = $_SERVER["DOCUMENT_ROOT"];
+					print $path;
+					echo "<br>";
 					$data = scandir($dir, SCANDIR_SORT_ASCENDING, null);
 					if ($data != false)
 					{
@@ -20,13 +22,14 @@
 							echo "http://";
 							echo $addr;
 							if (substr($addr, -1) != "/"
-								&& substr($path, 0, 1 != "/"))
+								&& substr($path, 0, 1) != "/")
 								echo "/";
 							echo $path;
-							if (substr($path, -1) != "/")
+							if (substr($path, -1) != "/"
+								&& substr($files, 0, 1) != "/")
 								echo "/";
 							echo $files;
-							echo "\n";
+							echo "<br>";
 						}
 					}
 				?>

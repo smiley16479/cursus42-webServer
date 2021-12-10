@@ -6,8 +6,12 @@
 #include "color.hpp"
 #include "struct_webserv.hpp"
 
+class client_handler;
+class header_handler;
+
 class server
 {
+#define MAX_LEN 8192
 #define MAX_EVENTS 1000
 #define BUF_LEN 1000000
 
@@ -16,8 +20,8 @@ private:
     std::vector<server_info> _s;
     struct_epoll _epoll;
  
-    char str[BUF_LEN];
-    char msg[BUF_LEN];
+    char str[MAX_LEN];
+    char msg[MAX_LEN];
 
 public:
     server(std::string);
@@ -29,6 +33,7 @@ public:
     /* PRIVATE */
     int is_new_client(int fd);
     int get_time_out(int id_serv);
+	void	response_handler(client_handler&, header_handler&, int fd);
 };
 
 #endif

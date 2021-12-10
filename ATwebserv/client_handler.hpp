@@ -6,9 +6,12 @@
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
 
+#include <vector>
 #include <fcntl.h>
 
 #include <string>
+
+#define MAX_LEN 8192
 
 using namespace std;
 
@@ -20,6 +23,7 @@ private:
 public:
 	client_handler(/* args */);
 	~client_handler();
+
 	bool is_request_fulfilled(int);
 	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
@@ -33,4 +37,8 @@ public:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	bool is_post_rqst_fulfilled(int client_fd);
+	std::vector<int>	handle_chunks();
+	void	fill_resp(int fd, std::string& base);
+	int		chunked_rqst(int fd);
+	void	chunked_resp(int fd);
 };

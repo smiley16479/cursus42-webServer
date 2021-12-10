@@ -71,7 +71,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 		exit(EXIT_FAILURE);
 	}
 	//END
-	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -98,6 +98,62 @@ return true;
 		return true;
 	return false;
 	*/
+}
+
+void	client_handler::fill_resp(int fd, std::string& base)	{
+	size_t	pos, end;
+	
+	pos = base.find("\r\n\r\n");
+	base.replace(pos, 4, "Transfer-Encoding: chunked\r\n\r\n");
+	(*this).clients[fd].resp = base;
+}
+
+int	client_handler::chunked_rqst(int fd)	{
+	char	str[MAX_LEN];
+
+	if (recv(fd, str, sizeof(str), MSG_DONTWAIT) != -1)
+		this->rqst_append(fd, str);
+	if (this->is_request_fulfilled(fd)) 
+		return (1);
+	return (0);
+}
+
+void	client_handler::chunked_resp(int fd)	{
+	std::string	tmp;
+
+	if ((*this).clients[fd].resp.length() > MAX_LEN)
+	{
+		tmp = (*this).clients[fd].resp.substr(0, MAX_LEN).length();
+		tmp.append("\r\n");
+		tmp.append((*this).clients[fd].resp.substr(0, MAX_LEN));
+		tmp.append("\r\n");
+		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(MAX_LEN);
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT);
+	}
+	else
+	{
+		send(fd, (*this).clients[fd].resp.c_str(), (*this).clients[fd].resp.length(), MSG_DONTWAIT);
+		tmp = "0\r\n\r\n";
+		this->clear(fd);
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT);
+	}
+}
+
+std::vector<int>	client_handler::handle_chunks()	{
+	std::vector<int>	ret;
+	char *str[MAX_LEN];
+
+	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
+	{
+		if (!it->second.rqst.empty())
+		{
+			if (chunked_rqst(it->first))
+				ret.push_back(it->first);
+		}
+		else if (!it->second.resp.empty())
+			chunked_resp(it->first);
+	}
+	return (ret);
 }
 
 // POST / HTTP/1.1^M$

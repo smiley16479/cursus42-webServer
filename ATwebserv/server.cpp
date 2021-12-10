@@ -37,6 +37,15 @@ void server::initialize(void) {
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
+		//SET NON BLOCK
+		int opt = 1;
+		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+		if (fcntl(_s[i].socket, F_SETFL, O_NONBLOCK) == -1)
+		{
+			perror("fcntl F_SETFL, FNDELAY | FASYNC ");
+			exit(EXIT_FAILURE);
+		}
+		//END
 		_epoll._event.events = EPOLLIN | EPOLLET;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
@@ -46,14 +55,21 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
+	std::vector<int>	chunks;
 	header_handler header(_s);
 	client_handler client;
 	int serv_id;
 
 	while(1)
 	{
+		//CHUNK RESOLUTION
+		printf("\nResolving chunked req/resp\n");
+		chunks = client.handle_chunks();
+		for (std::vector<int>::iterator it = chunks.begin(); it != chunks.end(); it++)
+			response_handler(client, header, *it);
+		//END
 		printf("\nPolling for input...\n");
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000); //500
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 100); //500
 		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
@@ -80,24 +96,15 @@ void server::run(void) {
 			} */
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-				if (recv(_epoll._events[i].data.fd, str, sizeof(str), 0) <= 0) {
-					client.remove(_epoll, i);
-					printf("server: client just left\n");
-					// break; // Pk Break T-ON ?
-				}
-				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
+				if (recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT) != -1)
+				{
 					client.rqst_append(_epoll._events[i].data.fd, str);
-					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
-						cout << "request_fulfilled !!\n";
-						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
-						header.writer();
-						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
+					response_handler(client, header, _epoll._events[i].data.fd);
 
 	//					client.remove(_epoll, i);
-						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
+				//		client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
-					}
 				}
 			}
 		}
@@ -172,5 +179,21 @@ void server::display_server(void)
 				cout << it->second.retour[k] << (k < it->second.retour.size() - 1 ? ", " : "");
 			cout << endl;
 		}
+	}
+}
+
+void	server::response_handler(client_handler& client, header_handler& header, int fd)	{
+	if (client.is_request_fulfilled(fd)) {
+		cout << "request_fulfilled !!\n";
+		header.reader(/* str */client.get_rqst(fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+		header.writer();
+		client.clear(fd);
+		if (header.get_response().length() > MAX_LEN)
+		{
+			client.fill_resp(fd, header.get_response());
+			client.chunked_resp(fd);
+		}
+		else
+			send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
 	}
 }
