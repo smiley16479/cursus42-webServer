@@ -65,6 +65,7 @@ void request_handler::reader(const char *str)
 	}
 	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
 		cout << "*it : " << *it << endl;
+
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
@@ -191,7 +192,7 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 // génération du field content-length
 void	request_handler::gen_CLength()
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
-
+/* PROBLEM */ // http://127.0.0.1:8080/downloads/ n'affiche pas le poulpe -> les autre requetes sont faites sur le folder alors que le path du html est neutre, mais ça ça marche : http://127.0.0.1:8080/downloads 
 	_htx["Content-Length"].clear();
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
 
