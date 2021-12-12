@@ -5,22 +5,22 @@ use CGI;
 
 my $list = new CGI;
 
-my $arg = $ARGV[0];
-print $arg;
-my $fileDir = "./";
+# my $arg = $ARGV[0];
+# print $arg;
+my $fileDir = $ARGV[0];
 my @files;
 
 opendir DIR, "$fileDir" or die "Can't open $fileDir $!";
     @files = readdir DIR; # grep { /\.(?:txt|err|csv)$/i } readdir DIR;
 closedir DIR;
 
-print $list->header("text/html"),
+print # $list->header("text/html"),
       $list->start_html("Archives de $fileDir"),
       $list->p("Voici les fichiers de $fileDir");
 
 foreach my $file (@files) {
     print $list->p(
-            $list->a({-href=>$file},
+            $list->a({-href=>'/' . $fileDir . '/' . $file},
             $file)
             );
     

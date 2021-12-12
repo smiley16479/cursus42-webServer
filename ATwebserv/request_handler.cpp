@@ -176,6 +176,7 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 	cout << "file ext asked : " << ext << endl;
 #endif
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
+	_htx["Content-Type"].clear();
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
@@ -327,7 +328,7 @@ int request_handler::location_lookup()
 		for (size_t i = _si[_s_id].location.size(); i ; --i) {
 			if (url == _si[_s_id].location[i - 1].location) {
 				_path = _si[_s_id].location[i - 1].root.back() == '/' ? _si[_s_id].location[i - 1].root : _si[_s_id].location[i - 1].root + "/";
-				_path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/";
+				// _path += _si[_s_id].location[i - 1].location.back() == '/' ? _si[_s_id].location[i - 1].location : _si[_s_id].location[i - 1].location + "/"; // On ne fait pas comme nginx finalement
 				_path += _hrx["A"][1].substr(url.size());
 // SI LA LOCATION.SIZE() == _hrx["A"][1].SIZE() ALORS ON DOIT AFFECTER L'INDEX.HTML (OR WHATEVER) AU PATH
 				if (_si[_s_id].location[i - 1].location.size() == _hrx["A"][1].size()) {
@@ -345,7 +346,7 @@ cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) 
 	}
 	if (url.empty()) {
 		_path = _si[_s_id].location[0].root.back() == '/' ? _si[_s_id].location[0].root : _si[_s_id].location[0].root + "/";
-		_path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/";
+		// _path += _si[_s_id].location[0].location.back() == '/' ? _si[_s_id].location[0].location : _si[_s_id].location[0].location + "/"; // On ne fait pas comme nginx finalement
 		_path += _hrx["A"][1] == "/" ? _si[_s_id].location[0].index : _hrx["A"][1];
 		cout << BLUE "EMPTY _path : " RESET << _path << endl;
 	}
@@ -405,12 +406,11 @@ void request_handler::generate_folder_list()
 		_body.clear();
 		while ((n = read(fd[0], buf, 999))) {
 			buf[n] = '\0';
-			cout << "buf :" << buf << endl;
 			_body.append(buf);
 		}
 		gen_CType("html");
 		// gen_CType("html");
-		cout <<  CYAN "folder_ response" RESET << _body << endl;
+		cout <<  CYAN "folder_ response" RESET << _body  <<  CYAN "path_ response" RESET << _path << endl;
 		close(fd[0]);          /* Reader will see EOF */
 		wait(NULL);            /* Wait for child */
 		return ;
