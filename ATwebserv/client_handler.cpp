@@ -54,6 +54,7 @@ void client_handler::check_all_timeout(struct_epoll& _epoll)
 }
 
 // Ajoute un client à l'intance e_poll, à la structure client_info et initialize son time_out
+
 void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 {
 	int client_fd;
@@ -71,7 +72,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 		exit(EXIT_FAILURE);
 	}
 	//END
-	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -103,43 +104,103 @@ return true;
 void	client_handler::fill_resp(int fd, std::string& base)	{
 	size_t	pos, end;
 	
-	pos = base.find("\r\n\r\n");
-	base.replace(pos, 4, "Transfer-Encoding: chunked\r\n\r\n");
+	pos = base.find("Content-Length");
+	if (pos != std::string::npos)
+	{
+		end = base.substr(pos).find("\r\n");
+		base.replace(pos, end, "Connection: keep-alive\r\nTransfer-Encoding: chunked");
+	}
+	else
+	{
+		pos = base.find("\r\n\r\n");
+		if (pos != std::string::npos)
+			base.replace(pos, 4, "\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n\r\n");
+	}
 	(*this).clients[fd].resp = base;
 }
 
-int	client_handler::chunked_rqst(int fd)	{
+int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 	char	str[MAX_LEN];
 
 	if (recv(fd, str, sizeof(str), MSG_DONTWAIT) != -1)
+	{
 		this->rqst_append(fd, str);
+		this->time_reset(_epoll, this->clients[fd].time_out, fd);
+	}
 	if (this->is_request_fulfilled(fd)) 
 		return (1);
 	return (0);
 }
 
-void	client_handler::chunked_resp(int fd)	{
+int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 	std::string	tmp;
+	size_t	pos;
+	char	buf[20];
 
+	if ((*this).clients[fd].resp.substr(0, 4) == "HTTP")
+	{
+		pos = this->clients[fd].resp.find("\r\n\r\n");
+		tmp.clear();
+		tmp.append(this->clients[fd].resp.substr(0, pos + 4));
+		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+			perror("Send");
+			this->clients[fd].resp.clear();
+			return (1);
+		}
+		else
+			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+	}
 	if ((*this).clients[fd].resp.length() > MAX_LEN)
 	{
-		tmp = (*this).clients[fd].resp.substr(0, MAX_LEN).length();
+		sprintf(buf, "%lx", (*this).clients[fd].resp.substr(0, MAX_LEN).length());
+		tmp.clear();
+		tmp.append(buf);
 		tmp.append("\r\n");
 		tmp.append((*this).clients[fd].resp.substr(0, MAX_LEN));
 		tmp.append("\r\n");
 		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(MAX_LEN);
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+			perror("Send");
+			this->clients[fd].resp.clear();
+			return (1);
+		}
+		else
+			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		return (0);
 	}
 	else
 	{
-		send(fd, (*this).clients[fd].resp.c_str(), (*this).clients[fd].resp.length(), MSG_DONTWAIT);
-		tmp = "0\r\n\r\n";
+		sprintf(buf, "%lx", (*this).clients[fd].resp.substr(0, MAX_LEN).length());
+		tmp.clear();
+		tmp.append(buf);
+		tmp.append("\r\n");
+		tmp.append((*this).clients[fd].resp);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+			perror("Send");
+			this->clients[fd].resp.clear();
+			return (1);
+		}
+		tmp.clear();
+		tmp.append("0\r\n\r\n");
 		this->clear(fd);
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT);
+		this->clients[fd].resp.clear();
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+			perror("Send");
+			this->clients[fd].resp.clear();
+			return (1);
+		}
+		else
+			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		return (1);
 	}
 }
 
-std::vector<int>	client_handler::handle_chunks()	{
+std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	std::vector<int>	ret;
 	char *str[MAX_LEN];
 
@@ -147,14 +208,57 @@ std::vector<int>	client_handler::handle_chunks()	{
 	{
 		if (!it->second.rqst.empty())
 		{
-			if (chunked_rqst(it->first))
+			if (chunked_rqst(_epoll, it->first))
 				ret.push_back(it->first);
+			else
+			{
+				std::cout << "SALUT" << std::endl;
+				this->remove(_epoll, it->first);
+//				this->rearm(_epoll, it->second.time_out, it->first);
+			}
 		}
 		else if (!it->second.resp.empty())
-			chunked_resp(it->first);
+		{
+			printf("\nResolving chunked resp\n");
+			if (chunked_resp(_epoll, it->first))
+			{
+				this->remove(_epoll, it->first);
+//				this->rearm(_epoll, it->second.time_out, it->first);
+			}
+		}
 	}
 	return (ret);
 }
+
+void client_handler::time_reset(struct_epoll& _epoll, int time_out, int fd)
+{
+	if (!clients.empty() && clients.find(fd) != clients.end())
+	{
+		clients[fd].time_out = time_out;
+		time(&clients[fd].rqst_time_start);
+	}
+}
+
+void client_handler::rearm(struct_epoll& _epoll, int time_out, int fd)
+{
+	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_MOD, fd, &_epoll._event)) {
+		fprintf(stderr, "Failed to add file descriptor to epoll\n");
+		// close(_epoll_fd);
+		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
+	}	
+	clients[fd].time_out = time_out;
+	time(&clients[fd].rqst_time_start);
+}
+
+int	client_handler::no_chunk(int fd)
+{
+	if (this->clients[fd].rqst.empty() && this->clients[fd].resp.empty())
+		return (1);
+	else
+		return (0);
+}
+
 
 // POST / HTTP/1.1^M$
 // Host: localhost:8081^M$

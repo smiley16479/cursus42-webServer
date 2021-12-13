@@ -68,8 +68,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 	cgi_handler	cgi(mp, serv);
 //	cgi_handler	cgi(av);
 	std::string	tmp;
-	int			pos;
-	int			ret;
+	size_t			pos;
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
@@ -130,7 +129,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(plop[0], NULL, lol);
+		execve(plop[0],plop, lol);
 		exit(1);
 	}
 	else
@@ -190,6 +189,7 @@ cgi_handler::~cgi_handler()	{
 }
 
 cgi_handler&	cgi_handler::operator=(const cgi_handler& other)	{
+	(void)other;
 	return (*this);
 }
 

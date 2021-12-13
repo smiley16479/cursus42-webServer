@@ -46,7 +46,7 @@ void server::initialize(void) {
 			exit(EXIT_FAILURE);
 		}
 		//END
-		_epoll._event.events = EPOLLIN | EPOLLET;
+		_epoll._event.events = EPOLLIN;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
@@ -63,49 +63,34 @@ void server::run(void) {
 	while(1)
 	{
 		//CHUNK RESOLUTION
-		printf("\nResolving chunked req/resp\n");
-		chunks = client.handle_chunks();
+		chunks = client.handle_chunks(_epoll);
 		for (std::vector<int>::iterator it = chunks.begin(); it != chunks.end(); it++)
 			response_handler(client, header, *it);
+		chunks.clear();
 		//END
 		printf("\nPolling for input...\n");
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 100); //500
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 50); //500
 		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
-/*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
-					printf("Reading file descriptor '%d' -- ", events[i].data.fd);
-					bytes_read = read(events[i].data.fd, read_buffer, READ_SIZE);
-					printf("%zd bytes read.\n", bytes_read);
-					read_buffer[bytes_read] = '\0';
-					printf("Read '%s'\n", read_buffer);
-	
-					if(!strncmp(read_buffer, "stop\n", 5))
-						running = 0;
-			}
-			else {
-						printf(YELLOW "Writing file descriptor '%d' -- \n" RESET, events[i].data.fd);
-					//   for(i = 0; i < _event_count; i++)
-				bytes_read = write(events[i].data.fd, read_buffer, READ_SIZE);
-						printf("%zd bytes written.\n", bytes_read);
-						read_buffer[bytes_read] = '\0';
-						printf("Written '%s'\n", read_buffer);
-			} */
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
+				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
 				if (recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT) != -1)
 				{
 					client.rqst_append(_epoll._events[i].data.fd, str);
 					response_handler(client, header, _epoll._events[i].data.fd);
 
-	//					client.remove(_epoll, i);
+		//				client.remove(_epoll, i);
 				//		client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
+				else
+					client.remove(_epoll, _epoll._events[i].data.fd);
+				//	client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 			}
 		}
 		client.check_all_timeout(_epoll);
@@ -121,9 +106,13 @@ void server::run(void) {
 }
 
 int server::is_new_client(int fd) {
+	std::cout << "COUCOU FD = " << fd << std::endl;
 	for (int i = 0; i < _s.size(); ++i)
+	{
 		if (fd == _s[i].socket)
 			return i;
+	}
+	std::cout << "COUCOU FD = " << fd << std::endl;
 	return -1;
 }
 
@@ -191,9 +180,21 @@ void	server::response_handler(client_handler& client, header_handler& header, in
 		if (header.get_response().length() > MAX_LEN)
 		{
 			client.fill_resp(fd, header.get_response());
-			client.chunked_resp(fd);
+			client.chunked_resp(_epoll, fd);
 		}
 		else
-			send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT);
+		{
+			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT) == -1)
+			{
+				client.remove(_epoll, fd);
+//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+			}
+			else
+				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
+		}
+	}
+	else
+	{
+		client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 	}
 }

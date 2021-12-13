@@ -7,6 +7,7 @@
 #include "struct_webserv.hpp"
 
 #include <vector>
+#include <cstdlib>
 #include <fcntl.h>
 
 #include <string>
@@ -36,9 +37,13 @@ public:
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
+	client_info&	get_info(int fd) { return (clients[fd]); };
 	bool is_post_rqst_fulfilled(int client_fd);
-	std::vector<int>	handle_chunks();
+	std::vector<int>	handle_chunks(struct_epoll& _epoll);
 	void	fill_resp(int fd, std::string& base);
-	int		chunked_rqst(int fd);
-	void	chunked_resp(int fd);
+	int		chunked_rqst(struct_epoll& _epoll, int fd);
+	int		chunked_resp(struct_epoll& _epoll, int fd);
+	void 	time_reset(struct_epoll& _epoll, int time_out, int fd); // Reset client fd
+	void 	rearm(struct_epoll& _epoll, int time_out, int fd); // Reset client fd
+	int		no_chunk(int fd);
 };
