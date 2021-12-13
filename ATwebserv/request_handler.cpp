@@ -308,9 +308,16 @@ int	request_handler::resolve_path()
 	clean_url(_hrx["A"][1]);
 // INDEX DE LA LOCATION CONCERNÉE (loc_id)
 	int loc_id = location_lookup();
-
+// VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
+	bool allowed = false;
+	for (int i = 0; i < _si[_s_id].location[loc_id].allowed_method.size(); ++i)
+		if (_si[_s_id].location[loc_id].allowed_method[i] == _hrx["A"][0])
+			allowed = true;
+	if (!allowed)
+		gen_startLine( _status.find("405") );
+#ifdef _debug_
 	cout << BLUE ", _path : " RESET << _path << endl;
-
+#endif
 // AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
 	while (_path[0] == '/')
 		_path.erase(_path.begin());
@@ -319,7 +326,6 @@ int	request_handler::resolve_path()
 #ifdef _debug_
 	cout << BLUE "resolved_path : " RESET << _path << endl;
 #endif
-
 	return file_type(loc_id);
 }
 
@@ -363,7 +369,9 @@ cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
 int request_handler::location_lookup()
 {
+#ifdef _debug_
 	cout << GREEN "DS LOCATION_LOOKUP [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path : " << _path << endl;
+#endif
 
 	int id = 0, index = _si[_s_id].location.size() - 1;
 	size_t len = 0;
@@ -378,7 +386,9 @@ int request_handler::location_lookup()
 			if (it->location.size() == _hrx["A"][1].size() && !it->index.empty())
 				_path += it->index;
 		}
+#ifdef _debug_
 	cout << GREEN "DS LOCATION_LOOKUP : " RESET "location [" << id << "] : " + _si[_s_id].location[id].location << endl;
+#endif
 	return (id);
 }
 
@@ -399,18 +409,20 @@ int request_handler::file_type(int loc_id)
 				generate_folder_list();
 				return 1;
 			}
-			_path = "./files/if_folder.html";		break;
+			_path = "./files/if_folder.html";                  break;
 		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
 		// case S_IFLNK:  printf("symlink\n");                 break;
-		case S_IFREG:  printf("regular file\n");            break;
+		case S_IFREG:  printf("regular file\n");               break;
 		// case S_IFSOCK: printf("socket\n");                  break;
 		default:
 			gen_startLine( _status.find("404") );
-			printf("unknown? _path : %s\n", _path.c_str());
+			printf(RED "unknown path...\n" RESET);
 			_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
-			printf("unknown? _path : %s\n", _path.c_str());
 			break;
 	}
+	if (atoi(_htx["A"][1].c_str()) >= 400) /* Faire en sorte de changer le png */
+		_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+	printf("_path : %s\n", _path.c_str());
 	return 0;
 }
 
