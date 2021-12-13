@@ -5,8 +5,6 @@ use CGI;
 
 my $list = new CGI;
 
-# my $arg = $ARGV[0];
-# print $arg;
 my $fileDir = $ARGV[0];
 my @files;
 
@@ -18,6 +16,7 @@ print # $list->header("text/html"),
       $list->start_html("Archives de $fileDir"),
       $list->p("Voici les fichiers de $fileDir");
 
+$fileDir =~ s/files/downloads/; # PROBLEM : CANTONNE LA NAVIGATION A DOWNLOADS
 foreach my $file (@files) {
     print $list->p(
             $list->a({-href=>'/' . $fileDir . '/' . $file},
@@ -28,7 +27,7 @@ foreach my $file (@files) {
 
 print $list->end_html;
 
-#ANCIENNE SOLUTION :
+#ANCIENNE SOLUTION (en .c):
 
 # DIR *dpdf;
 # struct dirent *epdf;

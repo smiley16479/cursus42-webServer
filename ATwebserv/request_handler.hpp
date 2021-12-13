@@ -102,10 +102,12 @@ private:
 		void	verify_file_openess();
 			int 	resolve_path();
 				int	location_lookup();
+				int	location_lookup_2();
 				int	file_type(int);
 					void generate_folder_list();
 	void add_all_field();
 	void add_body();
+	void clean_url(string& str);
 	void handle_post_rqst(void);
 
 	/* FUNCTION DE DEBUG */

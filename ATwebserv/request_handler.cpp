@@ -248,6 +248,9 @@ void request_handler::handle_post_rqst(void)
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
 		cout << "[" << *i << "]" << endl;
+
+// POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
+	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
 	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 	cout << "boundary : " << boundary << endl;
 	cout << endl << "BODY : " << endl;
@@ -272,30 +275,29 @@ void	request_handler::verify_file_openess()
 	if (resolve_path()) // Resolve _path s'occupe d'écrire le contenu des dossiers aussi
 		return ;
 
-	// ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate); // Ancienne version ne sait plus pk ct là...
-	ifstream fs(_path, std::ifstream::binary /* | std::ifstream::ate */);
-	if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
-		gen_startLine( _status.find("404") );
-		if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
-			fs.open("files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
-		else
-			fs.open(_si[_s_id].error_page + "error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
-		if (!fs.is_open())
-			throw (std::runtime_error( "Unkown _path (header_writer) : error_4xx.html"));
-		if (_htx["Content-Type"].empty())
-			_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
-		else
-			_htx["Content-Type"][0] = "Content-Type: text/html; charset=utf-8\r\n";
-	}
+// Ancienne version : rmplacée par l'ouverture du fichier d'errueur ds file_type()
+	// // ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate);
+	// ifstream fs(_path, std::ifstream::binary /* | std::ifstream::ate */);
+	// if (!fs.is_open()) { // SI LE FICHIER N'EST PAS TROUVÉ ALORS ON ENVOIE LES PAGES D'ERREUR
+	// 	gen_startLine( _status.find("404") );
+	// 	if (_si[_s_id].error_page.empty()) // CHOISI LE FICHIER D'ERREUR PAR DEFAULT OU CELUI DE LA CONF
+	// 		fs.open("files/error_pages/error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
+	// 	else
+	// 		fs.open(_si[_s_id].error_page + "error_4xx.html",  std::ifstream::binary | std::ifstream::ate);
+	// 	if (!fs.is_open())
+	// 		throw (std::runtime_error( "Unkown _path (header_writer) : error_4xx.html"));
+	// 	if (_htx["Content-Type"].empty())
+	// 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+	// 	else
+	// 		_htx["Content-Type"][0] = "Content-Type: text/html; charset=utf-8\r\n";
+	// }
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url (comme le fait nginx)
 int	request_handler::resolve_path()
 {
 // REMOVE MULTIPLE '/' AND THE '/' AT URL'S END
-	for (size_t i = 0; i < _hrx["A"][1].size(); ++i)
-		while (_hrx["A"][1][i] == '/' && (_hrx["A"][1][i + 1] == '/' || _hrx["A"][1][i + 1] == '\0') && _hrx["A"][1].size() > 1)
-			_hrx["A"][1].erase(i, 1);
+	clean_url(_hrx["A"][1]);
 // INDEX DE LA LOCATION CONCERNÉE (loc_id)
 	int loc_id = location_lookup();
 
@@ -304,6 +306,8 @@ int	request_handler::resolve_path()
 // AFFACER LES '/' EN PRÉFIXE (POUR OUVRIR DEPUIS LA RACINE DE NOTRE DOSSIER ET PAS DEPUIS LA RACINE MERE)
 	while (_path[0] == '/')
 		_path.erase(_path.begin());
+	clean_url(_path);
+	
 // REMOVE MULTIPLE '/' AND THE '/' AT PATH'S END
 	for (size_t i = 0; i < _path.size(); ++i)
 		while (_path[i] == '/' && (_path[i + 1] == '/' || _path[i + 1] == '\0') && _path.size() > 1)
@@ -318,7 +322,7 @@ int	request_handler::resolve_path()
 
 
 // si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-int request_handler::location_lookup()
+int request_handler::location_lookup_2() /* RELIQUAT */
 {
 // URL == A LA TOTALITE DE LA REQUETE, URI == A LA DERNIERE PORTION APRES LE DERNIER '/'
 	string url(_hrx["A"][1]);
@@ -352,6 +356,29 @@ cout << GREEN "DS LOCATION_LOOKUP  (url == _si[_s_id].location[i - 1].location) 
 	}
 	return 0;
 }
+
+// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
+int request_handler::location_lookup()
+{
+	cout << GREEN "DS LOCATION_LOOKUP [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path : " << _path << endl;
+
+	int id = 0, index = _si[_s_id].location.size() - 1;
+	size_t len = 0;
+	for (vector<locati_info>::reverse_iterator it = _si[_s_id].location.rbegin(); it != _si[_s_id].location.rend(); ++it, --index)
+		if ((_hrx["A"][1].find( it->location.c_str(), 0 , it->location.size()) == 0 && it->location.size() > len) || (!len && !index)) // || si on a rien trouvé la location[0] est le default
+		{
+			_path = it->root.back() == '/' ? it->root : it->root + "/";
+			// _path += it->location.back() == '/' ? it->location : it->location + "/";
+			_path += _hrx["A"][1].substr(it->location.size());
+			len = it->location.length();
+			id = index;
+			if (it->location.size() == _hrx["A"][1].size() && !it->index.empty())
+				_path += it->index;
+		}
+	cout << GREEN "DS LOCATION_LOOKUP : " RESET "location [" << id << "] : " + _si[_s_id].location[id].location << endl;
+	return (id);
+}
+
 
 // Détecte si c'est un dossier ou un fichier normal
 int request_handler::file_type(int loc_id)
@@ -444,6 +471,15 @@ void request_handler::add_body()
 						 (istreambuf_iterator<char>() ));
 	}
 }
+
+// Remove multiple '/' and the '/' at url's end
+void request_handler::clean_url(string& str)
+{
+	for (size_t i = 0; i < str.size(); ++i)
+		while (str[i] == '/' && (str[i + 1] == '/' || str[i + 1] == '\0') && str.size() > 1)
+			str.erase(i, 1);
+}
+
 
 	/* FUNCTION GETTER / SETTER */
 
