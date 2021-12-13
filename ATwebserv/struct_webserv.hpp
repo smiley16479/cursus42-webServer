@@ -24,7 +24,7 @@ struct server_info {
 	int socket;
 	std::string port;
 	std::string host;
-	std::vector<std::string> server_name;
+	std::string server_name;
 	std::string error_page;
 	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
 	std::string time_out;
