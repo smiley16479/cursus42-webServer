@@ -7,6 +7,7 @@
 *      start-line     = request-line (client)/ status-line (server)
 
 		http://127.0.0.1:8080/ <- c'est ca qui fait bugger
+		curl --resolve test_server_block.com:9090:127.0.0.1 http://test_server_block.com:9090/ -X GET
 */
 
 #include "request_handler.hpp"
@@ -219,19 +220,26 @@ void request_handler::set_server_id(void)
 	// PROBLEM : SPARADRAP
 	if (host == "127.0.0.1") host = "localhost";
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
-	for (int i = _si.size(); i ; --i) {
-		if ( _si[i - 1].host == host && _si[i - 1].port == port ) {
-			_s_id = i - 1;
-// SI LE SERVER_NAME EST == ON BREAK SINON ON CONTINUE JUSQU'AU PREMIER SERVER /* PROBLEM ? */
-			for (int j = 0; i < _si[i - 1].server_name.size(); ++j)
-				if ( _si[i - 1].server_name[j] == host )
-					break ;
+	for (int i = 0; i < _si.size(); ++i)
+		if ( (_si[i].host == host || _si[i].server_name == host) && _si[i].port == port ) {
+			_s_id = i;
+			cout << RED "_s_id : " RESET << _s_id << endl;
+			return ;
 		}
-	}
+// SI LE HOST:PORT N'A PAS ETE TROUVE ON SELECT LE PREMIER SERVER CORRESPONDANT
+	for (int i = 0; i < _si.size(); ++i)
+		if (_si[i].port == port)
+			_s_id = i; // PROBLEM ?
 #ifdef _debug_
 			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
 #endif
 }
+
+/* ◦ Le premier serveur pour un host :port sera le serveur par défaut pour cet
+host :port (ce qui signifie qu’il répondra à toutes les requêtes qui n’appar-
+tiennent pas à un autre serveur) */
+
+
 
 void request_handler::handle_get_rqst(void)
 {
@@ -307,11 +315,6 @@ int	request_handler::resolve_path()
 	while (_path[0] == '/')
 		_path.erase(_path.begin());
 	clean_url(_path);
-	
-// REMOVE MULTIPLE '/' AND THE '/' AT PATH'S END
-	for (size_t i = 0; i < _path.size(); ++i)
-		while (_path[i] == '/' && (_path[i + 1] == '/' || _path[i + 1] == '\0') && _path.size() > 1)
-			_path.erase(i, 1);
 
 #ifdef _debug_
 	cout << BLUE "resolved_path : " RESET << _path << endl;
@@ -378,7 +381,6 @@ int request_handler::location_lookup()
 	cout << GREEN "DS LOCATION_LOOKUP : " RESET "location [" << id << "] : " + _si[_s_id].location[id].location << endl;
 	return (id);
 }
-
 
 // Détecte si c'est un dossier ou un fichier normal
 int request_handler::file_type(int loc_id)
