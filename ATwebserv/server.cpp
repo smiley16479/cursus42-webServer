@@ -68,9 +68,9 @@ void server::run(void) {
 			response_handler(client, header, *it);
 		chunks.clear();
 		//END
-		printf("\nPolling for input...\n");
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 50); //500
-		printf("%d ready events\n", _epoll._event_count);
+//		printf("\nPolling for input...\n");
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
+//		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
@@ -89,12 +89,12 @@ void server::run(void) {
 					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
 				else
-					client.remove(_epoll, _epoll._events[i].data.fd);
-				//	client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+//					client.remove(_epoll, _epoll._events[i].data.fd);
+					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 			}
 		}
 		client.check_all_timeout(_epoll);
-		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
+//		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 
 	if(close(_epoll._epoll_fd))
@@ -180,7 +180,8 @@ void	server::response_handler(client_handler& client, header_handler& header, in
 		if (header.get_response().length() > MAX_LEN)
 		{
 			client.fill_resp(fd, header.get_response());
-			client.chunked_resp(_epoll, fd);
+			if (client.chunked_resp(_epoll, fd))
+				client.remove(_epoll, fd);
 		}
 		else
 		{
@@ -190,11 +191,13 @@ void	server::response_handler(client_handler& client, header_handler& header, in
 //				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 			}
 			else
-				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
+				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+//				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}
 	else
 	{
-		client.time_reset(_epoll, client.get_info(fd).time_out, fd);
+		client.rearm(_epoll, client.get_info(fd).time_out, fd);
+	//	client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 	}
 }

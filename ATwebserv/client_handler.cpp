@@ -213,7 +213,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 			else
 			{
 				std::cout << "SALUT" << std::endl;
-				this->remove(_epoll, it->first);
+//				this->remove(_epoll, it->first);
 //				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}
