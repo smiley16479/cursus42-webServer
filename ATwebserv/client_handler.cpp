@@ -26,7 +26,15 @@ bool client_handler::is_request_fulfilled(int client_fd)
 	return false ;
 }
 
-void client_handler::remove(struct_epoll& _epoll,int i)
+void client_handler::remove_fd(struct_epoll& _epoll, int fd)
+{	
+	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, fd, &_epoll._event);
+	clients.erase(fd);
+	if (close(fd))
+		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+}
+
+void client_handler::remove(struct_epoll& _epoll, int i)
 {	
 	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
 	clients.erase(_epoll._events[i].data.fd);
@@ -214,7 +222,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 			{
 				std::cout << "SALUT" << std::endl;
 //				this->remove(_epoll, it->first);
-//				this->rearm(_epoll, it->second.time_out, it->first);
+				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}
 		else if (!it->second.resp.empty())
@@ -222,7 +230,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 			printf("\nResolving chunked resp\n");
 			if (chunked_resp(_epoll, it->first))
 			{
-				this->remove(_epoll, it->first);
+				this->remove_fd(_epoll, it->first);
 //				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}

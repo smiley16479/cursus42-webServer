@@ -72,7 +72,7 @@ void server::run(void) {
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
 //		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
-			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
+			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
@@ -106,13 +106,11 @@ void server::run(void) {
 }
 
 int server::is_new_client(int fd) {
-	std::cout << "COUCOU FD = " << fd << std::endl;
 	for (int i = 0; i < _s.size(); ++i)
 	{
 		if (fd == _s[i].socket)
 			return i;
 	}
-	std::cout << "COUCOU FD = " << fd << std::endl;
 	return -1;
 }
 
@@ -181,17 +179,20 @@ void	server::response_handler(client_handler& client, header_handler& header, in
 		{
 			client.fill_resp(fd, header.get_response());
 			if (client.chunked_resp(_epoll, fd))
-				client.remove(_epoll, fd);
+				client.remove_fd(_epoll, fd);
 		}
 		else
 		{
 			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT) == -1)
 			{
-				client.remove(_epoll, fd);
+				client.remove_fd(_epoll, fd);
 //				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 			}
 			else
-				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+			{
+				client.remove_fd(_epoll, fd);
+			}
+//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 //				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}

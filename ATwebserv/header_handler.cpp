@@ -101,9 +101,7 @@ void header_handler::writer(void) {
 	gen_serv();
 
 	if (is_cgi(_hrx["A"]))
-	{
 		handle_cgi();
-	}
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "POST")

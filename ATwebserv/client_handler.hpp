@@ -27,6 +27,7 @@ public:
 
 	bool is_request_fulfilled(int);
 	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
+	void remove_fd(struct_epoll& _epoll, int fd); // REMOVE A CLIENT
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
 	void check_all_timeout(struct_epoll& _epoll);
 

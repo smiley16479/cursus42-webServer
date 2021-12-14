@@ -117,7 +117,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 				if (!it->empty())
 				{
 					write(bfd[1], it->c_str(), post);
-					write(2, it->c_str(), post);
+//					write(2, it->c_str(), post);
 				}
 				if (cgi._cLen == 0)
 					break ;
@@ -174,7 +174,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 cgi_handler::cgi_handler()	{
 }
 
-cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv)	{
+cgi_handler::cgi_handler(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv)	: _cLen(0)	{
 	extract_env(mp, serv);
 }
 
@@ -286,6 +286,8 @@ void	cgi_handler::extract_env(std::map<std::string, std::vector<std::string> >& 
 		std::stringstream	ss(tmp.substr(strlen("CONTENT_LENGTH=")));
 		ss >> _cLen;
 	}
+	else
+		tmp+="0";
 	env.push_back(tmp);
 	tmp = "HTTP_ACCEPT=";
 	if (!mp["Accept:"].empty())
