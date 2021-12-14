@@ -7,7 +7,7 @@
 #include "struct_webserv.hpp"
 
 class client_handler;
-class header_handler;
+class request_handler;
 
 class server
 {
@@ -33,7 +33,7 @@ public:
     /* PRIVATE */
     int is_new_client(int fd);
     int get_time_out(int id_serv);
-	void	response_handler(client_handler&, header_handler&, int fd);
+	void	response_handler(client_handler&, request_handler&, int fd);
 };
 
 #endif

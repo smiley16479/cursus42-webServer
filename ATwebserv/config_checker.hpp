@@ -56,7 +56,7 @@ private:
 **		PRIVATE FUNCTION (UTILITAIRES)
 */
 	void check_serv_part(std::ifstream&, server_info&);
-	void check_loca_part(std::ifstream&, std::string& name, std::map<std::string, locati_info>& loc);
+	void check_loca_part(std::ifstream&, server_info&);
 	// bool is_not_allowed(string key,string val);
 	// void string_vector_insert(ifstream& ifs, string& where_to_insert);
 	void valid_port(std::ifstream& ifs, server_info&);

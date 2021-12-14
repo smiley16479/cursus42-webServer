@@ -3,13 +3,15 @@
 	<link href="layout.css" rel="stylesheet" type="text/css">
 	<title>Layout</title>
 	<body>
+		<div class="header">
+		</div>
 		<div id="Page">
 			<div id="Title">
 				<h1>WEBSERV</h1>
 			</div>
 			<div id="Form">
 				<p>
-					<form action="get_form.php" method="GET">
+					<form action="./get_form.php" method="GET">
 						<label for="stuff">Enter stuff here</label>
 						<input type="text" id="stuff" name="stuff">
 						<input type="submit" value="Send get request">
@@ -17,14 +19,17 @@
 				</p>
 			</div>
 			<br>
-			<div id="Form_2">
+			<div id="Form">
 				<p>
-					<form action="post_form.php" method="POST">
+					<form action="./post_form.php" method="POST">
 						<label for="things">Enter things here</label>
 						<input type="text" id="things" name="things">
 						<input type="submit" value="Send post request">
 					</form>
 				</p>
 			</div>
+		</div>
+		<div class="footer">
+		</div>
 	</body>
 </html>

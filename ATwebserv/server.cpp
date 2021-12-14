@@ -1,6 +1,6 @@
 #include "server.hpp"
 #include "config_checker.hpp"
-#include "header_handler.hpp"
+#include "request_handler.hpp"
 #include "client_handler.hpp"
 #include <stdexcept>
 
@@ -27,10 +27,18 @@ void server::initialize(void) {
 		throw std::runtime_error("ERROR IN EPOLL INSTANCE CREATION");
 /* INITIALISATION DES SOCKET DES SERVER(S) VIRTUEL(S) */
 	for (size_t i = 0; i < _s.size(); i++) {
+		bool skip = false;
 		bzero(&servaddr, sizeof(servaddr));
 		servaddr.sin_family = AF_INET; 
 		servaddr.sin_addr.s_addr = htonl(0); //127.0.0.1 -> 2130706433
 		servaddr.sin_port = htons(atoi(_s[i].port.c_str()));
+/* VERIFIE QUE LE SERVER A BIND N'AIT PAS D'HOMOLOGUE */
+		for (int j = i - 1; i && j >= 0; --j)
+				if (_s[j].host == _s[i].host && _s[j].port == _s[i].port && (skip = true))
+					break ;
+		if (skip)
+			continue ;
+/* CREATION DU SERVER */
 	//	if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
 		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
@@ -56,7 +64,7 @@ void server::initialize(void) {
 void server::run(void) {
 	initialize();
 	std::vector<int>	chunks;
-	header_handler header(_s);
+	request_handler header(_s);
 	client_handler client;
 	int serv_id;
 
@@ -117,30 +125,17 @@ int server::is_new_client(int fd) {
 int server::get_time_out(int id_serv) {
 	return atoi(_s[id_serv].time_out.c_str());
 };
-
-void	display_loc(std::pair<const std::string, locati_info>& loc, int depth)
-{
-	cout << "location : " << loc.first << std::endl;
-	if (!loc.second.location.empty())
-	{
-		for (int i = 0; i < depth; i++)
-			std::cout << "\t";
-		for (std::map<std::string, locati_info>::iterator it = loc.second.location.begin(); it != loc.second.location.end(); it++)
-			display_loc(*it, depth + 1);
-		cout << endl;
-	}
-}
-
-/* 
+/*
 * AFFICHE TOUTES LES INFORMATIONS CONTENUES DS LES STRUCTURES GÉNÉRÉES PAR LE FICHIER DE .CONF
 */
+
 void server::display_server(void)
 {
 	for (size_t i = 0; i < _s.size(); i++)
 	{
 		cout << GREEN ITALIC UNDERLINE "DISPLAY SERVER INFORMATION" RESET GREEN " :" RESET << endl;
-		for (size_t j = 0; j < _s[i].server_name.size(); j++)
-			cout << "server_name : " << _s[i].server_name[j] << endl;
+		// for (size_t j = 0; j < _s[i].server_name.size(); j++) // Qd server_name etait un vector
+		cout << "server_name : " << _s[i].server_name << endl;
 		cout << "time_out : " << _s[i].time_out << endl;
 		cout << "port : " << _s[i].port << endl;
 		cout << "host : " << _s[i].host << endl;
@@ -148,28 +143,28 @@ void server::display_server(void)
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
 		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
-		for (std::map<std::string, locati_info>::iterator it = _s[i].location.begin(); it != _s[i].location.end(); it++) {
+		for (size_t j = 0; j < _s[i].location.size(); j++) {
 			cout << GREEN "LOCATION : " RESET << endl;
-			display_loc(*it, 0);
-			cout << "auth_basic : " << it->second.auth_basic << endl;
-			cout << "auth_user_file : " << it->second.auth_user_file << endl;
-			cout << "autoindex : " << it->second.autoindex << endl;
-			cout << "index : " << it->second.index << endl;
-			cout << "max_file_size : " << it->second.max_file_size << endl;
-			cout << "return_directive : " << it->second.return_directive << endl;
-			cout << "root : " << it->second.root << endl;
+			cout << "location : " << _s[i].location[j].location << endl;
+			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
+			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
+			cout << "autoindex : " << _s[i].location[j].autoindex << endl;
+			cout << "index : " << _s[i].location[j].index << endl;
+			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
+			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
+			cout << "root : " << _s[i].location[j].root << endl;
 			cout << "allowed_method : ";
-			for (size_t k = 0; k < it->second.allowed_method.size(); k++)
-				cout << it->second.allowed_method[k] << (k < it->second.allowed_method.size() - 1 ? ", " : "");
+			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
+				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
 			cout << endl << "return : ";
-			for (size_t k = 0; k < it->second.retour.size(); k++)
-				cout << it->second.retour[k] << (k < it->second.retour.size() - 1 ? ", " : "");
+			for (size_t k = 0; k < _s[i].location[j].retour.size(); k++)
+				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
 			cout << endl;
 		}
 	}
 }
 
-void	server::response_handler(client_handler& client, header_handler& header, int fd)	{
+void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
 	if (client.is_request_fulfilled(fd)) {
 		cout << "request_fulfilled !!\n";
 		header.reader(/* str */client.get_rqst(fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML

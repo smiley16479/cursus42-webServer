@@ -116,10 +116,8 @@ void config_checker::check_conFile(std::string str)
 {
 	return false;
 }
-
 void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert)
 {
-
 } */
 
 void config_checker::valid_port(std::ifstream& ifs, server_info& si)
@@ -171,7 +169,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		else if (word == "server_name" /* && ifs >> word */) {
 			// si.server_name.push_back(word);
 			std::cout << "server_name : ";
-			extract_to_vector(ifs, si.server_name);
+			extract_to_string(ifs, si.server_name);
 			// std::cout << "server_name : " << si.server_name[si.server_name.size() - 1] << std::endl;
 		}
 		else if (word == "max_file_size") {
@@ -197,9 +195,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
 		}
 		else if (word == "location") {
-			string	name;
-			ifs >> name;
-			check_loca_part(ifs, name, si.location);  // ?
+			check_loca_part(ifs, si);  // ?
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
@@ -216,40 +212,13 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		throw (configException(_si, )); */
 }
 
-void config_checker::check_loca_part(std::ifstream& ifs, std::string& path, std::map<std::string, locati_info>& loc){
-	size_t	pos;
-	string	word;
-	string	name, rest;
+void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 
-	std::cout << "path= " << path << std::endl;
-	if (loc.find(path) != loc.end())
-		return ;
-	else
-	{
-		pos = path.find("/");
-		if (pos != std::string::npos)
-		{
-			name = path.substr(0, pos + 1);
-			rest = path.substr(pos + 1);
-			if (name.back() != '/')
-				name += "/";
-			if (loc.find(name) != loc.end())
-			{
-				check_loca_part(ifs, rest, loc[name].location);
-				return ;
-			}
-			else
-				loc.insert(std::make_pair(name, locati_info()));
-		}
-		else
-		{
-			name = path;
-			if (name.back() != '/')
-				name += "/";
-			loc.insert(std::make_pair(name, locati_info()));
-		}
-	}
-	std::cout << RED "location : " RESET << loc.find(name)->first << std::endl;
+	string word;
+	ifs >> word;
+	si.location.push_back(locati_info());
+	si.location[si.location.size() - 1].location = word;
+	std::cout << RED "location : " RESET << si.location[si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException(_si, "bad formating (location_part1) around : " + word));
@@ -257,41 +226,36 @@ void config_checker::check_loca_part(std::ifstream& ifs, std::string& path, std:
 	
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
 		if (word == "allowed_method")
-			extract_to_vector(ifs, loc[name].allowed_method);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].allowed_method);
 		else if (word == "auth_basic") {
-			extract_to_string(ifs, loc[name].auth_basic);
-			std::cout << GREEN "auth_basic : " RESET << loc[name].auth_basic << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_basic);
+			std::cout << GREEN "auth_basic : " RESET << si.location[si.location.size() - 1].auth_basic << std::endl;
 		}
 		else if (word == "auth_user_file") {
-			extract_to_string(ifs, loc[name].auth_user_file);
-			std::cout << GREEN "auth_user_file : " RESET << loc[name].auth_user_file << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_user_file);
+			std::cout << GREEN "auth_user_file : " RESET << si.location[si.location.size() - 1].auth_user_file << std::endl;
 		}
 		else if (word == "autoindex") {
-			extract_to_string(ifs, loc[name].autoindex);
-			std::cout << GREEN "autoindex : " RESET << loc[name].autoindex << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].autoindex);
+			std::cout << GREEN "autoindex : " RESET << si.location[si.location.size() - 1].autoindex << std::endl;
 		}
 		else if (word == "index") {
-			extract_to_string(ifs, loc[name].index);
-			std::cout << GREEN "index : " RESET << loc[name].index << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].index);
+			std::cout << GREEN "index : " RESET << si.location[si.location.size() - 1].index << std::endl;
 		}
 		else if (word == "max_file_size") {
-			extract_to_string(ifs, loc[name].max_file_size);
-			std::cout << GREEN "max_file_size : " RESET << loc[name].max_file_size << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].max_file_size);
+			std::cout << GREEN "max_file_size : " RESET << si.location[si.location.size() - 1].max_file_size << std::endl;
 		}
 		else if (word == "return_directive") {
-			extract_to_string(ifs, loc[name].return_directive);
-			std::cout << GREEN "return_directive : " RESET << loc[name].return_directive << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].return_directive);
+			std::cout << GREEN "return_directive : " RESET << si.location[si.location.size() - 1].return_directive << std::endl;
 		}
 		else if (word == "return") 
-			extract_to_vector(ifs, loc[name].retour);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].retour);
 		else if (word == "root") {
-			extract_to_string(ifs, loc[name].root);
-			std::cout << GREEN "root : " RESET << loc[name].root << std::endl;
-		}
-		else if (word == "location")
-		{
-			ifs >> word;
-			check_loca_part(ifs, word, loc[name].location);
+			extract_to_string(ifs, si.location[si.location.size() - 1].root);
+			std::cout << GREEN "root : " RESET << si.location[si.location.size() - 1].root << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
