@@ -6,9 +6,11 @@
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
 
+#include <sstream>
 #include <vector>
 #include <cstdlib>
 #include <fcntl.h>
+#include <cstring>
 
 #include <string>
 
@@ -39,7 +41,8 @@ public:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	client_info&	get_info(int fd) { return (clients[fd]); };
-	bool is_post_rqst_fulfilled(int client_fd);
+	bool is_post_rqst_fulfilled(client_info& client);
+	bool is_chunked_rqst_fulfilled(client_info& client);
 	std::vector<int>	handle_chunks(struct_epoll& _epoll);
 	void	fill_resp(int fd, std::string& base);
 	int		chunked_rqst(struct_epoll& _epoll, int fd);

@@ -1,12 +1,12 @@
 #ifndef _STRUCT_WEBSERV_HPP_
-#define _STRUCT_WEBSERV_HPP_
-#include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <map>
+# define _STRUCT_WEBSERV_HPP_
+# include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
+# include <string>
+# include <iostream>
+# include <vector>
+# include <map>
 
-#define MAX_EVENTS 1000
+# define MAX_EVENTS 1000
 
 struct locati_info {
 	std::string	location;
@@ -38,6 +38,7 @@ struct client_info {
 	std::string rqst;
 	std::string post_boundary;
 	time_t		rqst_time_start;
+	size_t		_cLen;
 	int			time_out;
 };
 

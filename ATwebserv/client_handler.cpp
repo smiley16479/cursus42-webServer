@@ -15,7 +15,14 @@ bool client_handler::is_request_fulfilled(int client_fd)
 	// cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
 		
 	if (clients[client_fd].rqst.substr(0, 4) == "POST")
-		return is_post_rqst_fulfilled(client_fd); // HANDLE RECOGNITION OF ENDED POST RQST
+	{
+		return is_post_rqst_fulfilled(clients[client_fd]); // HANDLE RECOGNITION OF ENDED POST RQST
+	}
+
+	if (clients[client_fd].rqst.substr(0, 5) == "CHUNK")
+	{
+		return is_chunked_rqst_fulfilled(clients[client_fd]);
+	}
 
 	// for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
 	// 	cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
@@ -91,22 +98,127 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	time(&clients[client_fd].rqst_time_start);
 }
 
-bool client_handler::is_post_rqst_fulfilled(int client_fd)
-{cout << YELLOW "DANS IS_POST_REQUEST_FULFILLED\n";
-return true;
-/*
-	if (clients[client_fd].post_boundary.empty()) {
-		size_t bundary_pos;
-		if ((bundary_pos = clients[client_fd].rqst.find("boundary")) != string::npos && (bundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
-			clients[client_fd].post_boundary = clients[client_fd].rqst.substr(bundary_pos, clients[client_fd].rqst.find_first_of('\r', bundary_pos) - bundary_pos);
-			// cout << "bundary_pos : "<< bundary_pos << ", bundary_pos of fisrt \\r in boundary : " << clients[client_fd].rqst.find_first_of('\r', bundary_pos) << endl;
+bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
+{
+//	cout << YELLOW "DANS IS_CHUNKED_REQUEST_FULFILLED\n" RESET << std::endl;
+	size_t	pos;
+	std::string	tmp;
+	std::stringstream	ss;
+
+	if (client.post_boundary.empty()) {
+		size_t boundary_pos;
+
+		if ((boundary_pos = client.rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
+			client.post_boundary = client.rqst.substr(boundary_pos, client.rqst.find_first_of('\r', boundary_pos) - boundary_pos);
+			// cout << "boundary_pos : "<< boundary_pos << ", boundary_pos of fisrt \\r in boundary : " << clients[client_fd].rqst.find_first_of('\r', boundary_pos) << endl;
 			// cout << "boundary : [" << clients[client_fd].post_boundary << "]" RESET << endl;
 			// cout << "boundary : [" << clients[client_fd].post_boundary + "--\r\n" << "]" RESET << endl;
 	}
-	if	(clients[client_fd].rqst.rfind(clients[client_fd].post_boundary + "--") != string::npos)
-		return true;
+	if (client._cLen != 0)
+	{
+		if ((pos = client.rqst.rfind(client.post_boundary)) != string::npos)
+		{
+			tmp = client.rqst.substr(pos + strlen((client.post_boundary).c_str()));
+			if (client._cLen > tmp.length())
+			{
+				std::cout << "dans cLen is set" << std::endl;
+				std::cout << tmp.length() << std::endl;
+			}
+			else
+			{
+				if (client._cLen < tmp.length())
+					client.rqst = client.rqst.substr(0, pos + strlen(("--" + client.post_boundary).c_str()) + client._cLen);
+				if (client.rqst.substr(0, 5) == "CHUNK")
+					client.rqst.replace(0, 5, "POST", 4);
+				return (true);
+			}
+		}
+	}
+	else
+	{
+		std::cout << "dans cLen is unset" << std::endl;
+		if ((pos = client.rqst.find("Content-Length: ")) != std::string::npos)
+		{
+			std::cout << "Len was set:" << pos << std::endl;
+			tmp = client.rqst.substr(pos + strlen("Content-Length: "));
+			if ((pos = tmp.find("\r\n")) != std::string::npos)
+				tmp = tmp.substr(0, pos);
+			ss = std::stringstream(tmp);
+			ss >> client._cLen;
+			if (client._cLen > MAX_LEN)
+			{
+				client.rqst.replace(0, 4, "CHUNK");
+				std::cout << "len requires chunking" << std::endl;
+			}
+		}
+//		pos = client.rqst.length();
+//		if (pos > 5 && client.rqst.substr(pos - 5, pos) == "0\r\n\r\n")
+	}
+	if (client.rqst.rfind("0\r\n\r\n") != std::string::npos)
+	{
+		if (client.rqst.substr(0, 5) == "CHUNK")
+			client.rqst.replace(0, 5, "POST", 4);
+		return (true);
+	}
+	std::cout << client.rqst << std::endl;
+	return (false);
+}
+
+bool client_handler::is_post_rqst_fulfilled(client_info& client)
+{
+	size_t				pos;
+	size_t				cur_len;
+	std::string			tmp;
+	std::stringstream	ss;
+
+	cout << YELLOW "DANS IS_POST_REQUEST_FULFILLED\n" RESET << std::endl;
+	client._cLen = 0;
+	if ((pos = client.rqst.find("Transfer-Encoding: chunked")) != std::string::npos)
+	{
+		client.rqst.replace(0, 4, "CHUNK", 5);
+		std::cout << "chunks:" << pos << std::endl;
+	}
+	else if ((pos = client.rqst.find("Content-Length: ")) != std::string::npos)
+	{
+		tmp = client.rqst.substr(pos + strlen("Content-Length: "));
+		if ((pos = tmp.find("\r\n")) != std::string::npos)
+			tmp = tmp.substr(0, pos);
+		ss = std::stringstream(tmp);
+		ss >> client._cLen;
+		std::cout << "Len was set:" << client._cLen << std::endl;
+		if (client._cLen > MAX_LEN)
+		{
+			client.rqst.replace(0, 4, "CHUNK");
+			std::cout << "len requires chunking" << std::endl;
+		}
+	}
+	if (client.post_boundary.empty()) {
+		size_t boundary_pos;
+
+		if ((boundary_pos = client.rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
+			client.post_boundary = client.rqst.substr(boundary_pos, client.rqst.find_first_of('\r', boundary_pos) - boundary_pos);
+			// cout << "boundary_pos : "<< boundary_pos << ", boundary_pos of fisrt \\r in boundary : " << clients[client_fd].rqst.find_first_of('\r', boundary_pos) << endl;
+			// cout << "boundary : [" << clients[client_fd].post_boundary << "]" RESET << endl;
+			// cout << "boundary : [" << clients[client_fd].post_boundary + "--\r\n" << "]" RESET << endl;
+	}
+	else
+	{
+		if ((pos = client.rqst.rfind(client.post_boundary)) != string::npos)
+		{
+			tmp = client.rqst.substr(0, pos + strlen((client.post_boundary).c_str()));
+			if (client._cLen > tmp.length())
+			{
+				return (false);
+			}
+			else
+			{
+				if (client.rqst.substr(0, 5) == "CHUNK")
+					client.rqst.replace(0, 5, "POST", 4);
+				return (true);
+			}
+		}
+	}
 	return false;
-	*/
 }
 
 void	client_handler::fill_resp(int fd, std::string& base)	{
@@ -136,7 +248,9 @@ int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 		this->time_reset(_epoll, this->clients[fd].time_out, fd);
 	}
 	if (this->is_request_fulfilled(fd)) 
+	{
 		return (1);
+	}
 	return (0);
 }
 
@@ -220,7 +334,8 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 				ret.push_back(it->first);
 			else
 			{
-				std::cout << "SALUT" << std::endl;
+//				this->time_reset(_epoll, it->second.time_out, it->first);
+//				std::cout << "SALUT" << std::endl;
 //				this->remove(_epoll, it->first);
 				this->rearm(_epoll, it->second.time_out, it->first);
 			}
