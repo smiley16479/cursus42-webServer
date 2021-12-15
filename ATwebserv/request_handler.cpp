@@ -127,9 +127,10 @@ void request_handler::writer(void) {
 		else
 			puts( "File successfully deleted" );
 	}
+/* PROBLEM REDONDANT AVEC LA METHODE GET -> VA FALLOIR CHOISIR*/
 	gen_CType(string());
 	gen_CLength();
-	add_all_field(); /* PROBLEM MIS DEUX FOIS SI LE FIL D'EXECUTION PASSE DS LA METHODE GET */
+	add_all_field(); 
 	add_body();
 	_hrx.clear();
 	_htx.clear();
@@ -205,7 +206,7 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-// génération du field Content-Length
+// génération du field Content-Length et d'un status d'erreur (413) si length > max_file_size
 void	request_handler::gen_CLength()
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
 /* PROBLEM */ // http://127.0.0.1:8080/downloads/ n'affiche pas le poulpe -> les autre requetes sont faites sur le folder alors que le path du html est neutre, mais ça ça marche : http://127.0.0.1:8080/downloads 
@@ -222,6 +223,9 @@ void	request_handler::gen_CLength()
 		ss << _body.size();
 	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
+	if (!_si[_s_id].location[_l_id].max_file_size.empty()
+		&& atoi(ss.str().c_str()) > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))
+		gen_startLine( _status.find("413") );
 }
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
@@ -257,10 +261,10 @@ tiennent pas à un autre serveur) */
 
 void request_handler::handle_get_rqst(void)
 {
-	gen_CType(string());
-	gen_CLength(); // Add ContentLength and Body
-	add_all_field();
-	add_body();
+	// gen_CType(string());
+	// gen_CLength();
+	// add_all_field();
+	// add_body();
 }
 
 void request_handler::handle_post_rqst(void) 
@@ -323,7 +327,7 @@ int	request_handler::resolve_path()
 						_l_id = it2 - _si[_s_id].location.begin();
 						break ;
 					}
-			}
+			} // SINON
 			else {
 				_path = it->root.back() == '/' ? it->root : it->root + "/";
 				_l_id = index;
@@ -352,8 +356,7 @@ int	request_handler::resolve_path()
 			allowed = true;
 	if (!allowed)
 		gen_startLine( _status.find("405") );
-	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
-	return file_type();
+	return allowed ? file_type() : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
 }
 
 // Détecte si c'est un dossier ou un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -364,26 +367,25 @@ int request_handler::file_type()
 	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
 	if (lstat(_path.c_str(), &sb) == -1)
 		perror("lstat");
-	else if (_l_id >= 0) {
-		switch (sb.st_mode & S_IFMT) {
-			// case S_IFBLK:  printf("block device\n");            break;
-			// case S_IFCHR:  printf("character device\n");        break;
-			case S_IFDIR:  printf("directory\n");
-				if (_si[_s_id].location[_l_id].autoindex == "on") {
-	// PROBLEM
-					generate_folder_list();
-					return 1;
-				}
-				_path = "./files/if_folder.html";                  break;
-			// case S_IFIFO:  printf("FIFO/pipe\n");               break;
-			// case S_IFLNK:  printf("symlink\n");                 break;
-			case S_IFREG:  printf("regular file\n");               break;
-			// case S_IFSOCK: printf("socket\n");                  break;
-			default:
-				gen_startLine( _status.find("404") );
-				printf(RED "unknown path...\n" RESET);
-				break;
-		}
+
+	switch (sb.st_mode & S_IFMT) {
+		// case S_IFBLK:  printf("block device\n");            break;
+		// case S_IFCHR:  printf("character device\n");        break;
+		case S_IFDIR:  printf("directory\n");
+			if (_si[_s_id].location[_l_id].autoindex == "on") {
+// PROBLEM
+				generate_folder_list();
+				return 1;
+			}
+			_path = "./files/if_folder.html";                  break;
+		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
+		// case S_IFLNK:  printf("symlink\n");                 break;
+		case S_IFREG:  printf("regular file\n");               break;
+		// case S_IFSOCK: printf("socket\n");                  break;
+		default:
+			gen_startLine( _status.find("404") );
+			printf(RED "unknown path...\n" RESET);
+			break;
 	}
 	if (atoi(_htx["A"][1].c_str()) >= 400) /* Faire en sorte de changer le png */
 		_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
@@ -437,6 +439,8 @@ void request_handler::add_all_field()
 // Ajout du fichier ou du body À LA SUITE des header dans response
 void request_handler::add_body()
 {
+	if (_htx["A"][1] == "413")
+		return ;
 	if (!_body.empty()) {
 		_response += _body;
 		_body.clear();
