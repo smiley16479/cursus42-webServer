@@ -13,7 +13,10 @@ RM = rm -f
 
 NAME = webserv
 
-CGI_OUT = out.html
+#MULTITHREADED BUILD FLAGS#
+#MAKEFLAGS+=-j8
+
+CGI_OUT = http://127.0.0.1::8080/scripts/layout.html
 
 ifeq ($(df), 0)
 CPP_FLAGS += -Wall
@@ -35,6 +38,9 @@ run:
 	./$(NAME)
 
 nav:
+	firefox $(CGI_OUT)
+
+goo-nav:
 	google-chrome $(CGI_OUT)
 
 $(NAME):	$(OBJ)
