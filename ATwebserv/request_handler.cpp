@@ -270,6 +270,7 @@ void request_handler::handle_get_rqst(void)
 void request_handler::handle_post_rqst(void) 
 {
 	size_t	pos;
+	std::string	tmp;
 
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
@@ -293,6 +294,18 @@ void request_handler::handle_post_rqst(void)
 	}
 	else
 	{
+		if (!_hrx["BODY"].empty() && !boundary.empty())
+		{
+			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); tmp.empty() && it != _hrx["BODY"].end(); it++)
+			{
+				if ((pos = it->find("\r\n\r\n")) != std::string::npos)
+					tmp += it->substr(0, pos);
+				else
+					tmp += *it;
+			}
+		}
+		if (!tmp.empty() && (pos = tmp.find("filename=")) != std::string::npos)
+			_path = tmp.substr(pos + 1, tmp.substr(pos +1).find("\""));
 		std::cout << "SISI" << std::endl;
 		resolve_path();
 		std::ofstream	output(_path);
