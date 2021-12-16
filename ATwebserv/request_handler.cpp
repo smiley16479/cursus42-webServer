@@ -307,16 +307,14 @@ void request_handler::handle_post_rqst(void)
 	{
 		if (!_hrx["BODY"].empty() && !boundary.empty())
 		{
-			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); tmp.empty() && it != _hrx["BODY"].end(); it++)
+			if ((pos = _hrx["BODY"][0].find("\r\n\r\n")) != std::string::npos)
 			{
-				if ((pos = it->find("\r\n\r\n")) != std::string::npos)
-				{
-					tmp.append(it->substr(0, pos), it->substr(0,pos).length());
-					*it = it->substr(pos + 4);
-				}
-				else
-					tmp.append(*it, it->length());
+				tmp.append(_hrx["BODY"][0].substr(0, pos), _hrx["BODY"][0].substr(0,pos).length());
+				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
 			}
+			else
+				tmp.append(_hrx["BODY"][0]);
+			
 		}
 		if (!tmp.empty() && (pos = tmp.find("filename=\"")) != std::string::npos)
 		{
@@ -326,19 +324,15 @@ void request_handler::handle_post_rqst(void)
 		std::ofstream	output(_hrx["A"][1]);
 		if (!boundary.empty())
 		{
-			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); it != _hrx["BODY"].end(); it++)
-			{
-				pos = it->find(boundary);
+				pos = _hrx["BODY"][0].find(boundary);
 				if (pos != std::string::npos)
-					output << it->substr(pos + boundary.length()).c_str();
+					output << _hrx["BODY"][0].substr(pos);
 				else
-					output << *it;
-			}
+					output << _hrx["BODY"][0];
 		}
 		else
 		{
-			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); it != _hrx["BODY"].end(); it++)
-			output << *it;
+			output << _hrx["BODY"][0];
 		}
 		gen_startLine( _status.find("200") ); 
 	}
