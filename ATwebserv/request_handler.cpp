@@ -74,8 +74,8 @@ void request_handler::reader(client_info& client)
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			_hrx["BODY"].resize(1, string());
-			while (std::getline(ss_1, buf_1))
-				_hrx["BODY"][0].append(buf_1);
+//			while (std::getline(ss_1, buf_1))
+			_hrx["BODY"][0].append(ss_1.str());
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -98,6 +98,17 @@ void request_handler::reader(client_info& client)
 //	client.rqst.clear();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
+
+	std::cout << "=========================================================" << std::endl;
+	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
+	{
+		std::cout << it->first << "=";
+		for (std::vector<std::string>::iterator i = it->second.begin(); i != it->second.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+	}
+	std::cout << "=========================================================" << std::endl;
+	
 }
 
 void request_handler::writer(void) {
@@ -299,25 +310,29 @@ void request_handler::handle_post_rqst(void)
 			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); tmp.empty() && it != _hrx["BODY"].end(); it++)
 			{
 				if ((pos = it->find("\r\n\r\n")) != std::string::npos)
-					tmp += it->substr(0, pos);
+				{
+					tmp.append(it->substr(0, pos), it->substr(0,pos).length());
+					*it = it->substr(pos + 4);
+				}
 				else
-					tmp += *it;
+					tmp.append(*it, it->length());
 			}
 		}
-		if (!tmp.empty() && (pos = tmp.find("filename=")) != std::string::npos)
-			_path = tmp.substr(pos + 1, tmp.substr(pos +1).find("\""));
-		std::cout << "SISI" << std::endl;
-		resolve_path();
-		std::ofstream	output(_path);
+		if (!tmp.empty() && (pos = tmp.find("filename=\"")) != std::string::npos)
+		{
+			_hrx["A"][1] = "./files/";
+			_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
+		}
+		std::ofstream	output(_hrx["A"][1]);
 		if (!boundary.empty())
 		{
 			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); it != _hrx["BODY"].end(); it++)
 			{
-			pos = it->find(boundary);
-			if (pos != std::string::npos)
-				output << it->substr(pos + boundary.length()).c_str();
-			else
-				output << *it;
+				pos = it->find(boundary);
+				if (pos != std::string::npos)
+					output << it->substr(pos + boundary.length()).c_str();
+				else
+					output << *it;
 			}
 		}
 		else
