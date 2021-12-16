@@ -10,6 +10,7 @@
 		curl --resolve test_server_block.com:9090:127.0.0.1 http://test_server_block.com:9090/ -X GET
 */
 
+#include "cgi_handler.hpp"
 #include "request_handler.hpp"
 
 request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
@@ -53,26 +54,28 @@ request_handler::~request_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void request_handler::reader(const char *str)
+void request_handler::reader(client_info& client)
 {
+	const char	*str = client.rqst.c_str();
+
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
 	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
-	if (std::getline(ss_1, buf_1)) {
+	if (ss_1 && std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
 	}
-	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
-		cout << "*it : " << *it << endl;
+//	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
+//		cout << "*it : " << *it << endl;
 
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			_hrx["BODY"].resize(1, string());
-			while (std::getline(ss_1, buf_1))
-				_hrx["BODY"][0].append(buf_1);
+//			while (std::getline(ss_1, buf_1))
+			_hrx["BODY"][0].append(ss_1.str());
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -92,8 +95,20 @@ void request_handler::reader(const char *str)
 #endif
 	}
 	set_server_id();
+//	client.rqst.clear();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
+
+	std::cout << "=========================================================" << std::endl;
+	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
+	{
+		std::cout << it->first << "=";
+		for (std::vector<std::string>::iterator i = it->second.begin(); i != it->second.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+	}
+	std::cout << "=========================================================" << std::endl;
+	
 }
 
 void request_handler::writer(void) {
@@ -103,7 +118,9 @@ void request_handler::writer(void) {
 	gen_serv();
 
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
-	if (resolve_path())
+	if (is_cgi(_hrx["A"]))
+		handle_cgi();
+	else if (resolve_path())
 		;
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
@@ -141,6 +158,8 @@ void request_handler::writer(void) {
 
 void	request_handler::gen_startLine(std::map<string, string>::iterator status)
 {
+	if (_htx["A"].empty())
+		_htx["A"] = std::vector<std::string>();
 	if (_htx["A"].size() != 3)
 		_htx["A"].resize(3, string());
 	_htx["A"][0] = "HTTP/1.1 "; // version (static)
@@ -170,6 +189,8 @@ void	request_handler::gen_date()
 	date.append("\r\n");
 
 	// _response.append(date);
+	if (_htx["Date"].empty())
+		_htx["Date"] = std::vector<std::string>();
 	_htx["Date"].push_back(date);
 }
 
@@ -178,9 +199,11 @@ void	request_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS 
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
 	_htx["Server"][0] = "Server: ";// HEADER_LABEL
-	_htx["Server"][1] = _hrx["Host:"][0];// IP & HOST
+	if (!_hrx["Host:"].empty())
+		_htx["Server"][1] = _hrx["Host:"][0];// IP & HOST
+	else
+		_htx["Server"][1] = "127.0.0.1";// IP & HOST
 	_htx["Server"][2] = "\r\n";
-
 }
 
 // génération du field Content-Type
@@ -196,6 +219,11 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 	_htx["Content-Type"].clear();
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+	else if ( ext == "css" ) // Default file PROBLEM ?
+	{
+		_htx["Content-Type"].push_back("Content-Type: text/css\r\n");
+//		_htx["Connection"].push_back("Connection: close\r\n");
+	}
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
 		_htx["Content-Type"].push_back("Content-Type: image\r\n");
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
@@ -237,7 +265,7 @@ void request_handler::set_server_id(void)
 	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	// PROBLEM : SPARADRAP
-	if (host == "127.0.0.1") host = "localhost";
+//	if (host == "127.0.0.1") host = "localhost";
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
 	for (int i = 0; i < _si.size(); ++i)
 		if ( (_si[i].host == host || _si[i].server_name == host) && _si[i].port == port ) {
@@ -270,6 +298,9 @@ void request_handler::handle_get_rqst(void)
 
 void request_handler::handle_post_rqst(void) 
 {
+	size_t	pos;
+	std::string	tmp;
+
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -282,12 +313,46 @@ void request_handler::handle_post_rqst(void)
 	cout << endl << "BODY : " << endl;
 	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
 	// 	cout << "[" << *i << "]" << endl;
-	cout << _hrx["BODY"][0] << endl;
+//	cout << _hrx["BODY"][0] << endl;
 
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
-	if ( _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+	std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
+	}
+	else
+	{
+		if (!_hrx["BODY"].empty() && !boundary.empty())
+		{
+			if ((pos = _hrx["BODY"][0].find("\r\n\r\n")) != std::string::npos)
+			{
+				tmp.append(_hrx["BODY"][0].substr(0, pos), _hrx["BODY"][0].substr(0,pos).length());
+				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
+			}
+			else
+				tmp.append(_hrx["BODY"][0]);
+			
+		}
+		if (!tmp.empty() && (pos = tmp.find("filename=\"")) != std::string::npos)
+		{
+			_hrx["A"][1] = "./files/";
+			_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
+		}
+		std::ofstream	output(_hrx["A"][1]);
+		if (!boundary.empty())
+		{
+				pos = _hrx["BODY"][0].find(boundary);
+				if (pos != std::string::npos)
+					output << _hrx["BODY"][0].substr(pos);
+				else
+					output << _hrx["BODY"][0];
+		}
+		else
+		{
+			output << _hrx["BODY"][0];
+		}
+		gen_startLine( _status.find("200") ); 
 	}
 	// sinon on execute les cgi ?
 }
@@ -297,6 +362,7 @@ void request_handler::handle_post_rqst(void)
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
 int	request_handler::resolve_path()
 {
+	size_t len;
 #ifdef _debug_
 	cout << GREEN "DS RESOLVE_PATH [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path (cleared afterward): " << _path << endl;
 #endif
@@ -308,9 +374,11 @@ int	request_handler::resolve_path()
 		_path = "files" + _hrx["A"][1];
 		return 1;
 	}
+	if ((len = _path.find("?")) != std::string::npos)
+		_path = _path.substr(0, len);
 	_l_id = 0;
 	int index = _si[_s_id].location.size() - 1;
-	size_t len = 0;
+	len = 0;
 	for (vector<locati_info>::reverse_iterator it = _si[_s_id].location.rbegin(); it != _si[_s_id].location.rend(); ++it, --index)
 		if ((_hrx["A"][1].find( it->location.c_str(), 0 , it->location.size()) == 0 && it->location.size() > len) || (!len && !index)) // || si on a rien trouvé la location[0] est le default
 		{
@@ -350,6 +418,7 @@ int	request_handler::resolve_path()
 	cout << BLUE "resolved_path : " RESET << _path << endl;
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
+
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 	bool allowed = false;
 	for (int i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
@@ -358,6 +427,7 @@ int	request_handler::resolve_path()
 	if (!allowed)
 		gen_startLine( _status.find("405") );
 	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+
 }
 
 // Détecte si c'est un dossier ou un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -481,3 +551,174 @@ void request_handler::display(void) {
 		cout << endl;
 	}
 }
+
+void	request_handler::handle_cgi(void)
+{
+		size_t	pos;
+		int		bfd[2];
+
+		//HERE!
+		resolve_path();
+		_hrx.insert(std::make_pair("query", std::vector<std::string>()));
+		_hrx["query"].push_back(_path);
+		if (_s_id == -1)
+		{
+			std::cout << "Invalid server id: " << _s_id << std::endl;
+			return ;
+		}
+		else
+		{
+			bfd[0] = dup(STDIN_FILENO);
+			bfd[1] = dup(STDOUT_FILENO);
+			go_cgi(_hrx, _si[_s_id], STDIN_FILENO);
+			dup2(bfd[0], STDIN_FILENO);
+			dup2(bfd[1], STDOUT_FILENO);
+			close(bfd[0]);
+			close(bfd[1]);
+	//		dup2(STDOUT_FILENO, bfd[1]);
+	//		dup2(STDIN_FILENO, bfd[0]);
+		}
+		_response.clear();
+		_response += (char*)"HTTP/1.1 200 OK\r\n";
+		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
+		{
+			_response += _hrx["A"][i];
+		}
+		_response += "Status: 200 Success\r\n";
+		_response += "Pragma: no-cache\r\n";
+//		_response += "Location:\r\n";
+		size_t k = 0;
+		if (!_hrx["BODY"].empty())
+		{
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			{
+//				std::cout << _hrx["BODY"][i] << std::endl;
+				if (!_hrx["BODY"][i].empty())
+					k += _hrx["BODY"][i].size() + 1;
+			}
+//			_response += "Connection: close\r\n";
+		}
+		_response += "Content-Lenght: ";
+		_response += std::to_string(k - 1);
+		_response += "\r\n";
+		if (!_hrx["Content-Type"].empty())
+		{
+			_response += "Content-Type: ";
+			for (size_t i = 0, j = _hrx["Content-Type"].size(); i < j; ++i)
+				_response += _hrx["Content-Type"][i];
+	//		_response += "\r\n";
+		}
+		_response += "Content-Language: en\r\n";
+		if (!_htx["Date"].empty())
+		{
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				_response += _htx["Date"][i];
+			}
+			_response += "Last-Modified:";
+			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+			{
+				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
+					_response += _htx["Date"][i].substr(pos + 5);
+				else
+					_response += _htx["Date"][i];
+			}
+		}
+		if (!_htx["Server"].empty())
+		{
+			for (size_t i = 0, j = _htx["Server"].size(); i < j; i++)
+			{
+				_response += _htx["Server"][i];
+			}
+		}
+		_response += "\r\n";
+		if (!_hrx["BODY"].empty())
+		{
+			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; ++i)
+			{
+			//	std::cout << _hrx["BODY"][i];
+				if (!_hrx["BODY"][i].empty() && _hrx["BODY"][i][0] != '\r')
+				{
+					_response += _hrx["BODY"][i];
+					_response += "\r\n";
+				}
+			}
+		}
+//		_response += "\r\n";
+		cout << RED "Response :\n" RESET << _response << endl;
+}
+
+/* recursive path solver(42 syntax)
+
+void	request_handler::resolve_path(string& path)
+{
+// REMOVE TRAILING '/' AT URL'S END
+//	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
+//		_hrx["A"][1].pop_back();
+
+	size_t pos;
+	string url, uri;
+
+	if (_hrx["A"][1] == "/") {
+		cout << "ds if\n";
+		path =  "./" + _si[_s_id].location["/"].root + "/" + _si[_s_id].location["/"].index;
+	}
+	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
+		cout << "ds else\n";
+		pos = _hrx["A"][1].find("/");
+		if (pos != std::string::npos)
+		{
+			url = _hrx["A"][1].substr(0, pos + 1);
+			uri = _hrx["A"][1].substr(pos + 1);
+			location_lookup(path, url, uri, _si[_s_id].location);
+		}
+	}
+	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
+
+	if (path.empty()) {
+		path = "./" + (_si[_s_id].location["/"].root.back() == '/' ? _si[_s_id].location["/"].root : _si[_s_id].location["/"].root + "/");
+		// path += url; // c'est ici que "/test" se mets ds le path
+		path += uri;
+	}
+
+	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
+
+	pos = path.find(".php");
+	if (pos != std::string::npos)
+		path = path.substr(0, pos + 4);
+	int file_tp = file_type(path, uri);
+
+#ifdef _debug_
+	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
+#endif
+}
+
+// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
+int request_handler::location_lookup(string& path, string url, string uri, std::map<std::string, locati_info>& loc)
+{
+	size_t	pos;
+
+	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
+	if (loc.find(url) != loc.end())
+	{
+		location_lookup(path, url, uri, loc[url].location);
+	}
+	else if ((pos = uri.find("/")) != std::string::npos)
+	{
+		url = uri.substr(0, pos + 1);
+		uri = uri.substr(pos + 1);
+		location_lookup(path, url, uri, loc);
+	}
+	if (path.empty())
+	{
+		if (url != "/" && loc.find(url) != loc.end())
+		{
+			path = loc[url].root;
+			if (path.back() != '/')
+				path += "/";
+			path += uri;
+		}
+	}
+	return (0);
+}
+*/

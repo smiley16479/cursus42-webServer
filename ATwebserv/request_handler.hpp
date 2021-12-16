@@ -79,7 +79,7 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	void reader(const char *);
+	void reader(client_info& client);
 	void writer(void);
 
 	/* FONCTION ACCESSEUR */
@@ -110,6 +110,7 @@ private:
 	void add_body();
 	void clean_url(string& str);
 	void handle_post_rqst(void);
+	void	handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */
 	

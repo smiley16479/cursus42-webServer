@@ -116,10 +116,8 @@ void config_checker::check_conFile(std::string str)
 {
 	return false;
 }
-
 void config_checker::string_vector_insert(ifstream& ifs, string &where_to_insert)
 {
-
 } */
 
 void config_checker::valid_port(std::ifstream& ifs, server_info& si)
@@ -216,11 +214,11 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 
 void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 
-	string	name;
-	string	word;
-	ifs >> name;
-	si.location.insert(std::make_pair(name, locati_info()));
-	std::cout << RED "location : " RESET << si.location.find(name)->first << std::endl;
+	string word;
+	ifs >> word;
+	si.location.push_back(locati_info());
+	si.location[si.location.size() - 1].location = word;
+	std::cout << RED "location : " RESET << si.location[si.location.size() - 1].location << std::endl;
 
 	if (!(ifs >> word) || word !=  "{")
 		throw (configException(_si, "bad formating (location_part1) around : " + word));
@@ -228,36 +226,36 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 	
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
 		if (word == "allowed_method")
-			extract_to_vector(ifs, si.location[name].allowed_method);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].allowed_method);
 		else if (word == "auth_basic") {
-			extract_to_string(ifs, si.location[name].auth_basic);
-			std::cout << GREEN "auth_basic : " RESET << si.location[name].auth_basic << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_basic);
+			std::cout << GREEN "auth_basic : " RESET << si.location[si.location.size() - 1].auth_basic << std::endl;
 		}
 		else if (word == "auth_user_file") {
-			extract_to_string(ifs, si.location[name].auth_user_file);
-			std::cout << GREEN "auth_user_file : " RESET << si.location[name].auth_user_file << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].auth_user_file);
+			std::cout << GREEN "auth_user_file : " RESET << si.location[si.location.size() - 1].auth_user_file << std::endl;
 		}
 		else if (word == "autoindex") {
-			extract_to_string(ifs, si.location[name].autoindex);
-			std::cout << GREEN "autoindex : " RESET << si.location[name].autoindex << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].autoindex);
+			std::cout << GREEN "autoindex : " RESET << si.location[si.location.size() - 1].autoindex << std::endl;
 		}
 		else if (word == "index") {
-			extract_to_string(ifs, si.location[name].index);
-			std::cout << GREEN "index : " RESET << si.location[name].index << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].index);
+			std::cout << GREEN "index : " RESET << si.location[si.location.size() - 1].index << std::endl;
 		}
 		else if (word == "max_file_size") {
-			extract_to_string(ifs, si.location[name].max_file_size);
-			std::cout << GREEN "max_file_size : " RESET << si.location[name].max_file_size << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].max_file_size);
+			std::cout << GREEN "max_file_size : " RESET << si.location[si.location.size() - 1].max_file_size << std::endl;
 		}
 		else if (word == "return_directive") {
-			extract_to_string(ifs, si.location[name].return_directive);
-			std::cout << GREEN "return_directive : " RESET << si.location[name].return_directive << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].return_directive);
+			std::cout << GREEN "return_directive : " RESET << si.location[si.location.size() - 1].return_directive << std::endl;
 		}
 		else if (word == "return") 
-			extract_to_vector(ifs, si.location[name].retour);
+			extract_to_vector(ifs, si.location[si.location.size() - 1].retour);
 		else if (word == "root") {
-			extract_to_string(ifs, si.location[name].root);
-			std::cout << GREEN "root : " RESET << si.location[name].root << std::endl;
+			extract_to_string(ifs, si.location[si.location.size() - 1].root);
+			std::cout << GREEN "root : " RESET << si.location[si.location.size() - 1].root << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;

@@ -1,14 +1,15 @@
 #ifndef _STRUCT_WEBSERV_HPP_
-#define _STRUCT_WEBSERV_HPP_
-#include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <map>
+# define _STRUCT_WEBSERV_HPP_
+# include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
+# include <string>
+# include <iostream>
+# include <vector>
+# include <map>
 
-#define MAX_EVENTS 1000
+# define MAX_EVENTS 1000
 
 struct locati_info {
+	std::string	location;
 	std::string auth_basic;							// ?
 	std::string auth_user_file;						// fichiers autorisés à l'utilisateur
 	std::string autoindex;							// présentation du fileSystem => val (on/off)
@@ -18,7 +19,6 @@ struct locati_info {
 	std::string root;								// dossier racine
 	std::vector<std::string> allowed_method;		// méthodes (GET, POST, etc) permises
 	std::vector<std::string> retour;				// directive return
-	std::string	location;
 };
 
 struct server_info {
@@ -34,9 +34,11 @@ struct server_info {
 };
 
 struct client_info {
+	std::string	resp;
 	std::string rqst;
 	std::string post_boundary;
 	time_t		rqst_time_start;
+	size_t		_cLen;
 	int			time_out;
 };
 

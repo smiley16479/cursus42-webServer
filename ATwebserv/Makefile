@@ -1,4 +1,5 @@
 SRC += main.cpp
+SRC += cgi_handler.cpp
 SRC += config_checker.cpp
 SRC += server.cpp
 SRC += request_handler.cpp
@@ -12,22 +13,35 @@ RM = rm -f
 
 NAME = webserv
 
+#MULTITHREADED BUILD FLAGS#
+#MAKEFLAGS+=-j8
+
+CGI_OUT = http://127.0.0.1::8080/scripts/layout.html
+
 ifeq ($(df), 0)
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
+CPP_FLAGS += -std=c++98
 endif
 
-CPP_FLAGS += -std=c++98
-CPP_FLAGS += -g3
+CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 
-all:	build run
+all:	build
+
+exec:	run nav
 
 build:	$(NAME)
 
 run:
 	./$(NAME)
+
+nav:
+	firefox $(CGI_OUT)
+
+goo-nav:
+	google-chrome $(CGI_OUT)
 
 $(NAME):	$(OBJ)
 	$(CC) $(CPP_FLAGS) -o $(NAME) $(OBJ)

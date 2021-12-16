@@ -1,8 +1,25 @@
-.gitignore
-*.out
+# macos garbage
 .DS_Store
+
+# binary stuff
+*.o
+*.out
+ATwebserv/webserv
+
+# tmp files
+ATwebserv/out.html
+
+# debug
+*.out.dSYM
+*.dylib
+*.gdb_history
+
+# utils and IDE stuff
 personalDir
 .vscode
-a.out.dSYM
-*.o
 exam06
+*.swiftdoc
+*.swiftmodule
+.*.swp
+*.vim
+
