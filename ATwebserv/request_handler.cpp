@@ -92,6 +92,11 @@ void request_handler::reader(const char *str)
 #endif
 	}
 	set_server_id();
+	for (auto it = _hrx.begin(); it != _hrx.end(); it++){
+		cout << "[" + it->first + "] : ";
+		for (size_t i = 0; i < it->second.size(); ++i)
+			cout << it->second[i] << endl;
+	}
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 }
@@ -128,6 +133,7 @@ void request_handler::writer(void) {
 			puts( "File successfully deleted" );
 	}
 /* PROBLEM REDONDANT AVEC LA METHODE GET -> VA FALLOIR CHOISIR*/
+	file_type();
 	gen_CType(string());
 	gen_CLength();
 	add_all_field(); 
@@ -223,7 +229,7 @@ void	request_handler::gen_CLength()
 		ss << _body.size();
 	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
-	if (!_si[_s_id].location[_l_id].max_file_size.empty()
+	if (!_si[_s_id].location[_l_id].max_file_size.empty() // POUR LES REQUEST ENTITY TOO LARGE SUREMENT A VIRER D'ICI
 		&& atoi(ss.str().c_str()) > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))
 		gen_startLine( _status.find("413") );
 }
@@ -302,7 +308,7 @@ int	request_handler::resolve_path()
 	_path.clear();
 // REMOVE MULTIPLE '/' AND THE '/' AT URL'S END
 	clean_url(_hrx["A"][1]);
-// MANOUCHERIE A VIRER POUR RECUP LES PAGES D'ERREUR SANS BOUCLE SUR 404.HTML SI 405
+// MANOUCHERIE A VIRER POUR RECUP LES PAGES D'ERREUR SANS BOUCLE SUR 4XX.HTML SI 405
 	if (_hrx["A"][1].find("/error_pages/", 0,13) == 0) {
 		_path = "files" + _hrx["A"][1];
 		return 1;
@@ -356,7 +362,7 @@ int	request_handler::resolve_path()
 			allowed = true;
 	if (!allowed)
 		gen_startLine( _status.find("405") );
-	return allowed ? file_type() : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
 }
 
 // Détecte si c'est un dossier ou un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -383,7 +389,8 @@ int request_handler::file_type()
 		case S_IFREG:  printf("regular file\n");               break;
 		// case S_IFSOCK: printf("socket\n");                  break;
 		default:
-			gen_startLine( _status.find("404") );
+			if (atoi(_htx["A"][1].c_str()) < 400)
+				gen_startLine( _status.find("404") );
 			printf(RED "unknown path...\n" RESET);
 			break;
 	}
