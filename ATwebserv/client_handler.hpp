@@ -35,7 +35,7 @@ public:
 
 	/* Function rubrique : getter setter */
 	void clear(int client_fd); // CLEAR CLIENT CONTENT
-	void rqst_append(int , char *); // APPEND DIFFERENT REQUEST CHUNK
+	void rqst_append(int , char *, size_t); // APPEND DIFFERENT REQUEST CHUNK
 	string get_rqst(int); // RETURN FINAL REQUEST
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */

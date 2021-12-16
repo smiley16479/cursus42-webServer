@@ -63,6 +63,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
+	size_t				read_bytes;
 	std::vector<int>	chunks;
 	request_handler header(_s);
 	client_handler client;
@@ -87,9 +88,9 @@ void server::run(void) {
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-				if (recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT) != -1)
+				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT)) != -1)
 				{
-					client.rqst_append(_epoll._events[i].data.fd, str);
+					client.rqst_append(_epoll._events[i].data.fd, str, read_bytes);
 					response_handler(client, header, _epoll._events[i].data.fd);
 
 		//				client.remove(_epoll, i);
@@ -167,7 +168,7 @@ void server::display_server(void)
 void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
 	if (client.is_request_fulfilled(fd)) {
 		cout << "request_fulfilled !!\n";
-		header.reader(/* str */client.get_rqst(fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+		header.reader(/* str */client.get_info(fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
 		header.writer();
 		client.clear(fd);
 		if (header.get_response().length() > MAX_LEN)

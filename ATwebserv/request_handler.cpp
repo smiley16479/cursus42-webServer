@@ -54,8 +54,10 @@ request_handler::~request_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void request_handler::reader(const char *str)
+void request_handler::reader(client_info& client)
 {
+	const char	*str = client.rqst.c_str();
+
 	string buf_1, buf_2;
 	std::stringstream ss_1(str);
 	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
@@ -93,6 +95,7 @@ void request_handler::reader(const char *str)
 #endif
 	}
 	set_server_id();
+//	client.rqst.clear();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 }
@@ -266,6 +269,8 @@ void request_handler::handle_get_rqst(void)
 
 void request_handler::handle_post_rqst(void) 
 {
+	size_t	pos;
+
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -278,12 +283,36 @@ void request_handler::handle_post_rqst(void)
 	cout << endl << "BODY : " << endl;
 	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
 	// 	cout << "[" << *i << "]" << endl;
-	cout << _hrx["BODY"][0] << endl;
+//	cout << _hrx["BODY"][0] << endl;
 
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
-	if ( _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+	std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
+	}
+	else
+	{
+		std::cout << "SISI" << std::endl;
+		resolve_path();
+		std::ofstream	output(_path);
+		if (!boundary.empty())
+		{
+			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); it != _hrx["BODY"].end(); it++)
+			{
+			pos = it->find(boundary);
+			if (pos != std::string::npos)
+				output << it->substr(pos + boundary.length()).c_str();
+			else
+				output << *it;
+			}
+		}
+		else
+		{
+			for (std::vector<std::string>::iterator it = _hrx["BODY"].begin(); it != _hrx["BODY"].end(); it++)
+			output << *it;
+		}
+		gen_startLine( _status.find("200") ); 
 	}
 	// sinon on execute les cgi ?
 }

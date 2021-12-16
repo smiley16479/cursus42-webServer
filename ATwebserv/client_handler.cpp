@@ -51,7 +51,7 @@ void client_handler::remove(struct_epoll& _epoll, int i)
 
 void client_handler::clear(int client_fd) {	clients[client_fd].rqst.clear();}
 
-void client_handler::rqst_append(int client_fd, char *str) {clients[client_fd].rqst.append(str);}
+void client_handler::rqst_append(int client_fd, char *str, size_t read_bytes) {clients[client_fd].rqst.append(str, read_bytes);}
 
 string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
 
@@ -110,29 +110,34 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 
 		if ((boundary_pos = client.rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
 			client.post_boundary = client.rqst.substr(boundary_pos, client.rqst.find_first_of('\r', boundary_pos) - boundary_pos);
-			// cout << "boundary_pos : "<< boundary_pos << ", boundary_pos of fisrt \\r in boundary : " << clients[client_fd].rqst.find_first_of('\r', boundary_pos) << endl;
-			// cout << "boundary : [" << clients[client_fd].post_boundary << "]" RESET << endl;
-			// cout << "boundary : [" << clients[client_fd].post_boundary + "--\r\n" << "]" RESET << endl;
 	}
 	if (client._cLen != 0)
 	{
+	/*
 		if ((pos = client.rqst.rfind(client.post_boundary)) != string::npos)
 		{
-			tmp = client.rqst.substr(pos + strlen((client.post_boundary).c_str()));
+			tmp = client.rqst.substr(pos + strlen(client.post_boundary.c_str()));
 			if (client._cLen > tmp.length())
 			{
 				std::cout << "dans cLen is set" << std::endl;
 				std::cout << tmp.length() << std::endl;
 			}
+			*/
+			if (client._cLen > client.rqst.length())
+			{
+				std::cout << "dans cLen is set" << std::endl;
+				std::cout << client.rqst.length() << std::endl;
+			}
 			else
 			{
+		std::cout << " COUCOU" << std::endl;
 				if (client._cLen < tmp.length())
-					client.rqst = client.rqst.substr(0, pos + strlen(("--" + client.post_boundary).c_str()) + client._cLen);
+					client.rqst = client.rqst.substr(0, pos + strlen(client.post_boundary.c_str()) + client._cLen);
 				if (client.rqst.substr(0, 5) == "CHUNK")
-					client.rqst.replace(0, 5, "POST", 4);
+					client.rqst.replace(0, 5, "POST");
 				return (true);
 			}
-		}
+	//	}
 	}
 	else
 	{
@@ -151,16 +156,16 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 				std::cout << "len requires chunking" << std::endl;
 			}
 		}
-//		pos = client.rqst.length();
-//		if (pos > 5 && client.rqst.substr(pos - 5, pos) == "0\r\n\r\n")
 	}
+//	pos = client.rqst.length();
+//	if (pos > 5 && client.rqst.substr(pos - 5, pos) == "0\r\n\r\n")
 	if (client.rqst.rfind("0\r\n\r\n") != std::string::npos)
 	{
 		if (client.rqst.substr(0, 5) == "CHUNK")
-			client.rqst.replace(0, 5, "POST", 4);
+			client.rqst.replace(0, 5, "POST");
 		return (true);
 	}
-	std::cout << client.rqst << std::endl;
+//	std::cout << client.rqst << std::endl;
 	return (false);
 }
 
@@ -205,7 +210,7 @@ bool client_handler::is_post_rqst_fulfilled(client_info& client)
 	{
 		if ((pos = client.rqst.rfind(client.post_boundary)) != string::npos)
 		{
-			tmp = client.rqst.substr(0, pos + strlen((client.post_boundary).c_str()));
+			tmp = client.rqst.substr(0, pos + strlen(client.post_boundary.c_str()));
 			if (client._cLen > tmp.length())
 			{
 				return (false);
@@ -240,11 +245,12 @@ void	client_handler::fill_resp(int fd, std::string& base)	{
 }
 
 int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
+	size_t	read_bytes;
 	char	str[MAX_LEN];
 
-	if (recv(fd, str, sizeof(str), MSG_DONTWAIT) != -1)
+	if ((read_bytes = recv(fd, str, sizeof(str), MSG_DONTWAIT)) != -1)
 	{
-		this->rqst_append(fd, str);
+		this->rqst_append(fd, str, read_bytes);
 		this->time_reset(_epoll, this->clients[fd].time_out, fd);
 	}
 	if (this->is_request_fulfilled(fd)) 
