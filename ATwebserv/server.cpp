@@ -97,10 +97,10 @@ void server::run(void) {
 					client.rqst_append(_epoll._events[i].data.fd, str);
 					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
 						cout << "request_fulfilled !!\n";
-						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str());
 						header.writer();
-						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
-
+						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0); // PROBLEME LA CORREC VEUT QUE L'ON VIRE LE CLIENT SI SEND RETURN UNE ERREUR
+						// VERIFIER SI ON VIRE BIEN LE CLIENT OU ON LUI SIGNIFIE BIEN FIN DE TRANSMISSION LORS D'UNE RÉPONSE COMPLÉTÉE
 						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 						// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
