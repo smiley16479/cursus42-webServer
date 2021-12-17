@@ -111,6 +111,12 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 		if ((boundary_pos = client.rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
 			client.post_boundary = client.rqst.substr(boundary_pos, client.rqst.find_first_of('\r', boundary_pos) - boundary_pos);
 	}
+	if ((pos = client.rqst.find(client.post_boundary + "--")) != std::string::npos)
+	{
+		if (client.rqst.substr(0, 5) == "CHUNK")
+			client.rqst.replace(0, 5, "POST");
+		return (true);
+	}
 	if (client._cLen != 0)
 	{
 	/*
@@ -132,7 +138,7 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 			{
 		std::cout << " COUCOU" << std::endl;
 				if (client._cLen < tmp.length())
-					client.rqst = client.rqst.substr(0, pos + strlen(client.post_boundary.c_str()) + client._cLen);
+					client.rqst = client.rqst.substr(0, client._cLen);
 				if (client.rqst.substr(0, 5) == "CHUNK")
 					client.rqst.replace(0, 5, "POST");
 				return (true);

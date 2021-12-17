@@ -56,11 +56,12 @@ request_handler::~request_handler()
 
 void request_handler::reader(client_info& client)
 {
-	const char	*str = client.rqst.c_str();
-
+//	const char	*str = client.rqst.c_str();
 	string buf_1, buf_2;
-	std::stringstream ss_1(str);
-	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
+	std::stringstream ss_1;
+
+	ss_1.str(client.rqst);
+//	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (ss_1 && std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
@@ -74,8 +75,8 @@ void request_handler::reader(client_info& client)
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			_hrx["BODY"].resize(1, string());
-//			while (std::getline(ss_1, buf_1))
-			_hrx["BODY"][0].append(ss_1.str());
+			while (std::getline(ss_1, buf_1))
+				_hrx["BODY"][0].append(buf_1);
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -99,16 +100,21 @@ void request_handler::reader(client_info& client)
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 
+/*
 	std::cout << "=========================================================" << std::endl;
 	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 	{
 		std::cout << it->first << "=";
+		if (it->first == "BODY")
+		{
+			std::cout << "BODY LEN=" << it->second[0].length() << std::endl;
+		}
 		for (std::vector<std::string>::iterator i = it->second.begin(); i != it->second.end(); i++)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 	}
 	std::cout << "=========================================================" << std::endl;
-	
+*/	
 }
 
 void request_handler::writer(void) {
@@ -119,13 +125,13 @@ void request_handler::writer(void) {
 
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (is_cgi(_hrx["A"]))
-		handle_cgi();
+		return (handle_cgi());
+	else if (_hrx["A"][0] == "POST")
+		return (handle_post_rqst());
 	else if (resolve_path())
 		;
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
-	else if (_hrx["A"][0] == "POST")
-		handle_post_rqst();
 	else if (_hrx["A"][0] == "PUT") {
 		cout << "Facultatif PUT method not implemented yet\n";
 	}
@@ -308,8 +314,8 @@ void request_handler::handle_post_rqst(void)
 
 // POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
 	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
-	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
-	cout << "boundary : " << boundary << endl;
+	string boundary = _hrx["Content-Type:"][1].substr(strlen("boundary=--"));
+	std::cout << boundary << std::endl;
 	cout << endl << "BODY : " << endl;
 	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
 	// 	cout << "[" << *i << "]" << endl;
@@ -317,36 +323,61 @@ void request_handler::handle_post_rqst(void)
 
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
 	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
-	std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
 	}
 	else
 	{
-		if (!_hrx["BODY"].empty() && !boundary.empty())
+		if (!_hrx["BODY"].empty())
 		{
-			if ((pos = _hrx["BODY"][0].find("\r\n\r\n")) != std::string::npos)
+			if (!boundary.empty() && (pos = _hrx["BODY"][0].find(boundary)) != std::string::npos)
 			{
-				tmp.append(_hrx["BODY"][0].substr(0, pos), _hrx["BODY"][0].substr(0,pos).length());
+				std::cout << "YOLO" << std::endl;
+				tmp = _hrx["BODY"][0].substr(0, pos + boundary.length() + 2);
+				std::cout << tmp << std::endl;
+				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + boundary.length());
+				ofstream plop("plop");
+				plop << _hrx["BODY"][0];
+			}
+			if ((pos = _hrx["BODY"][0].find("\r")) != std::string::npos)
+			{
+				std::cout << "SISI" << std::endl;
+				tmp = _hrx["BODY"][0].substr(0, pos);
+				std::cout << tmp << std::endl;
 				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
+				ofstream lol("lol");
+				lol << _hrx["BODY"][0];
+				/*
+				if ((pos = _hrx["BODY"][0].find("\r\n")) != std::string::npos)
+				{
+					tmp = tmp.substr(0, pos);
+					_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
+				}
+				*/
 			}
 			else
-				tmp.append(_hrx["BODY"][0]);
-			
+			{
+				tmp = _hrx["BODY"][0];
+			}
 		}
-		if (!tmp.empty() && (pos = tmp.find("filename=\"")) != std::string::npos)
+		if (!tmp.empty())
 		{
-			_hrx["A"][1] = "./files/";
-			_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
+			if ((pos = tmp.find("filename=\"")) != std::string::npos)
+			{
+				_hrx["A"][1] = "./";
+				_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
+			}
 		}
-		std::ofstream	output(_hrx["A"][1]);
+		resolve_path();
+		std::cout << "PATH=" << _path << std::endl;
+		std::ofstream	output(_path);
 		if (!boundary.empty())
 		{
-				pos = _hrx["BODY"][0].find(boundary);
-				if (pos != std::string::npos)
-					output << _hrx["BODY"][0].substr(pos);
-				else
-					output << _hrx["BODY"][0];
+			while ((pos = _hrx["BODY"][0].find(boundary + "--")) != std::string::npos)
+				_hrx["BODY"][0].replace(pos, (boundary + "--").length(), "");
+			while ((pos = _hrx["BODY"][0].find(boundary)) != std::string::npos)
+				_hrx["BODY"][0].replace(pos, boundary.length(), "");
+			output << _hrx["BODY"][0];
 		}
 		else
 		{
@@ -420,13 +451,15 @@ int	request_handler::resolve_path()
 #endif
 
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
+/*
 	bool allowed = false;
 	for (int i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
 		gen_startLine( _status.find("405") );
-	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+	return allowed ? 0 : 1;  PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+	return (true);
 
 }
 
