@@ -16,7 +16,7 @@ print # $list->header("text/html"),
       $list->start_html("Archives de $fileDir"),
       $list->p("Voici les fichiers de $fileDir");
 
-$fileDir =~ s/files/downloads/; # PROBLEM : CANTONNE LA NAVIGATION A DOWNLOADS
+# $fileDir =~ s/files/downloads/; # PROBLEM : CANTONNE LA NAVIGATION A DOWNLOADS
 foreach my $file (@files) {
     print $list->p(
             $list->a({-href=>'/' . $fileDir . '/' . $file},
@@ -37,3 +37,8 @@ print $list->end_html;
 #    while ((epdf = readdir(dpdf)))
 #      std::cout << epdf->d_name << std::endl;
 # closedir(dpdf);
+
+#   use File::Spec;
+#   ...
+#   my $rel_path = 'myfile.txt';
+#   my $abs_path = File::Spec->rel2abs( $rel_path ) ;
