@@ -281,8 +281,10 @@ void request_handler::set_server_id(void)
 		}
 // SI LE HOST:PORT N'A PAS ETE TROUVE ON SELECT LE PREMIER SERVER CORRESPONDANT
 	for (int i = 0; i < _si.size(); ++i)
-		if (_si[i].port == port)
-			_s_id = i; // PROBLEM ?
+		if (_si[i].port == port) {
+			_s_id = i;
+			break;
+		}
 #ifdef _debug_
 			cout << "host : " << host << ", port : " << port << ", id : " << _s_id << endl;
 #endif
