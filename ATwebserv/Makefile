@@ -25,7 +25,7 @@ CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
 endif
 
-CPP_FLAGS += -g
+CPP_FLAGS += -g3
 CPP_FLAGS += -fsanitize=address
 
 all:	build

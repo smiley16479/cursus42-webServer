@@ -164,7 +164,7 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 			free(sd);
 		}
 	}
-	mp["A"].clear();
+//	mp["A"].clear();
 	/*
 	mp["A"].erase(mp["A"].begin());
 	mp["A"].erase(mp["A"].begin());

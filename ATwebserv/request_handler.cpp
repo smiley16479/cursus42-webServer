@@ -57,13 +57,16 @@ request_handler::~request_handler()
 void request_handler::reader(client_info& client)
 {
 //	const char	*str = client.rqst.c_str();
+	size_t	pos;
 	string buf_1, buf_2;
-	std::stringstream ss_1;
+	std::string ss_1(client.rqst);
 
-	ss_1.str(client.rqst);
 //	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
-	if (ss_1 && std::getline(ss_1, buf_1)) {
+	if (!ss_1.empty() && (pos = ss_1.find("\r\n")) != string::npos)
+	{
+		buf_1 = ss_1.substr(0, pos + 2);
+		ss_1 = ss_1.substr(pos + 2);
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
@@ -72,11 +75,17 @@ void request_handler::reader(client_info& client)
 //		cout << "*it : " << *it << endl;
 
 	// LECTURE DU RESTE DE LA REQUETE
-	while (std::getline(ss_1, buf_1)) {
-		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
+	while ((pos = ss_1.find("\r\n")) != string::npos) {
+		buf_1 = ss_1.substr(0, pos + 2);
+		ss_1 = ss_1.substr(pos + 2);
+		if (buf_1 == "\r\n") { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			_hrx["BODY"].resize(1, string());
-			while (std::getline(ss_1, buf_1))
+			while ((pos = ss_1.find("\r\n")) != string::npos)
+			{
+				buf_1 = ss_1.substr(0, pos + 2);
+				ss_1 = ss_1.substr(pos + 2);
 				_hrx["BODY"][0].append(buf_1);
+			}
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -341,12 +350,12 @@ void request_handler::handle_post_rqst(void)
 				ofstream plop("plop");
 				plop << _hrx["BODY"][0];
 			}
-			if ((pos = _hrx["BODY"][0].find("\r")) != std::string::npos)
+			if ((pos = _hrx["BODY"][0].find("\r\n")) != std::string::npos)
 			{
 				std::cout << "SISI" << std::endl;
-				tmp = _hrx["BODY"][0].substr(0, pos);
+				tmp = _hrx["BODY"][0].substr(0, pos + 2);
 				std::cout << tmp << std::endl;
-				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
+				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 2);
 				ofstream lol("lol");
 				lol << _hrx["BODY"][0];
 				/*
@@ -357,9 +366,10 @@ void request_handler::handle_post_rqst(void)
 				}
 				*/
 			}
-			else
+			if ((pos = _hrx["BODY"][0].find_last_of("\r\n")) != std::string::npos)
 			{
-				tmp = _hrx["BODY"][0];
+				tmp = _hrx["BODY"][0].substr(0, pos + 2);
+				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 2);
 			}
 		}
 		if (!tmp.empty())
@@ -592,6 +602,7 @@ void	request_handler::handle_cgi(void)
 		int		ret_code;
 		size_t	pos;
 		int		bfd[2];
+		string tmp;
 
 		//HERE!
 		resolve_path();
@@ -618,12 +629,29 @@ void	request_handler::handle_cgi(void)
 		if (!_hrx["BODY"].empty() && ((pos = _hrx["BODY"][0].find("Status: ")) != std::string::npos))
 		{
 			_response += _hrx["BODY"][0].substr(pos, _hrx["BODY"][0].substr(pos).find("\r\n"));
-			if ((ret_code = atoi(_response.c_str())) != 0)
+			tmp = _response.substr(_response.find("Status: ") + strlen("Status: "));
+			
+			for (int i=0; i < tmp.size(); ++i)
+				cout << RED << tmp[i] << RESET << endl;
+			cout << RED "tmp : " RESET << endl;
+			cout << "_responseb : " << _response << endl;		
+			if ((ret_code = atoi(tmp.c_str())) != 0)
 			{
-				gen_startLine( _status.find(_response.substr(_response.find(": ") + 2)));
-				_path.clear();
-				_hrx["A"][1] = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
-				resolve_path();
+				cout << RED "ret codd int : " RESET << ret_code << endl;
+				std::cout << _status.find(std::to_string(ret_code))->first << "'" << _status.find(std::to_string(ret_code))->second << std::endl;
+				_hrx["A"][1] = _status.find(std::to_string(ret_code))->first;
+				_hrx["A"][2] = _status.find(std::to_string(ret_code))->second;
+				_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+				std::cout << "ret code = " << to_string(ret_code).c_str() << std::endl;
+				//_path.clear();
+				std::cout << "COUCOU : " << _htx["A"][1]  << std::endl;
+				file_type();
+				gen_CType(string());
+				gen_CLength();
+				add_all_field(); 
+				add_body();
+			//	std::cout << "SAluuuuuuuut" << std::endl;
+			//	resolve_path();
 			}
 			return ;
 		}
