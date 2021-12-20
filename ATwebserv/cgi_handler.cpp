@@ -156,7 +156,10 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 			}
 			else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
 			{
-				mp["BODY"].push_back(tmp);
+				if (mp["BODY"].empty()) 
+					mp["BODY"].push_back(tmp);
+				else
+					mp["BODY"][0].append(tmp);
 			}
 			free(sd);
 		}

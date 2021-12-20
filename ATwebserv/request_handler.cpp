@@ -589,6 +589,7 @@ void request_handler::display(void) {
 
 void	request_handler::handle_cgi(void)
 {
+		int		ret_code;
 		size_t	pos;
 		int		bfd[2];
 
@@ -614,12 +615,27 @@ void	request_handler::handle_cgi(void)
 	//		dup2(STDIN_FILENO, bfd[0]);
 		}
 		_response.clear();
-		_response += (char*)"HTTP/1.1 200 OK\r\n";
+		if (!_hrx["BODY"].empty() && ((pos = _hrx["BODY"][0].find("Status: ")) != std::string::npos))
+		{
+			_response += _hrx["BODY"][0].substr(pos, _hrx["BODY"][0].substr(pos).find("\r\n"));
+			if ((ret_code = atoi(_response.c_str())) != 0)
+			{
+				gen_startLine( _status.find(_response.substr(_response.find(": ") + 2)));
+				_path.clear();
+				_hrx["A"][1] = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+				resolve_path();
+			}
+			return ;
+		}
+		else
+		{
+			_response += (char*)"HTTP/1.1 200 OK\r\n";
+			_response += "Status: 200 Success\r\n";
+		}
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
 			_response += _hrx["A"][i];
 		}
-		_response += "Status: 200 Success\r\n";
 		_response += "Pragma: no-cache\r\n";
 //		_response += "Location:\r\n";
 		size_t k = 0;
@@ -682,78 +698,3 @@ void	request_handler::handle_cgi(void)
 //		_response += "\r\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 }
-
-/* recursive path solver(42 syntax)
-
-void	request_handler::resolve_path(string& path)
-{
-// REMOVE TRAILING '/' AT URL'S END
-//	while (_hrx["A"][1].back() == '/' && _hrx["A"][1].size() != 1)
-//		_hrx["A"][1].pop_back();
-
-	size_t pos;
-	string url, uri;
-
-	if (_hrx["A"][1] == "/") {
-		cout << "ds if\n";
-		path =  "./" + _si[_s_id].location["/"].root + "/" + _si[_s_id].location["/"].index;
-	}
-	else { // SPLIT URL (path...) AND URI POUR RECHERCHE DS LES "LOCATION" DU SERVER CONCERNÉ
-		cout << "ds else\n";
-		pos = _hrx["A"][1].find("/");
-		if (pos != std::string::npos)
-		{
-			url = _hrx["A"][1].substr(0, pos + 1);
-			uri = _hrx["A"][1].substr(pos + 1);
-			location_lookup(path, url, uri, _si[_s_id].location);
-		}
-	}
-	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
-
-	if (path.empty()) {
-		path = "./" + (_si[_s_id].location["/"].root.back() == '/' ? _si[_s_id].location["/"].root : _si[_s_id].location["/"].root + "/");
-		// path += url; // c'est ici que "/test" se mets ds le path
-		path += uri;
-	}
-
-	cout << BLUE "url : " RESET << url << BLUE ", uri : " RESET << uri << BLUE ", path : " RESET << path << endl;
-
-	pos = path.find(".php");
-	if (pos != std::string::npos)
-		path = path.substr(0, pos + 4);
-	int file_tp = file_type(path, uri);
-
-#ifdef _debug_
-	cout << BLUE "resolved_path : " RESET << path << " uri(" + uri + ")" << endl;
-#endif
-}
-
-// si l'url a plusieurs niveau de dossiers : choisir le plus adapté
-int request_handler::location_lookup(string& path, string url, string uri, std::map<std::string, locati_info>& loc)
-{
-	size_t	pos;
-
-	cout << BLUE "url : " RESET << url << BLUE " uri : " RESET << uri << endl;
-	if (loc.find(url) != loc.end())
-	{
-		location_lookup(path, url, uri, loc[url].location);
-	}
-	else if ((pos = uri.find("/")) != std::string::npos)
-	{
-		url = uri.substr(0, pos + 1);
-		uri = uri.substr(pos + 1);
-		location_lookup(path, url, uri, loc);
-	}
-	if (path.empty())
-	{
-		if (url != "/" && loc.find(url) != loc.end())
-		{
-			path = loc[url].root;
-			if (path.back() != '/')
-				path += "/";
-			path += uri;
-		}
-	}
-	return (0);
-}
-*/
