@@ -313,6 +313,52 @@ void request_handler::handle_get_rqst(void)
 	// add_body();
 }
 
+void request_handler::multipart_form(string& boundary, string& msg)	{
+	size_t	pos, end;
+	string	tmp, buf, path;
+	ofstream	out;
+
+	pos = msg.find(boundary);
+	if (pos != string::npos)
+	{
+		msg = msg.substr(pos + boundary.length());
+		if (msg.substr(0, 2) == "\r\n")
+			msg = msg.substr(2);
+		else if (msg.substr(0, 2) == "--")
+		{
+			msg = msg.substr(2);
+			return ;
+		}
+		while ((pos = msg.find("\r\n")) != string::npos)
+		{
+			if (pos == 0)
+				break ;
+			buf = msg.substr(0, pos + 2);
+			msg = msg.substr(pos + 2);
+			if (buf == "\r\n")
+				break ;
+			else
+				tmp.append(buf);
+		}
+		std::cout << "tmp = " << tmp << std::endl;
+		if ((pos = tmp.find("filename=\"")) != string::npos)
+		{
+			buf = tmp.substr(pos + strlen("filename=\""), tmp.find("\r\n"));
+			path = buf.substr(0, buf.find("\""));
+		}
+		std::cout << "path= " << path << std::endl;
+		out.open(path);
+		if (msg.substr(0, 2) == "\r\n")
+			msg = msg.substr(2);
+		if ((pos = msg.find(boundary + "--")) != string::npos)
+		{
+			buf = msg.substr(0, pos);
+			msg = msg.substr(pos + (boundary + "--").length());
+			out << buf;
+		}
+	}
+}
+
 void request_handler::handle_post_rqst(void) 
 {
 	size_t	pos;
@@ -341,63 +387,26 @@ void request_handler::handle_post_rqst(void)
 	{
 		if (!_hrx["BODY"].empty())
 		{
-			if (!boundary.empty() && (pos = _hrx["BODY"][0].find(boundary)) != std::string::npos)
+			if (!boundary.empty())
 			{
-				std::cout << "YOLO" << std::endl;
-				tmp = _hrx["BODY"][0].substr(0, pos + boundary.length() + 2);
-				std::cout << tmp << std::endl;
-				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + boundary.length());
-				ofstream plop("plop");
-				plop << _hrx["BODY"][0];
+				_response.clear();
+				multipart_form(boundary, _hrx["BODY"][0]);
+				_hrx.clear();
+				_htx.clear();
 			}
-			if ((pos = _hrx["BODY"][0].find("\r\n")) != std::string::npos)
+			else
 			{
-				std::cout << "SISI" << std::endl;
-				tmp = _hrx["BODY"][0].substr(0, pos + 2);
-				std::cout << tmp << std::endl;
-				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 2);
-				ofstream lol("lol");
-				lol << _hrx["BODY"][0];
-				/*
-				if ((pos = _hrx["BODY"][0].find("\r\n")) != std::string::npos)
-				{
-					tmp = tmp.substr(0, pos);
-					_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
-				}
-				*/
+				file_type();
+				gen_CType(string());
+				gen_CLength();
+				add_all_field(); 
+				add_body();
+				_hrx.clear();
+				_htx.clear();
 			}
-			if ((pos = _hrx["BODY"][0].find_last_of("\r\n")) != std::string::npos)
-			{
-				tmp = _hrx["BODY"][0].substr(0, pos + 2);
-				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 2);
-			}
-		}
-		if (!tmp.empty())
-		{
-			if ((pos = tmp.find("filename=\"")) != std::string::npos)
-			{
-				_hrx["A"][1] = "./";
-				_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
-			}
-		}
-		resolve_path();
-		std::cout << "PATH=" << _path << std::endl;
-		std::ofstream	output(_path);
-		if (!boundary.empty())
-		{
-			while ((pos = _hrx["BODY"][0].find(boundary + "--")) != std::string::npos)
-				_hrx["BODY"][0].replace(pos, (boundary + "--").length(), "");
-			while ((pos = _hrx["BODY"][0].find(boundary)) != std::string::npos)
-				_hrx["BODY"][0].replace(pos, boundary.length(), "");
-			output << _hrx["BODY"][0];
-		}
-		else
-		{
-			output << _hrx["BODY"][0];
 		}
 		gen_startLine( _status.find("200") ); 
 	}
-	// sinon on execute les cgi ?
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -650,6 +659,8 @@ void	request_handler::handle_cgi(void)
 				gen_CLength();
 				add_all_field(); 
 				add_body();
+				_hrx.clear();
+				_htx.clear();
 			//	std::cout << "SAluuuuuuuut" << std::endl;
 			//	resolve_path();
 			}
@@ -723,6 +734,8 @@ void	request_handler::handle_cgi(void)
 				}
 			}
 		}
+		_hrx.clear();
+		_htx.clear();
 //		_response += "\r\n";
 		cout << RED "Response :\n" RESET << _response << endl;
 }

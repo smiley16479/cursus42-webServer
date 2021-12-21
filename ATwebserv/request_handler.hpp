@@ -109,6 +109,7 @@ private:
 	void add_all_field();
 	void add_body();
 	void clean_url(string& str);
+	void multipart_form(string& boundary, string& msg);
 	void handle_post_rqst(void);
 	void	handle_cgi(void);
 

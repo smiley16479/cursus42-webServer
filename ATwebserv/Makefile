@@ -16,7 +16,7 @@ NAME = webserv
 #MULTITHREADED BUILD FLAGS#
 #MAKEFLAGS+=-j8
 
-CGI_OUT = http://127.0.0.1::8080/scripts/layout.html
+CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"
 
 ifeq ($(df), 0)
 CPP_FLAGS += -Wall
@@ -30,15 +30,15 @@ CPP_FLAGS += -fsanitize=address
 
 all:	build
 
-exec:	run nav
+exec:	build run nav
 
 build:	$(NAME)
 
 run:
-	./$(NAME)
+	./$(NAME) &
 
-nav:
-	firefox $(CGI_OUT)
+nav: run
+	firefox --private-window $(CGI_OUT)
 
 goo-nav:
 	google-chrome $(CGI_OUT)
