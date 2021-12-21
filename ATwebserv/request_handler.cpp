@@ -470,33 +470,30 @@ int request_handler::file_type()
 // execute le script perl er pipe sont résultat ds _body
 void request_handler::generate_folder_list()
 {
-	int fd[2], pid;
-	if (pipe(fd) == -1 || (pid = fork()) == -1)
-		throw runtime_error("pipe || fork failed");
-	if (pid == 0) {// Child
-		char const *argv[] = {"files/cgi/perlFolderLister.pl", _path.c_str(), NULL};
-		close(fd[0]);	/* Close unused read end */
-		dup2(fd[1], STDOUT_FILENO);
-		if (execv(*argv, (char *const *)argv) == -1)
-			_exit(EXIT_FAILURE);
-		close(fd[1]);
-	}
-	else {
-		close(fd[1]);          /* Close unused write end */
-		char buf[1000];
-		int n;
-		_body.clear();
-		while ((n = read(fd[0], buf, 999))) {
-			buf[n] = '\0';
-			_body.append(buf);
+	DIR *dpdf;
+	set<string> st;
+	struct dirent *epdf;
+
+	dpdf = opendir(_path.c_str());
+	if (dpdf != NULL)
+	   	while ((epdf = readdir(dpdf))) {
+			st.insert(epdf->d_name);
+	    	std::cout << epdf->d_name << std::endl;
 		}
-		gen_CType("html");
-		// gen_CType("html");
-		cout <<  CYAN "folder_ response" RESET << _body  <<  CYAN "path_ response" RESET << _path << endl;
-		close(fd[0]);          /* Reader will see EOF */
-		wait(NULL);            /* Wait for child */
-		return ;
-	}
+	closedir(dpdf);
+
+	fstream autoindex_file("configuration_files/autoindex.html");
+	if (!autoindex_file.is_open())
+		throw (std::runtime_error("Couldn't open : configuration_files/autoindex.html"));
+// BUFFERISE LE TEMPLATE HTML POUR Y AJOUTER LE CONTENU DU DOSSIER
+	char c;	
+	while ((c = autoindex_file.rdbuf()->sbumpc()) != EOF)
+		_body += c;
+	autoindex_file.close();
+	// cout << "_hrx['A'][1]" << _hrx["A"][1] << " _path : "  << _path << endl;
+	for (set<string>::iterator i = st.begin(); i != st.end(); ++i)
+		_body.append("<div style='padding:10px;'><a href=\"" + _hrx["A"][1] + '/' + *i + "\">" + *i + "</a></div>");
+	_body.append("</div></body></html>");
 }
 
 // Clear la string (response) et y ajoute tous les field, puis clear _hrx
