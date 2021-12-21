@@ -4,6 +4,7 @@
 
 client_handler::client_handler(/* args */)
 {
+	clients.clear();
 }
 
 client_handler::~client_handler()
@@ -156,6 +157,8 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 				tmp = tmp.substr(0, pos);
 			ss = std::stringstream(tmp);
 			ss >> client._cLen;
+			if (client._cLen < client.rqst.length())
+				return (true);
 			if (client._cLen > MAX_LEN)
 			{
 				client.rqst.replace(0, 4, "CHUNK");
@@ -197,6 +200,10 @@ bool client_handler::is_post_rqst_fulfilled(client_info& client)
 		ss = std::stringstream(tmp);
 		ss >> client._cLen;
 		std::cout << "Len was set:" << client._cLen << std::endl;
+		if (client.rqst.length() >= client._cLen)
+		{
+			return (true);
+		}
 		if (client._cLen > MAX_LEN)
 		{
 			client.rqst.replace(0, 4, "CHUNK");
@@ -254,7 +261,7 @@ int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 	size_t	read_bytes;
 	char	str[MAX_LEN];
 
-	if ((read_bytes = recv(fd, str, sizeof(str), MSG_DONTWAIT)) != -1)
+	if ((read_bytes = recv(fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
 	{
 		this->rqst_append(fd, str, read_bytes);
 		this->time_reset(_epoll, this->clients[fd].time_out, fd);
@@ -354,7 +361,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 		}
 		else if (!it->second.resp.empty())
 		{
-			printf("\nResolving chunked resp\n");
+		//	printf("\nResolving chunked resp\n");
 			if (chunked_resp(_epoll, it->first))
 			{
 				this->remove_fd(_epoll, it->first);

@@ -41,6 +41,7 @@ public:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	client_info&	get_info(int fd) { return (clients[fd]); };
+	std::map<int, client_info>*	data() { return (&this->clients); };
 	bool is_post_rqst_fulfilled(client_info& client);
 	bool is_chunked_rqst_fulfilled(client_info& client);
 	std::vector<int>	handle_chunks(struct_epoll& _epoll);

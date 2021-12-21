@@ -89,7 +89,7 @@ void server::run(void) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 
 				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT)) != -1)
+				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
 				{
 					client.rqst_append(_epoll._events[i].data.fd, str, read_bytes);
 					response_handler(client, header, _epoll._events[i].data.fd);
@@ -177,22 +177,23 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		client.clear(fd);
 		if (header.get_response().length() > MAX_LEN)
 		{
+				std::cout << "COUCOU" << std::endl;
 			client.fill_resp(fd, header.get_response());
 			if (client.chunked_resp(_epoll, fd))
 				client.remove_fd(_epoll, fd);
 		}
 		else
 		{
-			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT) == -1)
+			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
 			{
 				client.remove_fd(_epoll, fd);
 //				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 			}
 			else
 			{
+//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 				client.remove_fd(_epoll, fd);
 			}
-//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 //				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}

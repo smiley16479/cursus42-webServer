@@ -133,7 +133,7 @@ void request_handler::writer(void) {
 	gen_serv();
 
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
-	if (is_cgi(_hrx["A"]))
+	if (is_cgi(_hrx["A"], _si[_s_id].cgi_file_types))
 		return (handle_cgi());
 	else if (_hrx["A"][0] == "POST")
 		return (handle_post_rqst());
@@ -350,11 +350,18 @@ void request_handler::multipart_form(string& boundary, string& msg)	{
 		out.open(path);
 		if (msg.substr(0, 2) == "\r\n")
 			msg = msg.substr(2);
-		if ((pos = msg.find(boundary + "--")) != string::npos)
+		buf.clear();
+		end = msg.find(boundary);
+		if ((pos = msg.find(boundary + "--")) == end && pos != string::npos)
 		{
-			buf = msg.substr(0, pos);
+			buf.append(msg.substr(0, pos));
 			msg = msg.substr(pos + (boundary + "--").length());
 			out << buf;
+		}
+		else
+		{
+			buf.append(msg.substr(0, end));
+			msg = msg.substr(end + (boundary).length());
 		}
 	}
 }
@@ -405,8 +412,8 @@ void request_handler::handle_post_rqst(void)
 				_htx.clear();
 			}
 		}
-		gen_startLine( _status.find("200") ); 
 	}
+	gen_startLine( _status.find("200") ); 
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -615,6 +622,8 @@ void	request_handler::handle_cgi(void)
 
 		//HERE!
 		resolve_path();
+		if ((pos = _path.find("?")) != string::npos)
+			_path = _path.substr(0, pos);
 		_hrx.insert(std::make_pair("query", std::vector<std::string>()));
 		_hrx["query"].push_back(_path);
 		if (_s_id == -1)
@@ -671,10 +680,12 @@ void	request_handler::handle_cgi(void)
 			_response += (char*)"HTTP/1.1 200 OK\r\n";
 			_response += "Status: 200 Success\r\n";
 		}
+		/*
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
 		{
 			_response += _hrx["A"][i];
 		}
+		*/
 		_response += "Pragma: no-cache\r\n";
 //		_response += "Location:\r\n";
 		size_t k = 0;
@@ -724,15 +735,8 @@ void	request_handler::handle_cgi(void)
 		_response += "\r\n";
 		if (!_hrx["BODY"].empty())
 		{
-			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; ++i)
-			{
-			//	std::cout << _hrx["BODY"][i];
-				if (!_hrx["BODY"][i].empty() && _hrx["BODY"][i][0] != '\r')
-				{
-					_response += _hrx["BODY"][i];
-					_response += "\r\n";
-				}
-			}
+			if (!_hrx["BODY"][0].empty())
+				_response.append(_hrx["BODY"][0]);
 		}
 		_hrx.clear();
 		_htx.clear();

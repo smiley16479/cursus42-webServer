@@ -49,7 +49,7 @@ x	"HTTP_REFERER=";
 //# define SCRIPT "files/scripts/hello.php"
 # define SCRIPT "files/scripts/variables.php"
 
-bool	is_cgi(std::vector<std::string>& query);
+bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
 void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv, int fd_in);
 
 

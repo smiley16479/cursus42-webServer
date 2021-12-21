@@ -10,12 +10,15 @@ void debug_mp_out(std::map<std::string, std::vector<std::string> >& mp)
 	}
 }
 
-bool	is_cgi(std::vector<std::string>& query)
+bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions)
 {
-	for (std::vector<std::string>::iterator it = query.begin(); it != query.end(); it++)
+	for (std::vector<std::string>::iterator type = extensions.begin(); type != extensions.end(); type++)
 	{
-		if ((it->find(".php")) != std::string::npos)
-			return (true);
+		for (std::vector<std::string>::iterator it = query.begin(); it != query.end(); it++)
+		{
+			if ((it->find(*type)) != std::string::npos)
+				return (true);
+		}
 	}
 	return (false);
 }
@@ -134,16 +137,16 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 	}
 	else
 	{
-		waitpid(pid, NULL, 0);
 		close(bfd[0]);
 		close(bfd[1]);
+		close(fd[1]);
+		waitpid(pid, NULL, 0);
 		if (!mp["BODY"].empty())
 			mp["BODY"].clear();
 		mp["BODY"] = std::vector<std::string>();
-		char *sd;
-		close(fd[1]);
 		dup2(fd[0], fd_in);
 		close(fd[0]);
+		char *sd;
 		while (rec_gnl(fd_in, &sd) != 0)
 		{
 			tmp = (char*)sd;
