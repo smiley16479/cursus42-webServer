@@ -12,7 +12,8 @@
 	{
 		print "\t\t\t";
 		print "things=";
-		print $_POST["things"];
+		if (!empty($_POST["things"]))
+			print $_POST["things"];
 		print "\n";
 	}
 	else

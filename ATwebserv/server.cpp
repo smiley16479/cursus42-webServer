@@ -40,20 +40,11 @@ void server::initialize(void) {
 			continue ;
 /* CREATION DU SERVER */
 	//	if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
-		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0 
+		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		//SET NON BLOCK
-		int opt = 1;
-		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
-		if (fcntl(_s[i].socket, F_SETFL, O_NONBLOCK) == -1)
-		{
-			perror("fcntl F_SETFL, FNDELAY | FASYNC ");
-			exit(EXIT_FAILURE);
-		}
-		//END
 		_epoll._event.events = EPOLLIN;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
@@ -77,6 +68,7 @@ void server::run(void) {
 			response_handler(client, header, *it);
 		chunks.clear();
 		//END
+		
 //		printf("\nPolling for input...\n");
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
 //		printf("%d ready events\n", _epoll._event_count);
@@ -85,7 +77,7 @@ void server::run(void) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
-			else {
+			else if (_epoll._events[i].events & EPOLLIN) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 
 				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
@@ -102,9 +94,12 @@ void server::run(void) {
 				{
 //					client.remove(_epoll, _epoll._events[i].data.fd);
 //					printf("server: client just left\n");
-					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+					perror("recv serv");
+					std::cout << "HEYyyyyy" << std::endl;
 				}			
 			}
+			else
+				client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 		}
 		client.check_all_timeout(_epoll);
 //		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);

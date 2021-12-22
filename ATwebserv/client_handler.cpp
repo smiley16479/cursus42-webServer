@@ -80,13 +80,13 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	clientaddr.sin_addr;
 	//SET NON BLOCK
-	int opt = 1;
-	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
-	{
-		perror("fcntl F_SETFL, FNDELAY | FASYNC ");
-		exit(EXIT_FAILURE);
-	}
+//	int opt = 1;
+//	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+//	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
+//	{
+//		perror("fcntl F_SETFL, FNDELAY | FASYNC ");
+//		exit(EXIT_FAILURE);
+//	}
 	//END
 	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
 	_epoll._event.data.fd = client_fd;
@@ -266,6 +266,13 @@ int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 		this->rqst_append(fd, str, read_bytes);
 		this->time_reset(_epoll, this->clients[fd].time_out, fd);
 	}
+	else
+	{
+		std::cout << "HERE" << std::endl;
+		this->remove(_epoll, fd);
+	//	this->time_reset(_epoll, this->clients[fd].time_out, fd);
+	//	this->rearm(_epoll, this->clients[fd].time_out, fd);
+	}
 	if (this->is_request_fulfilled(fd)) 
 	{
 		return (1);
@@ -364,8 +371,8 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 		//	printf("\nResolving chunked resp\n");
 			if (chunked_resp(_epoll, it->first))
 			{
-				this->remove_fd(_epoll, it->first);
-//				this->rearm(_epoll, it->second.time_out, it->first);
+//				this->remove_fd(_epoll, it->first);
+				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}
 	}
