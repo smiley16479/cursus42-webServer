@@ -99,7 +99,7 @@ void request_handler::reader(client_info& client)
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 
-	std::cout << "=========================================================" << std::endl;
+/* 	std::cout << "=========================================================" << std::endl;
 	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 	{
 		std::cout << it->first << "=";
@@ -107,7 +107,7 @@ void request_handler::reader(client_info& client)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 	}
-	std::cout << "=========================================================" << std::endl;
+	std::cout << "=========================================================" << std::endl; */
 	
 }
 
@@ -486,9 +486,9 @@ void request_handler::generate_folder_list()
 	if (!autoindex_file.is_open())
 		throw (std::runtime_error("Couldn't open : configuration_files/autoindex.html"));
 // BUFFERISE LE TEMPLATE HTML POUR Y AJOUTER LE CONTENU DU DOSSIER
-	char c;	
-	while ((c = autoindex_file.rdbuf()->sbumpc()) != EOF)
-		_body += c;
+	std::stringstream buffer;
+	buffer << autoindex_file.rdbuf();
+	_body = buffer.str();
 	autoindex_file.close();
 	// cout << "_hrx['A'][1]" << _hrx["A"][1] << " _path : "  << _path << endl;
 	for (set<string>::iterator i = st.begin(); i != st.end(); ++i)
