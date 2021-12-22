@@ -360,10 +360,10 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 				ret.push_back(it->first);
 			else
 			{
-//				this->time_reset(_epoll, it->second.time_out, it->first);
+				this->time_reset(_epoll, it->second.time_out, it->first);
 //				std::cout << "SALUT" << std::endl;
 //				this->remove(_epoll, it->first);
-				this->rearm(_epoll, it->second.time_out, it->first);
+//				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}
 		else if (!it->second.resp.empty())
@@ -371,8 +371,8 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 		//	printf("\nResolving chunked resp\n");
 			if (chunked_resp(_epoll, it->first))
 			{
-//				this->remove_fd(_epoll, it->first);
-				this->rearm(_epoll, it->second.time_out, it->first);
+				this->remove_fd(_epoll, it->first);
+//				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 		}
 	}

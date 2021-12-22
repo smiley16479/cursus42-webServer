@@ -181,16 +181,16 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		}
 		else
 		{
-			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
 			{
-				client.remove_fd(_epoll, fd);
-//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+//				client.remove_fd(_epoll, fd);
+				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 			}
 			else
-			{
+//			{
 //				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 				client.remove_fd(_epoll, fd);
-			}
+//			}
 //				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}
