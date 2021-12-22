@@ -40,10 +40,12 @@ void server::initialize(void) {
 			continue ;
 /* CREATION DU SERVER */
 	//	if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
-		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
+		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | O_NONBLOCK, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
+		int opt = 1;
+		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
 		_epoll._event.events = EPOLLIN;
 		_epoll._event.data.fd = _s[i].socket;
