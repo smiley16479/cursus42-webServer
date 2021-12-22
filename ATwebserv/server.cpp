@@ -50,7 +50,9 @@ void server::initialize(void) {
 		_epoll._event.events = EPOLLIN;
 		_epoll._event.data.fd = _s[i].socket;
 		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
+		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
+		}
 	}
 }
 
@@ -75,7 +77,7 @@ void server::run(void) {
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
 //		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
-			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0) {
+			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && _epoll._events[i].events & EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
@@ -101,7 +103,12 @@ void server::run(void) {
 				}			
 			}
 			else
-				client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+			{
+				std::cout << "YOYOYOYOYOYO" << std::endl;
+				if (_epoll._events[i].data.fd & EPOLLIN
+					|| _epoll._events[i].data.fd & EPOLLOUT)
+					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+			}
 		}
 		client.check_all_timeout(_epoll);
 //		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
@@ -183,8 +190,8 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		{
 			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
 			{
-//				client.remove_fd(_epoll, fd);
-				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+				client.remove_fd(_epoll, fd);
+//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 			}
 			else
 //			{
@@ -196,6 +203,7 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 	}
 	else
 	{
+		std::cout << "YIYIYIYIYIYI" << std::endl;
 		client.rearm(_epoll, client.get_info(fd).time_out, fd);
 	//	client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 	}

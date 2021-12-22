@@ -91,6 +91,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
+		std::cout << "YAYAYAYAYAYA" << std::endl;
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
 		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
@@ -299,8 +300,9 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 		}
 		else
 			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		return (0);
 	}
-	if ((*this).clients[fd].resp.length() > MAX_LEN)
+	else if ((*this).clients[fd].resp.length() > MAX_LEN)
 	{
 		sprintf(buf, "%lx", (*this).clients[fd].resp.substr(0, MAX_LEN).length());
 		tmp.clear();
@@ -392,6 +394,7 @@ void client_handler::rearm(struct_epoll& _epoll, int time_out, int fd)
 {
 	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_MOD, fd, &_epoll._event)) {
+		perror("fail in epoll:");
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
 		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

@@ -33,6 +33,7 @@ public:
     /* PRIVATE */
     int is_new_client(int fd);
     int get_time_out(int id_serv);
+	int	is_fd_ready(int fd);
 	void	response_handler(client_handler&, request_handler&, int fd);
 };
 
