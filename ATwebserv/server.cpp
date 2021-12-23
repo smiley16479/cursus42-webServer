@@ -102,12 +102,10 @@ void server::run(void) {
 					std::cout << "HEYyyyyy" << std::endl;
 				}			
 			}
-			else
+			else if (_epoll._events[i].events & EPOLLIN
+					|| _epoll._events[i].events & EPOLLOUT)
 			{
-				std::cout << "YOYOYOYOYOYO" << std::endl;
-				if (_epoll._events[i].data.fd & EPOLLIN
-					|| _epoll._events[i].data.fd & EPOLLOUT)
-					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+				client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 			}
 		}
 		client.check_all_timeout(_epoll);
@@ -173,8 +171,20 @@ void server::display_server(void)
 	}
 }
 
+struct epoll_event*	get_event(struct_epoll& _epoll, int fd)
+{
+	for(int i = 0; i < _epoll._event_count; ++i) {
+		if (_epoll._events[i].data.fd == fd)
+			return (&_epoll._events[i]);
+	}
+	return (NULL);
+}
+
 void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
+	struct epoll_event	*ptr = get_event(_epoll, fd);
+
 	if (client.is_request_fulfilled(fd)) {
+		struct epoll_event	*ptr = get_event(_epoll, fd);
 		cout << "request_fulfilled !!\n";
 		header.reader(/* str */client.get_info(fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
 		header.writer();
@@ -188,23 +198,27 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		}
 		else
 		{
-			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
+			if (ptr != NULL && ptr->events & EPOLLOUT)
 			{
-				client.remove_fd(_epoll, fd);
-//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+				if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
+				{
+					std::cout << "YIYIYIYIYIYI" << std::endl;
+	//				client.remove_fd(_epoll, fd);
+					client.rearm(_epoll, client.get_info(fd).time_out, fd);
+				}
+				else
+	//			{
+	//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+					client.remove_fd(_epoll, fd);
+	//			}
+	//				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 			}
-			else
-//			{
-//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
-				client.remove_fd(_epoll, fd);
-//			}
-//				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}
 	else
 	{
-		std::cout << "YIYIYIYIYIYI" << std::endl;
-		client.rearm(_epoll, client.get_info(fd).time_out, fd);
+		if (ptr != NULL && (ptr->events & EPOLLIN || ptr->events & EPOLLOUT))
+			client.rearm(_epoll, client.get_info(fd).time_out, fd);
 	//	client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 	}
 }

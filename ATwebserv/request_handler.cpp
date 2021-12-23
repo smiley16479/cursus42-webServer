@@ -700,7 +700,7 @@ void	request_handler::handle_cgi(void)
 //			_response += "Connection: close\r\n";
 		}
 		_response += "Content-Lenght: ";
-		_response += std::to_string(k - 1);
+		_response += std::to_string(k);
 		_response += "\r\n";
 		if (!_hrx["Content-Type"].empty())
 		{

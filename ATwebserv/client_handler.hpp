@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
+#include "server.hpp"
 
 #include <sstream>
 #include <vector>

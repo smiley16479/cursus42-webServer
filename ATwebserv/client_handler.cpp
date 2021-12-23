@@ -35,8 +35,11 @@ bool client_handler::is_request_fulfilled(int client_fd)
 }
 
 void client_handler::remove_fd(struct_epoll& _epoll, int fd)
-{	
-	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, fd, &_epoll._event);
+{
+	struct epoll_event	*ptr = get_event(_epoll, fd);
+
+	if (ptr != NULL && (ptr->events & EPOLLIN || ptr->events & EPOLLOUT))
+		epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, fd, &_epoll._event);
 	clients.erase(fd);
 	if (close(fd))
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
@@ -299,7 +302,9 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 			return (1);
 		}
 		else
+		{
 			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		}
 		return (0);
 	}
 	else if ((*this).clients[fd].resp.length() > MAX_LEN)
@@ -318,7 +323,10 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 			return (1);
 		}
 		else
+		{
+			std::cout << "YOYOYOYOYOYO" << std::endl;
 			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		}
 		return (0);
 	}
 	else
