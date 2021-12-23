@@ -252,9 +252,10 @@ void	request_handler::gen_CLength()
 		ss << _body.size();
 	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
-	if (!_si[_s_id].location[_l_id].max_file_size.empty() // POUR LES REQUEST ENTITY TOO LARGE SUREMENT A VIRER D'ICI
+// PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT (A DECOMMENTER -AV SON HOMOLOGUE DS gen_CLength()- SI CHANGEMENT D'AVIS)
+/* 	if (!_si[_s_id].location[_l_id].max_file_size.empty() // POUR LES REQUEST ENTITY TOO LARGE SUREMENT A VIRER D'ICI
 		&& atoi(ss.str().c_str()) > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))
-		gen_startLine( _status.find("413") );
+		gen_startLine( _status.find("413") ); */
 }
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
@@ -406,8 +407,8 @@ int	request_handler::resolve_path()
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 			_path += _hrx["A"][1].substr(it->location.size());
 			len = it->location.length();
-			if (it->location.size() == _hrx["A"][1].size())
-				_path += _si[_s_id].location[_l_id].index;
+			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis ds file_type si necessaire
+			// 	_path += _si[_s_id].location[_l_id].index;
 		}
 #ifdef _debug_
 	cout << BLUE "path : " RESET << _path << endl;
@@ -420,7 +421,6 @@ int	request_handler::resolve_path()
 	cout << BLUE "resolved_path : " RESET << _path << endl;
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
-
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 	bool allowed = false;
 	for (int i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
@@ -429,10 +429,10 @@ int	request_handler::resolve_path()
 	if (!allowed)
 		gen_startLine( _status.find("405") );
 	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
-
 }
 
-// Détecte si c'est un dossier ou un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
+// Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
+// Si c'est un dossier check l'autoindex ou la presence d'une directive index et affiche le contenu du dossier ou ajoute le fichier index respectivement
 // Si erreur lors de l'ouverture du fichier renvoie le _path sur les pages d'erreurs
 int request_handler::file_type()
 {
@@ -442,23 +442,25 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		// case S_IFBLK:  printf("block device\n");            break;
-		// case S_IFCHR:  printf("character device\n");        break;
+		// case S_IFBLK:  printf("block device\n");			break;
+		// case S_IFCHR:  printf("character device\n");		break;
 		case S_IFDIR:  printf("directory\n");
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 // PROBLEM
 				generate_folder_list();
 				return 1;
 			}
-			_path = "./files/if_folder.html";                  break;
-		// case S_IFIFO:  printf("FIFO/pipe\n");               break;
-		// case S_IFLNK:  printf("symlink\n");                 break;
-		case S_IFREG:  printf("regular file\n");               break;
-		// case S_IFSOCK: printf("socket\n");                  break;
+			// _path = "./files/if_folder.html";			break;
+			_path += _si[_s_id].location[_l_id].index;		
+			file_type();									break;
+/* 		case S_IFIFO:  printf("FIFO/pipe\n");				break;
+		case S_IFLNK:  printf("symlink\n");					break; */
+		case S_IFREG:  printf("regular file\n");			break;
+/* 		case S_IFSOCK: printf("socket\n");					break; */
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
 				gen_startLine( _status.find("404") );
-			printf(RED "unknown path...\n" RESET);
+			printf(RED "unknown path : %s\n" RESET, _path.c_str());
 			break;
 	}
 	if (atoi(_htx["A"][1].c_str()) >= 400) /* Faire en sorte de changer le png */
@@ -510,8 +512,8 @@ void request_handler::add_all_field()
 // Ajout du fichier ou du body À LA SUITE des header dans response
 void request_handler::add_body()
 {
-	if (_htx["A"][1] == "413")
-		return ;
+/* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
+		return ; */
 	if (!_body.empty()) {
 		_response += _body;
 		_body.clear();
