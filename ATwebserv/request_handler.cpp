@@ -109,8 +109,7 @@ void request_handler::reader(client_info& client)
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 
-/*
-	std::cout << "=========================================================" << std::endl;
+/* 	std::cout << "=========================================================" << std::endl;
 	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 	{
 		std::cout << it->first << "=";
@@ -122,8 +121,7 @@ void request_handler::reader(client_info& client)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 	}
-	std::cout << "=========================================================" << std::endl;
-*/	
+	std::cout << "=========================================================" << std::endl; */
 }
 
 void request_handler::writer(void) {
@@ -398,6 +396,7 @@ void request_handler::handle_post_rqst(void)
 			{
 				_response.clear();
 				multipart_form(boundary, _hrx["BODY"][0]);
+				resolve_path();
 				file_type();
 				gen_CType(string());
 				gen_CLength();
@@ -533,33 +532,30 @@ int request_handler::file_type()
 // execute le script perl er pipe sont résultat ds _body
 void request_handler::generate_folder_list()
 {
-	int fd[2], pid;
-	if (pipe(fd) == -1 || (pid = fork()) == -1)
-		throw runtime_error("pipe || fork failed");
-	if (pid == 0) {// Child
-		char const *argv[] = {"files/cgi/perlFolderLister.pl", _path.c_str(), NULL};
-		close(fd[0]);	/* Close unused read end */
-		dup2(fd[1], STDOUT_FILENO);
-		if (execv(*argv, (char *const *)argv) == -1)
-			_exit(EXIT_FAILURE);
-		close(fd[1]);
-	}
-	else {
-		close(fd[1]);          /* Close unused write end */
-		char buf[1000];
-		int n;
-		_body.clear();
-		while ((n = read(fd[0], buf, 999))) {
-			buf[n] = '\0';
-			_body.append(buf);
+	DIR *dpdf;
+	set<string> st;
+	struct dirent *epdf;
+
+	dpdf = opendir(_path.c_str());
+	if (dpdf != NULL)
+	   	while ((epdf = readdir(dpdf))) {
+			st.insert(epdf->d_name);
+	    	std::cout << epdf->d_name << std::endl;
 		}
-		gen_CType("html");
-		// gen_CType("html");
-		cout <<  CYAN "folder_ response" RESET << _body  <<  CYAN "path_ response" RESET << _path << endl;
-		close(fd[0]);          /* Reader will see EOF */
-		wait(NULL);            /* Wait for child */
-		return ;
-	}
+	closedir(dpdf);
+
+	fstream autoindex_file("configuration_files/autoindex.html");
+	if (!autoindex_file.is_open())
+		throw (std::runtime_error("Couldn't open : configuration_files/autoindex.html"));
+// BUFFERISE LE TEMPLATE HTML POUR Y AJOUTER LE CONTENU DU DOSSIER
+	std::stringstream buffer;
+	buffer << autoindex_file.rdbuf();
+	_body = buffer.str();
+	autoindex_file.close();
+	// cout << "_hrx['A'][1]" << _hrx["A"][1] << " _path : "  << _path << endl;
+	for (set<string>::iterator i = st.begin(); i != st.end(); ++i)
+		_body.append("<div style='padding:10px;'><a href=\"" + _hrx["A"][1] + '/' + *i + "\">" + *i + "</a></div>");
+	_body.append("</div></body></html>");
 }
 
 // Clear la string (response) et y ajoute tous les field, puis clear _hrx
@@ -706,11 +702,11 @@ void	request_handler::handle_cgi(void)
 		_response += "Content-Lenght: ";
 		_response += std::to_string(k);
 		_response += "\r\n";
-		if (!_hrx["Content-Type"].empty())
+		if (!_hrx["Content-Type:"].empty())
 		{
 			_response += "Content-Type: ";
-			for (size_t i = 0, j = _hrx["Content-Type"].size(); i < j; ++i)
-				_response += _hrx["Content-Type"][i];
+			for (size_t i = 0, j = _hrx["Content-Type:"].size(); i < j; ++i)
+				_response += _hrx["Content-Type:"][i];
 			_response += "\r\n";
 		}
 //		_response += "Content-Language: en\r\n";

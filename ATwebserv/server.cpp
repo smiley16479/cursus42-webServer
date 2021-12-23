@@ -202,7 +202,7 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 			{
 				if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
 				{
-					std::cout << "YIYIYIYIYIYI" << header.get_response() << std::endl;
+					std::cout << "YIYIYIYIYIYI" << std::endl;
 	//				client.remove_fd(_epoll, fd);
 					client.rearm(_epoll, client.get_info(fd).time_out, fd);
 				}

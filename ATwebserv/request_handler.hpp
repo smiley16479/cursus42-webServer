@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <exception>
 #include <map>
+#include <set>
 #include <vector>
 #include "struct_webserv.hpp"
 #include "color.hpp"
