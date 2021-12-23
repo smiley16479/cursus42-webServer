@@ -398,6 +398,11 @@ void request_handler::handle_post_rqst(void)
 			{
 				_response.clear();
 				multipart_form(boundary, _hrx["BODY"][0]);
+				file_type();
+				gen_CType(string());
+				gen_CLength();
+				add_all_field(); 
+				add_body();
 				_hrx.clear();
 				_htx.clear();
 			}
@@ -413,7 +418,6 @@ void request_handler::handle_post_rqst(void)
 			}
 		}
 	}
-	gen_startLine( _status.find("200") ); 
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -678,7 +682,7 @@ void	request_handler::handle_cgi(void)
 		else
 		{
 			_response += (char*)"HTTP/1.1 200 OK\r\n";
-			_response += "Status: 200 Success\r\n";
+		//	_response += "Status: 200 Success\r\n";
 		}
 		/*
 		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
@@ -686,7 +690,7 @@ void	request_handler::handle_cgi(void)
 			_response += _hrx["A"][i];
 		}
 		*/
-		_response += "Pragma: no-cache\r\n";
+//		_response += "Pragma: no-cache\r\n";
 //		_response += "Location:\r\n";
 		size_t k = 0;
 		if (!_hrx["BODY"].empty())
@@ -707,23 +711,23 @@ void	request_handler::handle_cgi(void)
 			_response += "Content-Type: ";
 			for (size_t i = 0, j = _hrx["Content-Type"].size(); i < j; ++i)
 				_response += _hrx["Content-Type"][i];
-	//		_response += "\r\n";
+			_response += "\r\n";
 		}
-		_response += "Content-Language: en\r\n";
+//		_response += "Content-Language: en\r\n";
 		if (!_htx["Date"].empty())
 		{
 			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
 			{
 				_response += _htx["Date"][i];
 			}
-			_response += "Last-Modified:";
-			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
-			{
-				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
-					_response += _htx["Date"][i].substr(pos + 5);
-				else
-					_response += _htx["Date"][i];
-			}
+//			_response += "Last-Modified:";
+//			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
+//			{
+//				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
+//					_response += _htx["Date"][i].substr(pos + 5);
+//				else
+//					_response += _htx["Date"][i];
+//			}
 		}
 		if (!_htx["Server"].empty())
 		{

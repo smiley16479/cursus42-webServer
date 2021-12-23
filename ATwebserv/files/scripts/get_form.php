@@ -2,6 +2,9 @@
 <!doctype html>
 <html>
 	<link href="layout.css" rel="stylesheet" type="text/css">
+    <link rel="icon" 
+      type="image/png" 
+      href="/favicon.ico">
 	<head>
 		<title>get Form</title>
 	</head>

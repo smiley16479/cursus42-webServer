@@ -154,8 +154,8 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, const server_i
 			if ((pos = tmp.find("Content-type: ")) != std::string::npos)
 			{
 				tmp = tmp.replace(0, strlen("Content-type: "), "");
-				mp["Content-Type:"].clear();
-				mp["Content-Type:"].push_back(tmp);
+				mp["Content-Type"].clear();
+				mp["Content-Type"].push_back(tmp);
 			}
 			else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
 			{
