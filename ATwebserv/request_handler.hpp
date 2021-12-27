@@ -112,7 +112,8 @@ private:
 	void clean_url(string& str);
 	void multipart_form(string& boundary, string& msg);
 	void handle_post_rqst(void);
-	void	handle_cgi(void);
+	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
+	void handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */
 	

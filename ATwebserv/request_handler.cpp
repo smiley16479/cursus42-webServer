@@ -614,12 +614,157 @@ void request_handler::display(void) {
 	}
 }
 
+std::vector<std::string> request_handler::extract_env(std::map<std::string, std::vector<std::string> >& mp,const server_info& _s)
+{
+	std::vector<std::string>	env;
+	std::string			tmp;
+	std::string			buf(mp["A"][1]);
+	std::string			var;
+	size_t				pos;
+
+	tmp =  "REDIRECT_STATUS=CGI";
+	env.push_back(tmp);
+	tmp = "SERVER_SOFTWARE=";
+	for (size_t j = 0; j < _s.server_name.size(); ++j)
+		tmp += _s.server_name[j];
+	env.push_back(tmp);
+	tmp = "SERVER_NAME=";
+	tmp += _s.host;
+	env.push_back(tmp);
+	tmp = "GATEWAY_INTERFACE=CGI/1.1";
+	env.push_back(tmp);
+	tmp = "SERVER_PROTOCOL=HTTP/1.1";
+	env.push_back(tmp);
+	tmp = "SERVER_PORT=";
+	tmp += _s.port;
+	env.push_back(tmp);
+	tmp = "REQUEST_METHOD=";
+	tmp += mp["A"][0];
+	env.push_back(tmp);
+	tmp = "PATH_INFO=";
+	pos = buf.find(".php");
+	var = buf.substr(pos + 4);
+	buf = buf.substr(0, pos + 4);
+	if ((pos = var.find("/")) != std::string::npos)
+		tmp += var.substr(pos + 1);
+	env.push_back(tmp);
+	tmp = "PATH_TRANSLATED=";
+	if (!mp["query"].empty())
+		tmp += mp["query"][0];
+	env.push_back(tmp);
+	tmp = "SCRIPT_NAME=";
+//	tmp += buf;
+	tmp += (buf[0] == '/' ? buf.substr(1) : buf);
+	env.push_back(tmp);
+	tmp = "QUERY_STRING=";
+	if ((pos = var.find("?")) != std::string::npos)
+		tmp += var.substr(pos + 1);
+		/*
+	if (!mp["BODY"].empty())
+	{
+		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
+			tmp += *it;
+		mp["BODY"].clear();
+	}
+	*/
+	env.push_back(tmp);
+	tmp = "REMOTE_HOST=";
+	if (!mp["Host:"].empty())
+	{
+		for (size_t j = 0; j < mp["Host:"].size(); ++j)
+			tmp+= mp["Host:"][j];
+	}
+	env.push_back(tmp);
+	tmp = "DOCUMENT_ROOT=";
+	pos = buf.find_last_of("/");
+	var = buf.substr(0, pos);
+	if (var.substr(0, 2) == "./")
+		var = var.substr(2);
+	tmp += var;
+	env.push_back(tmp);
+	tmp = "AUTH_TYPE=";
+	if (!mp["Authorization:"].empty())
+	{
+		tmp+= mp["Authorization:"][0];
+	}
+	env.push_back(tmp);
+	tmp = "REMOTE_USER=";
+	// GET USER NAME FROM SERVER
+	env.push_back(tmp);
+	tmp = "REMOTE_IDENT=";
+	// GET USER ID FROM SERVER
+	env.push_back(tmp);
+	tmp = "CONTENT_TYPE=";
+	if (!mp["Content-Type:"].empty())
+	{
+		for (size_t j = 0; j < mp["Content-Type:"].size(); ++j)
+			tmp+= mp["Content-Type:"][j];
+	}
+	env.push_back(tmp);
+	tmp = "CONTENT_LENGTH=";
+	if (!mp["Content-Length:"].empty())
+	{
+		for (size_t j = 0; j < mp["Content-Length:"].size(); ++j)
+			tmp+= mp["Content-Length:"][j];
+	}
+	else
+		tmp+="0";
+	env.push_back(tmp);
+	tmp = "HTTP_ACCEPT=";
+	if (!mp["Accept:"].empty())
+	{
+		for (size_t j = 0; j < mp["Accept:"].size(); ++j)
+			tmp+= mp["Accept:"][j];
+	}
+	env.push_back(tmp);
+	tmp = "HTTP_ACCEPT_LANGUAGE=";
+	if (!mp["Accept-Language:"].empty())
+	{
+		for (size_t j = 0; j < mp["Accept-Language:"].size(); ++j)
+			tmp+= mp["Accept-Language:"][j];
+	}
+	env.push_back(tmp);
+	tmp = "HTTP_USER_AGENT=";
+	if (!mp["User-Agent:"].empty())
+	{
+		for (size_t j = 0; j < mp["User-Agent:"].size(); ++j)
+			tmp+= mp["User-Agent:"][j];
+	}
+	env.push_back(tmp);
+//	tmp = "HTTP_COOKIE=";
+	//GET COOKIE FROM SERVER
+	//C EST UN BONUS !!!
+//	env.push_back(tmp);
+	tmp = "HTTP_REFERER=";
+	if (!mp["Referer"].empty())
+	{
+		for (size_t j = 0; j < mp["Referer"].size(); ++j)
+			tmp+= mp["Referer"][j];
+	}
+	env.push_back(tmp);
+	/*
+		cout << "auth_basic : " << _s.location[j].auth_basic << endl;
+		cout << "auth_user_file : " << _s.location[j].auth_user_file << endl;
+		cout << "autoindex : " << _s.location[j].autoindex << endl;
+		cout << "return_directive : " << _s.location[j].return_directive << endl;
+		cout << "allowed_method : ";
+		for (size_t k = 0; k < _s.location[j].allowed_method.size(); ++k)
+			cout << _s.location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
+		cout << endl << "return : ";
+		for (size_t k = 0; k < _s.location[j].retour.size(); ++k)
+			cout << _s.location[j].retour[k] << (k < _s.location[j].retour.size() - 1 ? ", " : "");
+		cout << endl;
+		*/
+	return (env);
+}
+
 void	request_handler::handle_cgi(void)
 {
 		int		ret_code;
 		size_t	pos;
 		int		bfd[2];
 		string tmp;
+		std::vector<std::string>	env;
 
 		//HERE!
 		resolve_path();
@@ -636,7 +781,8 @@ void	request_handler::handle_cgi(void)
 		{
 			bfd[0] = dup(STDIN_FILENO);
 			bfd[1] = dup(STDOUT_FILENO);
-			go_cgi(_hrx, _si[_s_id], STDIN_FILENO);
+			env = extract_env(_hrx, _si[_s_id]);
+			go_cgi(_htx, env, STDIN_FILENO);
 			dup2(bfd[0], STDIN_FILENO);
 			dup2(bfd[1], STDOUT_FILENO);
 			close(bfd[0]);
@@ -645,9 +791,9 @@ void	request_handler::handle_cgi(void)
 	//		dup2(STDIN_FILENO, bfd[0]);
 		}
 		_response.clear();
-		if (!_hrx["BODY"].empty() && ((pos = _hrx["BODY"][0].find("Status: ")) != std::string::npos))
+		if (!_htx["BODY"].empty() && ((pos = _htx["BODY"][0].find("Status: ")) != std::string::npos))
 		{
-			_response += _hrx["BODY"][0].substr(pos, _hrx["BODY"][0].substr(pos).find("\r\n"));
+			_response += _htx["BODY"][0].substr(pos, _htx["BODY"][0].substr(pos).find("\r\n"));
 			tmp = _response.substr(_response.find("Status: ") + strlen("Status: "));
 			
 			for (int i=0; i < tmp.size(); ++i)
@@ -658,8 +804,8 @@ void	request_handler::handle_cgi(void)
 			{
 				cout << RED "ret codd int : " RESET << ret_code << endl;
 				std::cout << _status.find(std::to_string(ret_code))->first << "'" << _status.find(std::to_string(ret_code))->second << std::endl;
-				_hrx["A"][1] = _status.find(std::to_string(ret_code))->first;
-				_hrx["A"][2] = _status.find(std::to_string(ret_code))->second;
+				_htx["A"][1] = _status.find(std::to_string(ret_code))->first;
+				_htx["A"][2] = _status.find(std::to_string(ret_code))->second;
 				_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
 				std::cout << "ret code = " << to_string(ret_code).c_str() << std::endl;
 				//_path.clear();
@@ -690,24 +836,24 @@ void	request_handler::handle_cgi(void)
 //		_response += "Pragma: no-cache\r\n";
 //		_response += "Location:\r\n";
 		size_t k = 0;
-		if (!_hrx["BODY"].empty())
+		if (!_htx["BODY"].empty())
 		{
-			for (size_t i = 0, j = _hrx["BODY"].size(); i < j; i++)
+			for (size_t i = 0, j = _htx["BODY"].size(); i < j; i++)
 			{
-//				std::cout << _hrx["BODY"][i] << std::endl;
-				if (!_hrx["BODY"][i].empty())
-					k += _hrx["BODY"][i].size() + 1;
+//				std::cout << _htx["BODY"][i] << std::endl;
+				if (!_htx["BODY"][i].empty())
+					k += _htx["BODY"][i].size() + 1;
 			}
 //			_response += "Connection: close\r\n";
 		}
 		_response += "Content-Lenght: ";
 		_response += std::to_string(k);
 		_response += "\r\n";
-		if (!_hrx["Content-Type:"].empty())
+		if (!_htx["Content-Type:"].empty())
 		{
 			_response += "Content-Type: ";
-			for (size_t i = 0, j = _hrx["Content-Type:"].size(); i < j; ++i)
-				_response += _hrx["Content-Type:"][i];
+			for (size_t i = 0, j = _htx["Content-Type:"].size(); i < j; ++i)
+				_response += _htx["Content-Type:"][i];
 			_response += "\r\n";
 		}
 //		_response += "Content-Language: en\r\n";
@@ -734,10 +880,10 @@ void	request_handler::handle_cgi(void)
 			}
 		}
 		_response += "\r\n";
-		if (!_hrx["BODY"].empty())
+		if (!_htx["BODY"].empty())
 		{
-			if (!_hrx["BODY"][0].empty())
-				_response.append(_hrx["BODY"][0]);
+			if (!_htx["BODY"][0].empty())
+				_response.append(_htx["BODY"][0]);
 		}
 		_hrx.clear();
 		_htx.clear();

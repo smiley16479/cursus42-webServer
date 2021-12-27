@@ -85,6 +85,8 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	int client_fd;
 	struct sockaddr_in clientaddr;
 	socklen_t len = sizeof(clientaddr);
+	struct epoll_event	ev;
+
 	std::cout << "HEYyyyyy" << std::endl;
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
@@ -98,9 +100,12 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 //		exit(EXIT_FAILURE);
 //	}
 	//END
-	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
-	_epoll._event.data.fd = client_fd;
-	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
+	bzero(&ev, sizeof(ev));
+	ev.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
+	ev.data.fd = client_fd;
+//	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
+//	_epoll._event.data.fd = client_fd;
+	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cout << "YAYAYAYAYAYA" << std::endl;
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
 		// close(_epoll_fd);
@@ -367,9 +372,10 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 
 std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	std::vector<int>	ret;
+	std::map<int, client_info>::iterator tmp;
 	char *str[MAX_LEN];
 
-	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
+	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); )
 	{
 		if (!it->second.rqst.empty())
 		{
@@ -382,16 +388,24 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 //				this->remove(_epoll, it->first);
 //				this->rearm(_epoll, it->second.time_out, it->first);
 			}
+			++it;
 		}
 		else if (!it->second.resp.empty())
 		{
 		//	printf("\nResolving chunked resp\n");
 			if (chunked_resp(_epoll, it->first))
 			{
+				tmp = it;
+				tmp ++;
 				this->remove_fd(_epoll, it->first);
+				it = clients.find(tmp->first);
 //				this->rearm(_epoll, it->second.time_out, it->first);
 			}
+			else
+				++it;
 		}
+		else
+			++it;
 	}
 	return (ret);
 }
@@ -418,7 +432,7 @@ void client_handler::rearm(struct_epoll& _epoll, int time_out, int fd)
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
 		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
-	}	
+	}
 	clients[fd].time_out = time_out;
 	time(&clients[fd].rqst_time_start);
 }
