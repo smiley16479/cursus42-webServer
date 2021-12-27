@@ -44,12 +44,18 @@ void server::initialize(void) {
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-		int opt = 1;
-		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+//		int opt = 1;
+//		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		_epoll._event.events = EPOLLIN;
-		_epoll._event.data.fd = _s[i].socket;
-		if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, _s[i].socket, &_epoll._event))
+		int	opt = EPOLL_CTL_ADD;
+		struct epoll_event ev;
+		bzero(&ev, sizeof(ev));
+		ev.events = EPOLLIN;
+		ev.data.fd = _s[i].socket;
+//		_epoll._event.events = EPOLLIN;
+//		_epoll._event.data.fd = _s[i].socket;
+//		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &_epoll._event))
+		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &ev))
 		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 		}
@@ -96,10 +102,11 @@ void server::run(void) {
 				}
 				else
 				{
-//					client.remove(_epoll, _epoll._events[i].data.fd);
+					if (!(_epoll._events[i].events & EPOLLOUT))
+						client.remove(_epoll, _epoll._events[i].data.fd);
 //					printf("server: client just left\n");
 					perror("recv serv");
-					std::cout << "HEYyyyyy" << std::endl;
+//					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 				}			
 			}
 			else if (_epoll._events[i].events & EPOLLIN
@@ -202,14 +209,14 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 			{
 				if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
 				{
-					std::cout << "YIYIYIYIYIYI" << std::endl;
-	//				client.remove_fd(_epoll, fd);
-					client.rearm(_epoll, client.get_info(fd).time_out, fd);
+	//				std::cout << "YIYIYIYIYIYI" << std::endl;
+					client.remove_fd(_epoll, fd);
+//					client.rearm(_epoll, client.get_info(fd).time_out, fd);
 				}
 				else
 	//			{
-	//				client.rearm(_epoll, client.get_info(fd).time_out, fd);
-					client.remove_fd(_epoll, fd);
+					client.rearm(_epoll, client.get_info(fd).time_out, fd);
+	//				client.remove_fd(_epoll, fd);
 	//			}
 	//				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 			}

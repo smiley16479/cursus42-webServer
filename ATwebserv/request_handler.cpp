@@ -417,6 +417,7 @@ void request_handler::handle_post_rqst(void)
 			}
 		}
 	}
+	gen_startLine( _status.find("200") ); 
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,

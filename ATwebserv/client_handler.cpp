@@ -62,14 +62,20 @@ string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
 // si la requete d'un des clients est plus longue a traiter que son time_out (set ds la config) on ferme la connexion ... puis on remove le client
 void client_handler::check_all_timeout(struct_epoll& _epoll) 
 {	
-	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
+	if (!clients.size() || clients.empty())
+		return ;
+	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
 		if (time(NULL) - it->second.rqst_time_start > it->second.time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
-			cout << "elapsed time : " << time(NULL) - it->second.rqst_time_start <<  "it->second.time_out : " <<  it->second.time_out << endl;
-			epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
-			if (close(it->first)) 
-				throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
-			clients.erase(it->first);
+	//		cout << "elapsed time : " << time(NULL) - it->second.rqst_time_start <<  "it->second.time_out : " <<  it->second.time_out << endl;
+	//		epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
+	//		if (close(it->first)) 
+	//			throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+	//		clients.erase(it->first);
+			remove_fd(_epoll, it->first);
+			return ;
 		}
+	}
 }
 
 // Ajoute un client à l'intance e_poll, à la structure client_info et initialize son time_out
@@ -79,6 +85,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	int client_fd;
 	struct sockaddr_in clientaddr;
 	socklen_t len = sizeof(clientaddr);
+	std::cout << "HEYyyyyy" << std::endl;
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	clientaddr.sin_addr;
@@ -400,8 +407,13 @@ void client_handler::time_reset(struct_epoll& _epoll, int time_out, int fd)
 
 void client_handler::rearm(struct_epoll& _epoll, int time_out, int fd)
 {
-	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
-	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_MOD, fd, &_epoll._event)) {
+	struct	epoll_event	ev;
+
+	bzero(&ev, sizeof(ev));
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+	ev.data.fd = fd;
+//	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_MOD, fd, &ev)) {
 		perror("fail in epoll:");
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
 		// close(_epoll_fd);
