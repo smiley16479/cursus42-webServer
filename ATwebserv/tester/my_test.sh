@@ -45,3 +45,37 @@ default_conf
 
 # comment : 
 # Pourquoi ca ca marche (Test GET http://localhost:8080/directory/nop) ds le tester et pas ca (Test GET Expected 404 on http://localhost:8080/directory/Yeah)
+
+# tests de ubuntu_tester_webserv:
+# Test GET http://localhost:8080/
+# 
+# Test POST http://localhost:8080/ with a size of 0
+# 
+# Test HEAD http://localhost:8080/
+# 
+# Test GET http://localhost:8080/directory
+# content returned: youpi.bad_extension
+# 
+# Test GET http://localhost:8080/directory/youpi.bad_extension
+# content returned: youpi.bad_extension
+# 
+# Test GET http://localhost:8080/directory/youpi.bla
+# content returned: 
+# 
+# Test GET Expected 404 on http://localhost:8080/directory/oulalala
+# content returned: <!DOCTYPE html>...
+# 
+# Test GET http://localhost:8080/directory/nop
+# content returned: <!doctype html>
+# 
+# Test GET http://localhost:8080/directory/nop/
+# content returned: <!doctype html>
+# 
+# Test GET http://localhost:8080/directory/nop/other.pouic
+# content returned: 
+# 
+# Test GET Expected 404 on http://localhost:8080/directory/nop/other.pouac
+# content returned: <!DOCTYPE html>
+# 
+# Test GET Expected 404 on http://localhost:8080/directory/Yeah
+# FATAL ERROR ON LAST TEST: bad status code <<---- ECHOUE ALORS QUE LE TEST "/directory/nop" QUI EST CENSE FAIRE LA MM CHOSE PASSE
