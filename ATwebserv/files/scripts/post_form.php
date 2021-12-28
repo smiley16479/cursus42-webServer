@@ -11,12 +11,11 @@
 	<body>
 		<p>
 <?php
-	if ($_POST["things"])
+	if (!empty($_POST["things"]))
 	{
 		print "\t\t\t";
 		print "things=";
-		if (!empty($_POST["things"]))
-			print $_POST["things"];
+		print $_POST["things"];
 		print "\n";
 	}
 	else

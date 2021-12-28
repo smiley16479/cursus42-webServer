@@ -80,12 +80,7 @@ void request_handler::reader(client_info& client)
 		ss_1 = ss_1.substr(pos + 2);
 		if (buf_1 == "\r\n") { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			_hrx["BODY"].resize(1, string());
-			while ((pos = ss_1.find("\r\n")) != string::npos)
-			{
-				buf_1 = ss_1.substr(0, pos + 2);
-				ss_1 = ss_1.substr(pos + 2);
-				_hrx["BODY"][0].append(buf_1);
-			}
+			_hrx["BODY"][0].append(ss_1);
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -109,7 +104,8 @@ void request_handler::reader(client_info& client)
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 
-/* 	std::cout << "=========================================================" << std::endl;
+/*
+ 	std::cout << "=========================================================" << std::endl;
 	for(std::map<std::string, std::vector<std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
 	{
 		std::cout << it->first << "=";
@@ -121,7 +117,8 @@ void request_handler::reader(client_info& client)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 	}
-	std::cout << "=========================================================" << std::endl; */
+	std::cout << "=========================================================" << std::endl; 
+	*/
 }
 
 void request_handler::writer(void) {
@@ -758,7 +755,9 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 
 void	request_handler::handle_cgi(void)
 {
-		int		bfd[2];
+		int		cgi_fd;
+		char	sd[MAX_LEN];
+		size_t	pos;
 		string tmp;
 		std::vector<std::string>	env;
 
@@ -770,19 +769,32 @@ void	request_handler::handle_cgi(void)
 		}
 		else
 		{
-			bfd[0] = dup(STDIN_FILENO);
-			bfd[1] = dup(STDOUT_FILENO);
+		//EN CHANTIER !!!
 			env = extract_env(_hrx, _si[_s_id]);
-			go_cgi(_hrx["BODY"], _body, env, STDIN_FILENO);
-			if (!_hrx["BODY"].empty())
+			cgi_fd = go_cgi(_hrx["BODY"], env);
+			if (cgi_fd == -1)
+				return ;
+
+			if (!_body.empty())
+				_body.clear();
+			if (read(cgi_fd, sd, MAX_LEN) != -1)
 			{
-				_htx["Content-Type"] = _hrx["BODY"];
+				tmp = sd;
+				std::cout << tmp << std::endl;
+				if ((pos = tmp.find("Content-type: ")) != std::string::npos)
+				{
+					tmp.replace(0, strlen("Content-type: "), "");
+					_htx["BODY"].push_back(tmp);
+				}
+				else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
+				{
+					if (_body.empty()) 
+						_body = tmp;
+					else
+						_body.append(tmp);
+				}
 			}
-			dup2(bfd[0], STDIN_FILENO);
-			dup2(bfd[1], STDOUT_FILENO);
-			close(bfd[0]);
-			close(bfd[1]);
-	//		dup2(STDOUT_FILENO, bfd[1]);
-	//		dup2(STDIN_FILENO, bfd[0]);
+			close(cgi_fd);
+		//EN CHANTIER !!!
 		}
 }

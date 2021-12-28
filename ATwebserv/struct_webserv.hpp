@@ -34,6 +34,7 @@ struct server_info {
 };
 
 struct client_info {
+	int			fd;
 	std::string	resp;
 	std::string rqst;
 	std::string post_boundary;

@@ -18,6 +18,8 @@
 #include <unistd.h> // pipe pour le script perl
 #include <sys/wait.h> // pipe pour le script perl
 
+#define MAX_LEN 8192
+
 using namespace std;
 
 class request_handler

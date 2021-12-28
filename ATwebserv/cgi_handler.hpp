@@ -50,7 +50,7 @@ x	"HTTP_REFERER=";
 # define SCRIPT "files/scripts/variables.php"
 
 bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
-void	go_cgi(std::vector<std::string>& post_args, std::string& body, std::vector<std::string>& env, int fd_in);
+int	go_cgi(std::vector<std::string>& post_args, std::vector<std::string>& env);
 size_t	getcLen(std::vector<std::string>& env);
 
 

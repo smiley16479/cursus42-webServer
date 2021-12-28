@@ -207,26 +207,29 @@ bool client_handler::is_post_rqst_fulfilled(client_info& client)
 		client.rqst.replace(0, 4, "CHUNK", 5);
 		std::cout << "chunks:" << pos << std::endl;
 	}
-	else if ((pos = client.rqst.find("Content-Length: ")) != std::string::npos)
-	{
-		tmp = client.rqst.substr(pos + strlen("Content-Length: "));
-		if ((pos = tmp.find("\r\n")) != std::string::npos)
-			tmp = tmp.substr(0, pos);
-		ss.str(tmp);
-		ss >> client._cLen;
-		std::cout << "Len was set:" << client._cLen << std::endl;
-		if (client.rqst.length() >= client._cLen)
-		{
-			return (true);
-		}
-		if (client._cLen > MAX_LEN)
-		{
-			client.rqst.replace(0, 4, "CHUNK");
-			std::cout << "len requires chunking" << std::endl;
-		}
-	}
 	else if ((pos = client.rqst.find("\r\n\r\n")) != string::npos)
-		return (true);
+	{
+		if ((pos = client.rqst.find("Content-Length: ")) != std::string::npos)
+		{
+			tmp = client.rqst.substr(pos + strlen("Content-Length: "));
+			if ((pos = tmp.find("\r\n")) != std::string::npos)
+				tmp = tmp.substr(0, pos);
+			ss.str(tmp);
+			ss >> client._cLen;
+			std::cout << "Len was set:" << client._cLen << std::endl;
+			if (client.rqst.substr(client.rqst.find("\r\n\r\n") + 4).length() >= client._cLen)
+			{
+				return (true);
+			}
+			if (client._cLen > MAX_LEN)
+			{
+				client.rqst.replace(0, 4, "CHUNK");
+				std::cout << "len requires chunking" << std::endl;
+			}
+		}
+		else
+			return (true);
+	}
 	if (client.post_boundary.empty()) {
 		size_t boundary_pos;
 
@@ -399,7 +402,6 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 				tmp ++;
 				this->remove_fd(_epoll, it->first);
 				it = clients.find(tmp->first);
-//				this->rearm(_epoll, it->second.time_out, it->first);
 			}
 			else
 				++it;
