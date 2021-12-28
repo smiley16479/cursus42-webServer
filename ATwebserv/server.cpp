@@ -12,7 +12,7 @@ server::server(std::string av)
 {
 	config_checker confCheck;
 	confCheck.check_conFile(av);
-	this->_s = *confCheck._si; // je voulais le passer par reference mais pas possible av l'architecture actuelle
+	this->_s = confCheck._si; // je voulais le passer par reference mais pas possible av l'architecture actuelle
 }
 
 server::~server()
@@ -64,7 +64,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	size_t				read_bytes;
+	int				read_bytes;
 	std::vector<int>	chunks;
 	request_handler header(_s);
 	client_handler client;
@@ -128,7 +128,7 @@ void server::run(void) {
 }
 
 int server::is_new_client(int fd) {
-	for (int i = 0; i < _s.size(); ++i)
+	for (size_t i = 0; i < _s.size(); ++i)
 	{
 		if (fd == _s[i].socket)
 			return i;
@@ -200,7 +200,7 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		{
 				std::cout << "COUCOU" << std::endl;
 			client.fill_resp(fd, header.get_response());
-			if (client.chunked_resp(_epoll, fd))
+			if (client.chunked_resp(fd))
 				client.remove_fd(_epoll, fd);
 		}
 		else

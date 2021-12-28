@@ -21,7 +21,6 @@ private:
     struct_epoll _epoll;
  
     char str[MAX_LEN];
-    char msg[MAX_LEN];
 
 public:
     server(std::string);

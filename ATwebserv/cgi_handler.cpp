@@ -107,7 +107,7 @@ void	go_cgi(std::vector<std::string>& post_args, std::string& body, std::vector<
 		{
 			for (std::vector<std::string>::iterator it = post_args.begin(); it != post_args.end(); it++)
 			{
-				int post = it->size();
+				size_t post = it->size();
 				std::cout << "post: " << post << std::endl;
 				std::cout << "cLen: " << _cLen << std::endl;
 				if (post > _cLen)

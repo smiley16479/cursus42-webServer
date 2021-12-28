@@ -1,17 +1,21 @@
+#ifndef CLIENT_HANDLER_HPP
+# define CLIENT_HANDLER_HPP
+
+#include <iostream>
+#include <sstream>
 #include <map>
 #include <string>
 #include <netdb.h>		// pour struct sockaddr_in
 #include <unistd.h>		// pour close
-#include <iostream>
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
 #include "server.hpp"
 
-#include <sstream>
 #include <vector>
 #include <cstdlib>
 #include <fcntl.h>
 #include <cstring>
+#include <cstdio>
 
 #include <string>
 
@@ -28,6 +32,9 @@ public:
 	client_handler(/* args */);
 	~client_handler();
 
+	client_handler& operator=(const client_handler& other)
+	{ (void)other; return *this;}
+
 	bool is_request_fulfilled(int);
 	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
 	void remove_fd(struct_epoll& _epoll, int fd); // REMOVE A CLIENT
@@ -36,7 +43,7 @@ public:
 
 	/* Function rubrique : getter setter */
 	void clear(int client_fd); // CLEAR CLIENT CONTENT
-	void rqst_append(int , char *, size_t); // APPEND DIFFERENT REQUEST CHUNK
+	void rqst_append(int , char *, int); // APPEND DIFFERENT REQUEST CHUNK
 	string get_rqst(int); // RETURN FINAL REQUEST
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
@@ -48,8 +55,10 @@ public:
 	std::vector<int>	handle_chunks(struct_epoll& _epoll);
 	void	fill_resp(int fd, std::string& base);
 	int		chunked_rqst(struct_epoll& _epoll, int fd);
-	int		chunked_resp(struct_epoll& _epoll, int fd);
-	void 	time_reset(struct_epoll& _epoll, int time_out, int fd); // Reset client fd
+	int		chunked_resp(int fd);
+	void 	time_reset(int time_out, int fd); // Reset client fd
 	void 	rearm(struct_epoll& _epoll, int time_out, int fd); // Reset client fd
 	int		no_chunk(int fd);
 };
+
+#endif

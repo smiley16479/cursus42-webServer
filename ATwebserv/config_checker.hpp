@@ -17,14 +17,14 @@ class config_checker
 /* 
 **		TYPES
 */
-	typedef std::vector<server_info>*		info_vector;
+	typedef std::vector<server_info>		info_vector;
 
 	/* data */
 	class configException: public std::exception
 	{
 	  public :
-	  configException(info_vector si): _si(si), _str("Config File : error.") {};
-	  configException(info_vector si, std::string str) : _si(si), _str(str + "\nConfig File : error.") {};
+	  configException(info_vector si): _str("Config File : error."), _si(si) {};
+	  configException(info_vector si, std::string str) : _str(str + "\nConfig File : error."), _si(si) {};
 	  ~configException() throw() {};
 	  virtual const char* what() const throw()
 	  {
@@ -32,8 +32,8 @@ class config_checker
 	    return  _str.c_str();
 	  }
 	  private :
-	  std::string _str;
-	  info_vector _si;
+		  std::string _str;
+		  info_vector _si;
 	};
 
 /* 

@@ -1,7 +1,6 @@
 #include "client_handler.hpp"
 #include "color.hpp"
 
-
 client_handler::client_handler(/* args */)
 {
 	clients.clear();
@@ -57,7 +56,7 @@ void client_handler::remove(struct_epoll& _epoll, int i)
 
 void client_handler::clear(int client_fd) {	clients[client_fd].rqst.clear();}
 
-void client_handler::rqst_append(int client_fd, char *str, size_t read_bytes) {clients[client_fd].rqst.append(str, read_bytes);}
+void client_handler::rqst_append(int client_fd, char *str, int read_bytes) {clients[client_fd].rqst.append(str, read_bytes);}
 
 string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
 
@@ -92,7 +91,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	std::cout << "HEYyyyyy" << std::endl;
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-	clientaddr.sin_addr;
+//	clientaddr.sin_addr;
 	//SET NON BLOCK
 //	int opt = 1;
 //	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
@@ -108,8 +107,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 //	_epoll._event.events = EPOLLIN | EPOLLET | EPOLLOUT | EPOLLONESHOT;
 //	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
-		std::cout << "YAYAYAYAYAYA" << std::endl;
-		fprintf(stderr, "Failed to add file descriptor to epoll\n");
+		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
 		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}	
@@ -173,7 +171,7 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 			tmp = client.rqst.substr(pos + strlen("Content-Length: "));
 			if ((pos = tmp.find("\r\n")) != std::string::npos)
 				tmp = tmp.substr(0, pos);
-			ss = std::stringstream(tmp);
+			ss.str(tmp);
 			ss >> client._cLen;
 			if (client._cLen < client.rqst.length())
 				return (true);
@@ -199,7 +197,6 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 bool client_handler::is_post_rqst_fulfilled(client_info& client)
 {
 	size_t				pos;
-	size_t				cur_len;
 	std::string			tmp;
 	std::stringstream	ss;
 
@@ -215,7 +212,7 @@ bool client_handler::is_post_rqst_fulfilled(client_info& client)
 		tmp = client.rqst.substr(pos + strlen("Content-Length: "));
 		if ((pos = tmp.find("\r\n")) != std::string::npos)
 			tmp = tmp.substr(0, pos);
-		ss = std::stringstream(tmp);
+		ss.str(tmp);
 		ss >> client._cLen;
 		std::cout << "Len was set:" << client._cLen << std::endl;
 		if (client.rqst.length() >= client._cLen)
@@ -278,18 +275,18 @@ void	client_handler::fill_resp(int fd, std::string& base)	{
 }
 
 int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
-	size_t	read_bytes;
+	int	read_bytes;
 	char	str[MAX_LEN];
 
 	if ((read_bytes = recv(fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
 	{
 		this->rqst_append(fd, str, read_bytes);
-		this->time_reset(_epoll, this->clients[fd].time_out, fd);
+		this->time_reset(this->clients[fd].time_out, fd);
 	}
 	else
 	{
 //		this->remove_fd(_epoll, fd);
-	//	this->time_reset(_epoll, this->clients[fd].time_out, fd);
+	//	this->time_reset(this->clients[fd].time_out, fd);
 		this->rearm(_epoll, this->clients[fd].time_out, fd);
 		return (1);
 	}
@@ -300,7 +297,7 @@ int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 	return (0);
 }
 
-int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
+int	client_handler::chunked_resp(int fd)	{
 	std::string	tmp;
 	size_t	pos;
 	char	buf[20];
@@ -319,7 +316,7 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 		}
 		else
 		{
-			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+			this->time_reset(this->clients[fd].time_out, fd);
 		}
 		return (0);
 	}
@@ -341,7 +338,7 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 		else
 		{
 			std::cout << "YOYOYOYOYOYO" << std::endl;
-			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+			this->time_reset(this->clients[fd].time_out, fd);
 		}
 		return (0);
 	}
@@ -369,7 +366,7 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 			return (1);
 		}
 		else
-			this->time_reset(_epoll, this->clients[fd].time_out, fd);
+			this->time_reset(this->clients[fd].time_out, fd);
 		return (1);
 	}
 }
@@ -377,7 +374,6 @@ int	client_handler::chunked_resp(struct_epoll& _epoll, int fd)	{
 std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	std::vector<int>	ret;
 	std::map<int, client_info>::iterator tmp;
-	char *str[MAX_LEN];
 
 	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); )
 	{
@@ -387,7 +383,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 				ret.push_back(it->first);
 			else
 			{
-				this->time_reset(_epoll, it->second.time_out, it->first);
+				this->time_reset(it->second.time_out, it->first);
 //				std::cout << "SALUT" << std::endl;
 //				this->remove(_epoll, it->first);
 //				this->rearm(_epoll, it->second.time_out, it->first);
@@ -397,7 +393,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 		else if (!it->second.resp.empty())
 		{
 		//	printf("\nResolving chunked resp\n");
-			if (chunked_resp(_epoll, it->first))
+			if (chunked_resp(it->first))
 			{
 				tmp = it;
 				tmp ++;
@@ -414,7 +410,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	return (ret);
 }
 
-void client_handler::time_reset(struct_epoll& _epoll, int time_out, int fd)
+void client_handler::time_reset(int time_out, int fd)
 {
 	if (!clients.empty() && clients.find(fd) != clients.end())
 	{
