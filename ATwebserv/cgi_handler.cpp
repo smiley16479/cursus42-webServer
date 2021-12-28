@@ -66,7 +66,7 @@ int				rec_gnl(int fd, char **line)
 }
 
 
-void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<std::string>& env, int fd_in)
+void	go_cgi(std::vector<std::string>& post_args, std::string& body, std::vector<std::string>& env, int fd_in)
 {
 	size_t		_cLen;
 	std::string	tmp;
@@ -103,9 +103,9 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<st
 	if (pid == 0)
 	{
 		close(fd[0]);
-		if (!mp["BODY"].empty())
+		if (!post_args.empty())
 		{
-			for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
+			for (std::vector<std::string>::iterator it = post_args.begin(); it != post_args.end(); it++)
 			{
 				int post = it->size();
 				std::cout << "post: " << post << std::endl;
@@ -141,9 +141,9 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<st
 		close(bfd[1]);
 		close(fd[1]);
 		waitpid(pid, NULL, 0);
-		if (!mp["BODY"].empty())
-			mp["BODY"].clear();
-		mp["BODY"] = std::vector<std::string>();
+		if (!body.empty())
+			body.clear();
+		post_args.clear();
 		dup2(fd[0], fd_in);
 		close(fd[0]);
 		char *sd;
@@ -154,26 +154,18 @@ void	go_cgi(std::map<std::string, std::vector<std::string> >& mp, std::vector<st
 			if ((pos = tmp.find("Content-type: ")) != std::string::npos)
 			{
 				tmp.replace(0, strlen("Content-type: "), "");
-				mp["Content-Type:"].clear();
-				mp["Content-Type:"].push_back(tmp);
+				post_args.push_back(tmp);
 			}
 			else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
 			{
-				if (mp["BODY"].empty()) 
-					mp["BODY"].push_back(tmp);
+				if (body.empty()) 
+					body = tmp;
 				else
-					mp["BODY"][0].append(tmp);
+					body.append(tmp);
 			}
 			free(sd);
 		}
 	}
-//	mp["A"].clear();
-	/*
-	mp["A"].erase(mp["A"].begin());
-	mp["A"].erase(mp["A"].begin());
-	mp["A"].push_back(" 200");
-	mp["A"].push_back(" OK\r\n");
-	*/
 	delete [] e_path;
 	delete [] c_env;
 }

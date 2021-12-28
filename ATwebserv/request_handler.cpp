@@ -131,12 +131,12 @@ void request_handler::writer(void) {
 	gen_serv();
 
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
-	if (is_cgi(_hrx["A"], _si[_s_id].cgi_file_types))
-		return (handle_cgi());
-	else if (_hrx["A"][0] == "POST")
-		return (handle_post_rqst());
-	else if (resolve_path())
+	if (resolve_path())
 		;
+	else if (is_cgi(_hrx["A"], _si[_s_id].cgi_file_types))
+		handle_cgi();
+	else if (_hrx["A"][0] == "POST")
+		handle_post_rqst();
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "PUT") {
@@ -397,27 +397,9 @@ void request_handler::handle_post_rqst(void)
 				_response.clear();
 				multipart_form(boundary, _hrx["BODY"][0]);
 				resolve_path();
-				file_type();
-				gen_CType(string());
-				gen_CLength();
-				add_all_field(); 
-				add_body();
-				_hrx.clear();
-				_htx.clear();
-			}
-			else
-			{
-				file_type();
-				gen_CType(string());
-				gen_CLength();
-				add_all_field(); 
-				add_body();
-				_hrx.clear();
-				_htx.clear();
 			}
 		}
 	}
-	gen_startLine( _status.find("200") ); 
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -425,7 +407,9 @@ void request_handler::handle_post_rqst(void)
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
 int	request_handler::resolve_path()
 {
-	size_t len;
+	size_t len, pos;
+	std::string			var;
+
 #ifdef _debug_
 	cout << GREEN "DS RESOLVE_PATH [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path (cleared afterward): " << _path << endl;
 #endif
@@ -435,10 +419,9 @@ int	request_handler::resolve_path()
 // MANOUCHERIE A VIRER POUR RECUP LES PAGES D'ERREUR SANS BOUCLE SUR 4XX.HTML SI 405
 	if (_hrx["A"][1].find("/error_pages/", 0,13) == 0) {
 		_path = "files" + _hrx["A"][1];
-		return 1;
+		return true;
 	}
-	if ((len = _path.find("?")) != std::string::npos)
-		_path = _path.substr(0, len);
+
 	_l_id = 0;
 	int index = _si[_s_id].location.size() - 1;
 	len = 0;
@@ -482,6 +465,41 @@ int	request_handler::resolve_path()
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
 
+	//CGI variables initialisation
+	if ((len = _path.find("?")) != std::string::npos)
+	{
+		var = _path.substr(len + 1);
+		_path = _path.substr(0, len);
+	}
+	std::cout << "PATH=" << _path << std::endl;
+	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
+	_hrx["Path-Translated"].push_back(_path);
+	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
+	_hrx["Query-String"].push_back(var);
+	var.clear();
+	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
+	pos = _path.find(".php");
+	if (pos != std::string::npos)
+	{
+		var = _path.substr(pos + 4);
+		_path = _path.substr(0, pos + 4);
+	}
+	if (!var.empty() && (pos = var.find("/")) != std::string::npos)
+		var = var.substr(pos + 1);
+	_hrx["Path-Info"].push_back(var);
+	var.clear();
+	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
+	var = (_path[0] == '/' ? _path.substr(1) : _path);
+	_hrx["Script-Name"].push_back(var);
+	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
+	pos = _path.find_last_of("/");
+	var = _path.substr(0, pos);
+	if (var.substr(0, 2) == "./")
+		var = var.substr(2);
+	_hrx["Document-Root"].push_back(var);
+	var.clear();
+
+
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 /*
 	bool allowed = false;
@@ -491,8 +509,7 @@ int	request_handler::resolve_path()
 	if (!allowed)
 		gen_startLine( _status.find("405") );
 	return allowed ? 0 : 1;  PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
-	return (true);
-
+	return (false);
 }
 
 // Détecte si c'est un dossier ou un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -642,31 +659,32 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	tmp += mp["A"][0];
 	env.push_back(tmp);
 	tmp = "PATH_INFO=";
-	pos = buf.find(".php");
-	var = buf.substr(pos + 4);
-	buf = buf.substr(0, pos + 4);
-	if ((pos = var.find("/")) != std::string::npos)
-		tmp += var.substr(pos + 1);
+	if (!mp["Path-Info"].empty())
+	{
+		for (size_t j = 0; j < mp["Path-Info"].size(); ++j)
+			tmp+= mp["Path-Info"][j];
+	}
 	env.push_back(tmp);
 	tmp = "PATH_TRANSLATED=";
-	if (!mp["query"].empty())
-		tmp += mp["query"][0];
+	if (!mp["Path-Translated"].empty())
+	{
+		for (size_t j = 0; j < mp["Path-Translated"].size(); ++j)
+			tmp+= mp["Path-Translated"][j];
+	}
 	env.push_back(tmp);
 	tmp = "SCRIPT_NAME=";
-//	tmp += buf;
-	tmp += (buf[0] == '/' ? buf.substr(1) : buf);
+	if (!mp["Script-Name"].empty())
+	{
+		for (size_t j = 0; j < mp["Script-Name"].size(); ++j)
+			tmp+= mp["Script-Name"][j];
+	}
 	env.push_back(tmp);
 	tmp = "QUERY_STRING=";
-	if ((pos = var.find("?")) != std::string::npos)
-		tmp += var.substr(pos + 1);
-		/*
-	if (!mp["BODY"].empty())
+	if (!mp["Query-String"].empty())
 	{
-		for (std::vector<std::string>::iterator it = mp["BODY"].begin(); it != mp["BODY"].end(); it++)
-			tmp += *it;
-		mp["BODY"].clear();
+		for (size_t j = 0; j < mp["Query-String"].size(); ++j)
+			tmp+= mp["Query-String"][j];
 	}
-	*/
 	env.push_back(tmp);
 	tmp = "REMOTE_HOST=";
 	if (!mp["Host:"].empty())
@@ -676,23 +694,11 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	}
 	env.push_back(tmp);
 	tmp = "DOCUMENT_ROOT=";
-	pos = buf.find_last_of("/");
-	var = buf.substr(0, pos);
-	if (var.substr(0, 2) == "./")
-		var = var.substr(2);
-	tmp += var;
-	env.push_back(tmp);
-	tmp = "AUTH_TYPE=";
-	if (!mp["Authorization:"].empty())
+	if (!mp["Document-Root"].empty())
 	{
-		tmp+= mp["Authorization:"][0];
+		for (size_t j = 0; j < mp["Document-Root"].size(); ++j)
+			tmp+= mp["Document-Root"][j];
 	}
-	env.push_back(tmp);
-	tmp = "REMOTE_USER=";
-	// GET USER NAME FROM SERVER
-	env.push_back(tmp);
-	tmp = "REMOTE_IDENT=";
-	// GET USER ID FROM SERVER
 	env.push_back(tmp);
 	tmp = "CONTENT_TYPE=";
 	if (!mp["Content-Type:"].empty())
@@ -731,10 +737,6 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["User-Agent:"][j];
 	}
 	env.push_back(tmp);
-//	tmp = "HTTP_COOKIE=";
-	//GET COOKIE FROM SERVER
-	//C EST UN BONUS !!!
-//	env.push_back(tmp);
 	tmp = "HTTP_REFERER=";
 	if (!mp["Referer"].empty())
 	{
@@ -742,19 +744,6 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
-	/*
-		cout << "auth_basic : " << _s.location[j].auth_basic << endl;
-		cout << "auth_user_file : " << _s.location[j].auth_user_file << endl;
-		cout << "autoindex : " << _s.location[j].autoindex << endl;
-		cout << "return_directive : " << _s.location[j].return_directive << endl;
-		cout << "allowed_method : ";
-		for (size_t k = 0; k < _s.location[j].allowed_method.size(); ++k)
-			cout << _s.location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
-		cout << endl << "return : ";
-		for (size_t k = 0; k < _s.location[j].retour.size(); ++k)
-			cout << _s.location[j].retour[k] << (k < _s.location[j].retour.size() - 1 ? ", " : "");
-		cout << endl;
-		*/
 	return (env);
 }
 
@@ -767,11 +756,6 @@ void	request_handler::handle_cgi(void)
 		std::vector<std::string>	env;
 
 		//HERE!
-		resolve_path();
-		if ((pos = _path.find("?")) != string::npos)
-			_path = _path.substr(0, pos);
-		_hrx.insert(std::make_pair("query", std::vector<std::string>()));
-		_hrx["query"].push_back(_path);
 		if (_s_id == -1)
 		{
 			std::cout << "Invalid server id: " << _s_id << std::endl;
@@ -782,7 +766,11 @@ void	request_handler::handle_cgi(void)
 			bfd[0] = dup(STDIN_FILENO);
 			bfd[1] = dup(STDOUT_FILENO);
 			env = extract_env(_hrx, _si[_s_id]);
-			go_cgi(_htx, env, STDIN_FILENO);
+			go_cgi(_hrx["BODY"], _body, env, STDIN_FILENO);
+			if (!_hrx["BODY"].empty())
+			{
+				_htx["Content-Type"] = _hrx["BODY"];
+			}
 			dup2(bfd[0], STDIN_FILENO);
 			dup2(bfd[1], STDOUT_FILENO);
 			close(bfd[0]);
@@ -790,103 +778,4 @@ void	request_handler::handle_cgi(void)
 	//		dup2(STDOUT_FILENO, bfd[1]);
 	//		dup2(STDIN_FILENO, bfd[0]);
 		}
-		_response.clear();
-		if (!_htx["BODY"].empty() && ((pos = _htx["BODY"][0].find("Status: ")) != std::string::npos))
-		{
-			_response += _htx["BODY"][0].substr(pos, _htx["BODY"][0].substr(pos).find("\r\n"));
-			tmp = _response.substr(_response.find("Status: ") + strlen("Status: "));
-			
-			for (int i=0; i < tmp.size(); ++i)
-				cout << RED << tmp[i] << RESET << endl;
-			cout << RED "tmp : " RESET << endl;
-			cout << "_responseb : " << _response << endl;		
-			if ((ret_code = atoi(tmp.c_str())) != 0)
-			{
-				cout << RED "ret codd int : " RESET << ret_code << endl;
-				std::cout << _status.find(std::to_string(ret_code))->first << "'" << _status.find(std::to_string(ret_code))->second << std::endl;
-				_htx["A"][1] = _status.find(std::to_string(ret_code))->first;
-				_htx["A"][2] = _status.find(std::to_string(ret_code))->second;
-				_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
-				std::cout << "ret code = " << to_string(ret_code).c_str() << std::endl;
-				//_path.clear();
-				std::cout << "COUCOU : " << _htx["A"][1]  << std::endl;
-				file_type();
-				gen_CType(string());
-				gen_CLength();
-				add_all_field(); 
-				add_body();
-				_hrx.clear();
-				_htx.clear();
-			//	std::cout << "SAluuuuuuuut" << std::endl;
-			//	resolve_path();
-			}
-			return ;
-		}
-		else
-		{
-			_response += (char*)"HTTP/1.1 200 OK\r\n";
-		//	_response += "Status: 200 Success\r\n";
-		}
-		/*
-		for (size_t i = 0, j = _hrx["A"].size(); i < j; i++)
-		{
-			_response += _hrx["A"][i];
-		}
-		*/
-//		_response += "Pragma: no-cache\r\n";
-//		_response += "Location:\r\n";
-		size_t k = 0;
-		if (!_htx["BODY"].empty())
-		{
-			for (size_t i = 0, j = _htx["BODY"].size(); i < j; i++)
-			{
-//				std::cout << _htx["BODY"][i] << std::endl;
-				if (!_htx["BODY"][i].empty())
-					k += _htx["BODY"][i].size() + 1;
-			}
-//			_response += "Connection: close\r\n";
-		}
-		_response += "Content-Lenght: ";
-		_response += std::to_string(k);
-		_response += "\r\n";
-		if (!_htx["Content-Type:"].empty())
-		{
-			_response += "Content-Type: ";
-			for (size_t i = 0, j = _htx["Content-Type:"].size(); i < j; ++i)
-				_response += _htx["Content-Type:"][i];
-			_response += "\r\n";
-		}
-//		_response += "Content-Language: en\r\n";
-		if (!_htx["Date"].empty())
-		{
-			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
-			{
-				_response += _htx["Date"][i];
-			}
-//			_response += "Last-Modified:";
-//			for (size_t i = 0, j = _htx["Date"].size(); i < j; i++)
-//			{
-//				if ((pos = _htx["Date"][i].find("Date:")) != std::string::npos)
-//					_response += _htx["Date"][i].substr(pos + 5);
-//				else
-//					_response += _htx["Date"][i];
-//			}
-		}
-		if (!_htx["Server"].empty())
-		{
-			for (size_t i = 0, j = _htx["Server"].size(); i < j; i++)
-			{
-				_response += _htx["Server"][i];
-			}
-		}
-		_response += "\r\n";
-		if (!_htx["BODY"].empty())
-		{
-			if (!_htx["BODY"][0].empty())
-				_response.append(_htx["BODY"][0]);
-		}
-		_hrx.clear();
-		_htx.clear();
-//		_response += "\r\n";
-		cout << RED "Response :\n" RESET << _response << endl;
 }
