@@ -374,6 +374,12 @@ void request_handler::handle_post_rqst(void)
 	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
 		cout << "[" << *i << "]" << endl;
 
+	if (_hrx["Content-Length:"].empty() && _hrx["Transfer-Encoding:"].empty())
+	{
+		gen_startLine( _status.find("400") ); 
+		return ;
+	}
+
 // POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
 	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
 	string boundary = _hrx["Content-Type:"][1].substr(strlen("boundary=--"));

@@ -39,15 +39,17 @@ void client_handler::remove_fd(struct_epoll& _epoll, int fd)
 	struct epoll_event	*ptr = get_event(_epoll, fd);
 
 	if (ptr != NULL && (ptr->events & EPOLLIN || ptr->events & EPOLLOUT))
-		epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, fd, &_epoll._event);
+		epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, fd, ptr);
 	clients.erase(fd);
 	if (close(fd))
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
 }
 
 void client_handler::remove(struct_epoll& _epoll, int i)
-{	
-	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
+{
+	struct epoll_event	*ptr = &_epoll._events[i];
+
+	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, ptr);
 	clients.erase(_epoll._events[i].data.fd);
 	if (close(_epoll._events[i].data.fd))
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
@@ -226,6 +228,8 @@ bool client_handler::is_post_rqst_fulfilled(client_info& client)
 			std::cout << "len requires chunking" << std::endl;
 		}
 	}
+	else if ((pos = client.rqst.find("\r\n\r\n")) != string::npos)
+		return (true);
 	if (client.post_boundary.empty()) {
 		size_t boundary_pos;
 
@@ -284,10 +288,10 @@ int	client_handler::chunked_rqst(struct_epoll& _epoll, int fd)	{
 	}
 	else
 	{
-		std::cout << "HERE" << std::endl;
-		this->remove(_epoll, fd);
+//		this->remove_fd(_epoll, fd);
 	//	this->time_reset(_epoll, this->clients[fd].time_out, fd);
-	//	this->rearm(_epoll, this->clients[fd].time_out, fd);
+		this->rearm(_epoll, this->clients[fd].time_out, fd);
+		return (1);
 	}
 	if (this->is_request_fulfilled(fd)) 
 	{
