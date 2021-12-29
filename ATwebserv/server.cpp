@@ -187,45 +187,62 @@ struct epoll_event*	get_event(struct_epoll& _epoll, int fd)
 	return (NULL);
 }
 
-void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
+void	server::select_send_method(client_handler& client, request_handler& header, int fd)
+{
 	struct epoll_event	*ptr = get_event(_epoll, fd);
 
-	if (client.is_request_fulfilled(fd)) {
-		struct epoll_event	*ptr = get_event(_epoll, fd);
-		cout << "request_fulfilled !!\n";
-		header.reader(/* str */client.get_info(fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
-		header.writer();
-		client.clear(fd);
-		if (header.get_response().length() > MAX_LEN)
+	if (header.get_response().length() > MAX_LEN)
+	{
+		client.fill_resp(fd, header.get_response());
+		if (client.chunked_resp(fd))
+			client.remove_fd(_epoll, fd);
+	}
+	else
+	{
+		if (ptr != NULL && ptr->events & EPOLLOUT)
 		{
-				std::cout << "COUCOU" << std::endl;
-			client.fill_resp(fd, header.get_response());
-			if (client.chunked_resp(fd))
+			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
 				client.remove_fd(_epoll, fd);
+			else
+				client.rearm(_epoll, client.get_info(fd).time_out, fd);
+		}
+	}
+}
+
+void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
+	int	redir;
+	struct epoll_event	*ptr = get_event(_epoll, fd);
+
+	if (client.get_info(fd).redir_mode == NONE && !client.get_info(fd).buf.empty())
+	{
+		cout << "WHYYYYYYYYY" << endl;
+		header.set_body(client.get_info(fd).buf);
+		header.clean_body();
+		header.writer();
+		select_send_method(client, header, fd);
+	}
+	else if (client.is_request_fulfilled(fd)) {
+		cout << "request_fulfilled !!\n";
+		header.reader(/* str */client.get_info(fd).rqst); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+		redir = header.choose_method();
+		if (redir != NONE)
+		{
+			if (redir == READ)
+			{
+				std::cout << "HEYyyyyy" << std::endl;
+				client.get_info(fd).redir_mode = redir;
+				client.get_info(fd).buf = header.get_body();
+				client.get_info(fd).redir_fd = header.get_redir_fd();
+			}
+			return ;
 		}
 		else
-		{
-			if (ptr != NULL && ptr->events & EPOLLOUT)
-			{
-				if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
-				{
-	//				std::cout << "YIYIYIYIYIYI" << std::endl;
-					client.remove_fd(_epoll, fd);
-//					client.rearm(_epoll, client.get_info(fd).time_out, fd);
-				}
-				else
-	//			{
-					client.rearm(_epoll, client.get_info(fd).time_out, fd);
-	//				client.remove_fd(_epoll, fd);
-	//			}
-	//				client.time_reset(_epoll, client.get_info(fd).time_out, fd);
-			}
-		}
+			client.clear(fd);
+		select_send_method(client, header, fd);
 	}
 	else
 	{
 		if (ptr != NULL && (ptr->events & EPOLLIN || ptr->events & EPOLLOUT))
 			client.rearm(_epoll, client.get_info(fd).time_out, fd);
-	//	client.time_reset(_epoll, client.get_info(fd).time_out, fd);
 	}
 }

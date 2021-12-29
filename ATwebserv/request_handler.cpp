@@ -54,12 +54,12 @@ request_handler::~request_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void request_handler::reader(client_info& client)
+void request_handler::reader(std::string& rqst)
 {
 //	const char	*str = client.rqst.c_str();
 	size_t	pos;
 	string buf_1, buf_2;
-	std::string ss_1(client.rqst);
+	std::string ss_1(rqst);
 
 //	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
@@ -121,19 +121,21 @@ void request_handler::reader(client_info& client)
 	*/
 }
 
-void request_handler::writer(void) {
-// PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
+int request_handler::choose_method(void)
+{
+	int	redir_mode;
 	gen_startLine( _status.find("200") );
 	gen_date();
 	gen_serv();
 
+	redir_mode = NONE;
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
 		;
 	else if (is_cgi(_hrx["A"], _si[_s_id].cgi_file_types))
-		handle_cgi();
+		redir_mode = handle_cgi();
 	else if (_hrx["A"][0] == "POST")
-		handle_post_rqst();
+		redir_mode = handle_post_rqst();
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "PUT") {
@@ -154,14 +156,23 @@ void request_handler::writer(void) {
 		else
 			puts( "File successfully deleted" );
 	}
-/* PROBLEM REDONDANT AVEC LA METHODE GET -> VA FALLOIR CHOISIR*/
-	file_type();
-	gen_CType(string());
-	gen_CLength();
-	add_all_field(); 
-	add_body();
+	if (redir_mode == NONE)
+	{
+		file_type();
+		gen_CType(string());
+		gen_CLength();
+		redir_mode = writer();
+	}
 	_hrx.clear();
 	_htx.clear();
+	return (redir_mode);
+}
+
+int request_handler::writer(void) {
+// PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
+/* PROBLEM REDONDANT AVEC LA METHODE GET -> VA FALLOIR CHOISIR*/
+	add_all_field(); 
+	return (add_body());
 }
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
@@ -309,7 +320,7 @@ void request_handler::handle_get_rqst(void)
 	// add_body();
 }
 
-void request_handler::multipart_form(string& boundary, string& msg)	{
+int request_handler::multipart_form(string& boundary, string& msg)	{
 	size_t	pos, end;
 	string	tmp, buf, path;
 	ofstream	out;
@@ -323,7 +334,7 @@ void request_handler::multipart_form(string& boundary, string& msg)	{
 		else if (msg.substr(0, 2) == "--")
 		{
 			msg = msg.substr(2);
-			return ;
+			return (NONE);
 		}
 		while ((pos = msg.find("\r\n")) != string::npos)
 		{
@@ -360,12 +371,15 @@ void request_handler::multipart_form(string& boundary, string& msg)	{
 			msg = msg.substr(end + (boundary).length());
 		}
 	}
+	return (NONE);
 }
 
-void request_handler::handle_post_rqst(void) 
+int request_handler::handle_post_rqst(void) 
 {
+	int			redir_mode;
 	std::string	tmp;
 
+	redir_mode = NONE;
 	if (_hrx.find("Content-Type:") != _hrx.end())
 		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 	for (std::vector<std::string>::iterator i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -374,7 +388,7 @@ void request_handler::handle_post_rqst(void)
 	if (_hrx["Content-Length:"].empty() && _hrx["Transfer-Encoding:"].empty())
 	{
 		gen_startLine( _status.find("400") ); 
-		return ;
+		return (NONE);
 	}
 
 // POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
@@ -389,7 +403,7 @@ void request_handler::handle_post_rqst(void)
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
 	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > static_cast<size_t>(atoi(_si[_s_id].max_file_size.c_str())) ) {
 		gen_startLine( _status.find("413") ); 
-		return ;
+		return (NONE);
 	}
 	else
 	{
@@ -398,11 +412,12 @@ void request_handler::handle_post_rqst(void)
 			if (!boundary.empty())
 			{
 				_response.clear();
-				multipart_form(boundary, _hrx["BODY"][0]);
+				redir_mode = multipart_form(boundary, _hrx["BODY"][0]);
 				resolve_path();
 			}
 		}
 	}
+	return (redir_mode);
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -595,14 +610,14 @@ void request_handler::add_all_field()
 }
 
 // Ajout du fichier ou du body À LA SUITE des header dans response
-void request_handler::add_body()
+int request_handler::add_body()
 {
 /* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
 		return ; */
 	if (!_body.empty()) {
 		_response += _body;
 		_body.clear();
-		return ;
+		return (NONE);
 	}
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
 	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
@@ -611,6 +626,7 @@ void request_handler::add_body()
 		_response.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
+	return (NONE);
 }
 
 // Remove multiple '/' and the '/' at url's end
@@ -625,6 +641,14 @@ void request_handler::clean_url(string& str)
 	/* FUNCTION GETTER / SETTER */
 
 std::string &request_handler::get_response(void) {return _response;}
+
+std::string &request_handler::get_body(void) {return _body;}
+
+void request_handler::set_body(const string& str)	{
+	_body = str;
+}
+
+int request_handler::get_redir_fd(void) {return redir_fd;}
 
 	/* FUNCTION DE DEBUG */
 
@@ -753,48 +777,62 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	return (env);
 }
 
-void	request_handler::handle_cgi(void)
+void	request_handler::clean_body()
 {
-		int		cgi_fd;
-		char	sd[MAX_LEN];
-		size_t	pos;
-		string tmp;
-		std::vector<std::string>	env;
-
-		//HERE!
-		if (_s_id == -1)
+	std::string	tmp;
+	std::string	index;
+	size_t	pos;
+	
+	while ((pos = _body.find("\r\n")) != std::string::npos)
+	{
+		tmp = _body.substr(0, pos + 2);
+		_body = _body.substr(pos + 2);
+		if (tmp == "\r\n")
+			break ;
+		if ((pos = tmp.find(":")) != std::string::npos)
 		{
-			std::cout << "Invalid server id: " << _s_id << std::endl;
-			return ;
+			index = tmp.substr(0, pos);
+			cout << "index=" << index << endl;
+			if (index != "X-Powered-By")
+				_htx[index].push_back(tmp.substr(0, tmp.size() - 3));
+		}
+	}
+}
+
+int	request_handler::handle_cgi(void)
+{
+	char	sd[MAX_LEN];
+	int		read_bytes;
+	std::vector<std::string>	env;
+
+	//HERE!
+	if (_s_id == -1)
+	{
+		std::cout << "Invalid server id: " << _s_id << std::endl;
+		return (NONE);
+	}
+	else
+	{
+	//EN CHANTIER !!!
+		env = extract_env(_hrx, _si[_s_id]);
+		redir_fd = go_cgi(_hrx["BODY"], env);
+		if (redir_fd == -1)
+			return (NONE);
+		if (!_body.empty())
+			_body.clear();
+		if ((read_bytes = read(redir_fd, sd, MAX_LEN)) != -1)
+		{
+			_body.append(sd, read_bytes);
+		}
+		if (read_bytes < MAX_LEN)
+		{
+			close(redir_fd);
+			redir_fd = NONE;
+			clean_body();
 		}
 		else
-		{
-		//EN CHANTIER !!!
-			env = extract_env(_hrx, _si[_s_id]);
-			cgi_fd = go_cgi(_hrx["BODY"], env);
-			if (cgi_fd == -1)
-				return ;
-
-			if (!_body.empty())
-				_body.clear();
-			if (read(cgi_fd, sd, MAX_LEN) != -1)
-			{
-				tmp = sd;
-				std::cout << tmp << std::endl;
-				if ((pos = tmp.find("Content-type: ")) != std::string::npos)
-				{
-					tmp.replace(0, strlen("Content-type: "), "");
-					_htx["BODY"].push_back(tmp);
-				}
-				else if (!((pos = tmp.find("X-Powered-By:")) != std::string::npos))
-				{
-					if (_body.empty()) 
-						_body = tmp;
-					else
-						_body.append(tmp);
-				}
-			}
-			close(cgi_fd);
-		//EN CHANTIER !!!
-		}
+			return (READ);
+	//EN CHANTIER !!!
+	}
+	return (NONE);
 }

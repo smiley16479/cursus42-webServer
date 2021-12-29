@@ -18,7 +18,6 @@
 #include <unistd.h> // pipe pour le script perl
 #include <sys/wait.h> // pipe pour le script perl
 
-#define MAX_LEN 8192
 
 using namespace std;
 
@@ -30,6 +29,7 @@ private:
     std::vector<server_info> &			_si; // server_info
 	int									_s_id; // server id <- quel server doit répondre à la requete actuelle : '_s_id' est l'index de '_si'
 	int									_l_id; // location id <- quel location doit répondre à la requete actuelle : '_l_id' est l'index de 'location' ds '_si'
+	int									redir_fd;
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
 	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
@@ -82,12 +82,17 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	void reader(client_info& client);
-	void writer(void);
+	void reader(std::string& rqst);
+	int choose_method(void);
+	int writer(void);
+	void	clean_body();
 
 	/* FONCTION ACCESSEUR */
 
 	string &get_response(void);
+	string &get_body(void);
+	void set_body(const string &);
+	int get_redir_fd(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
@@ -110,12 +115,12 @@ private:
 				int	file_type();
 					void generate_folder_list();
 	void add_all_field();
-	void add_body();
+	int add_body();
 	void clean_url(string& str);
-	void multipart_form(string& boundary, string& msg);
-	void handle_post_rqst(void);
+	int multipart_form(string& boundary, string& msg);
+	int handle_post_rqst(void);
 	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
-	void handle_cgi(void);
+	int handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */
 	

@@ -6,6 +6,14 @@
 # include <vector>
 # include <map>
 
+enum	e_redir	{
+	NONE,
+	WRITE,
+	READ
+};
+
+#define MAX_LEN 8192
+
 # define MAX_EVENTS 1000
 
 struct locati_info {
@@ -34,9 +42,11 @@ struct server_info {
 };
 
 struct client_info {
-	int			fd;
+	int			redir_fd;
+	char		redir_mode;
 	std::string	resp;
 	std::string rqst;
+	std::string buf;
 	std::string post_boundary;
 	time_t		rqst_time_start;
 	size_t		_cLen;

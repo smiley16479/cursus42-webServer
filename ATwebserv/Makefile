@@ -13,7 +13,7 @@ RM = rm -f
 
 NAME = webserv
 
-#MULTITHREADED BUILD FLAGS#
+#####MULTITHREADED BUILD FLAGS######
 #MAKEFLAGS+=-j8
 
 CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"

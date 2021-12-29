@@ -19,8 +19,6 @@
 
 #include <string>
 
-#define MAX_LEN 8192
-
 using namespace std;
 
 class client_handler
@@ -52,6 +50,8 @@ public:
 	std::map<int, client_info>*	data() { return (&this->clients); };
 	bool is_post_rqst_fulfilled(client_info& client);
 	bool is_chunked_rqst_fulfilled(client_info& client);
+	int					redir_read(client_info& client);
+	int					redir_write(client_info& client);
 	std::vector<int>	handle_chunks(struct_epoll& _epoll);
 	void	fill_resp(int fd, std::string& base);
 	int		chunked_rqst(struct_epoll& _epoll, int fd);

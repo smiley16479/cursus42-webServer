@@ -88,7 +88,6 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	socklen_t len = sizeof(clientaddr);
 	struct epoll_event	ev;
 
-	std::cout << "HEYyyyyy" << std::endl;
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 //	clientaddr.sin_addr;
@@ -112,6 +111,8 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}	
 	clients[client_fd].time_out = time_out;
+	clients[client_fd].redir_fd = -1;
+	clients[client_fd].redir_mode = NONE;
 	time(&clients[client_fd].rqst_time_start);
 }
 
@@ -374,12 +375,51 @@ int	client_handler::chunked_resp(int fd)	{
 	}
 }
 
+int	client_handler::redir_read(client_info& client)
+{
+	int	read_bytes;
+	char sd[MAX_LEN];
+
+	(void)client;
+	if ((read_bytes = read(client.redir_fd, sd, MAX_LEN)) != -1)
+	{
+		client.buf.append(sd, read_bytes);
+	}
+	if (read_bytes < MAX_LEN)
+	{
+		close(client.redir_fd);
+		client.redir_fd = NONE;
+		return (1);
+	}
+	return (0);
+}
+
+int	client_handler::redir_write(client_info& client)
+{
+	(void)client;
+	return (1);
+}
+
 std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	std::vector<int>	ret;
 	std::map<int, client_info>::iterator tmp;
 
 	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); )
 	{
+		if (it->second.redir_fd != -1)
+		{
+			if (it->second.redir_mode == READ)
+			{
+				std::cout << "COUCOU" << std::endl;
+				if (redir_read(it->second))
+					ret.push_back(it->first);
+			}
+			else
+			{
+				if (redir_write(it->second))
+					;
+			}
+		}
 		if (!it->second.rqst.empty())
 		{
 			if (chunked_rqst(_epoll, it->first))
@@ -436,6 +476,8 @@ void client_handler::rearm(struct_epoll& _epoll, int time_out, int fd)
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 	clients[fd].time_out = time_out;
+	clients[fd].redir_fd = -1;
+	clients[fd].redir_mode = NONE;
 	time(&clients[fd].rqst_time_start);
 }
 
