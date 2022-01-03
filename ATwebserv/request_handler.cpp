@@ -498,7 +498,7 @@ void request_handler::generate_folder_list()
 	autoindex_file.close();
 	// cout << "_hrx['A'][1]" << _hrx["A"][1] << " _path : "  << _path << endl;
 	for (set<string>::iterator i = st.begin(); i != st.end(); ++i)
-		_body.append("<div style='padding:10px;'><a href=\"" + _hrx["A"][1] + '/' + *i + "\">" + *i + "</a></div>");
+		_body.append("<div><a href=\"" + _hrx["A"][1] + '/' + *i + "\">" + *i + "</a></div>");
 	_body.append("</div></body></html>");
 }
 
