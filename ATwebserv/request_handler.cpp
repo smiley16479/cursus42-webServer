@@ -468,7 +468,7 @@ int request_handler::file_type()
 	}
 // AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
-		_path = _si[_s_id].error_page.empty() ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
+		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
 	printf("_path : %s\n", _path.c_str());
 	return 0;
 }
