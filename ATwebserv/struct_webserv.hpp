@@ -9,7 +9,8 @@
 enum	e_redir	{
 	NONE,
 	WRITE,
-	READ
+	READ,
+	CGI_OUT
 };
 
 #define MAX_LEN 8192

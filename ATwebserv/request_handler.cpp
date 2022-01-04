@@ -61,7 +61,7 @@ void request_handler::reader(std::string& rqst)
 	string buf_1, buf_2;
 	std::string ss_1(rqst);
 
-//	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
+//	cout << RED "DANS HEADER CGI_OUTER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (!ss_1.empty() && (pos = ss_1.find("\r\n")) != string::npos)
 	{
@@ -365,14 +365,12 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			else
 				tmp.append(buf);
 		}
-		std::cout << "tmp = " << tmp << std::endl;
+//		std::cout << "tmp = " << tmp << std::endl;
 		if ((pos = tmp.find("filename=\"")) != string::npos)
 		{
 			buf = tmp.substr(pos + strlen("filename=\""), tmp.find("\r\n"));
 			path = buf.substr(0, buf.find("\""));
 		}
-		std::cout << "path= " << path << std::endl;
-		out.open(path.c_str());
 		if (msg.substr(0, 2) == "\r\n")
 			msg = msg.substr(2);
 		buf.clear();
@@ -380,8 +378,19 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 		if ((pos = msg.find(boundary + "--")) == end && pos != string::npos)
 		{
 			buf.append(msg.substr(0, pos));
+			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
-			out << buf;
+			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY);
+			if (redir_fd == -1)
+			{
+				std::cout << "BAD" << std::endl;
+				return (NONE);
+			}
+			else
+			{
+				std::cout << "GOOD" << std::endl;
+				return (WRITE);
+			}
 		}
 		else
 		{
@@ -431,6 +440,36 @@ int request_handler::handle_post_rqst(void)
 			{
 				_response.clear();
 				redir_mode = multipart_form(boundary, _hrx["BODY"][0]);
+				if (redir_mode != NONE)
+				{
+					for (map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
+					{
+						if (it->first != "BODY")
+						{
+							if (it->first != "A")
+							{
+								_response.append(it->first);
+								_response.append(" ");
+							}
+							for (vector<string>::iterator i = it->second.begin(); i != it->second.end(); i++)
+							{
+								if (it->first == "A" && *i == "POST")
+								{
+									_response.append("GET");
+									_response.append(" ");
+								}
+								else if (it->first != "Content-Length:" && it->first != "Content-Type:")
+								{
+									_response.append(*i);
+									_response.append(" ");
+								}
+							}
+							_response.append("\r\n");
+						}
+					}
+					_response.append("\r\n");
+					return (redir_mode);
+				}
 				resolve_path();
 			}
 		}
@@ -630,6 +669,8 @@ void request_handler::add_all_field()
 // Ajout du fichier ou du body À LA SUITE des header dans response
 int request_handler::add_body()
 {
+	int	read_bytes;
+	char	sd[MAX_LEN];
 /* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
 		return ; */
 	if (!_body.empty()) {
@@ -640,9 +681,22 @@ int request_handler::add_body()
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
 	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
 		cout << RED "File written !" RESET  << endl;
-		ifstream fs(_path.c_str());
-		_response.append((istreambuf_iterator<char>(fs)),
-						 (istreambuf_iterator<char>() ));
+		redir_fd = open(_path.c_str(), O_RDONLY);
+		if (redir_fd == -1)
+			return (NONE);
+		read_bytes = read(redir_fd, sd, MAX_LEN);
+		_response.append(sd, read_bytes);
+//		std::cout << _body << std::endl;
+		if (read_bytes == -1)
+			return (NONE);
+		else if (read_bytes < MAX_LEN)
+		{
+			close(redir_fd);
+			redir_fd = -1;
+//			clean_body();
+		}
+		else
+			return (READ);
 	}
 	return (NONE);
 }
@@ -810,7 +864,7 @@ void	request_handler::clean_body()
 		if ((pos = tmp.find(":")) != std::string::npos)
 		{
 			index = tmp.substr(0, pos);
-			cout << "index=" << index << endl;
+//			cout << "index=" << index << endl;
 			if (index != "X-Powered-By")
 				_htx[index].push_back(tmp.substr(0, tmp.find("\r\n") + 2));
 		}
@@ -840,7 +894,7 @@ int	request_handler::handle_cgi(void)
 			_body.clear();
 		read_bytes = read(redir_fd, sd, MAX_LEN);
 		_body.append(sd, read_bytes);
-		std::cout << _body << std::endl;
+//		std::cout << _body << std::endl;
 		if (read_bytes == -1)
 			return (NONE);
 		else if (read_bytes < MAX_LEN)
@@ -850,8 +904,17 @@ int	request_handler::handle_cgi(void)
 			clean_body();
 		}
 		else
-			return (READ);
+			return (CGI_OUT);
 	//EN CHANTIER !!!
 	}
 	return (NONE);
+}
+
+void	request_handler::clean(void)	{
+	_hrx.clear();
+	_htx.clear();
+	_status.clear();
+	_path.clear();
+	_body.clear();
+	_response.clear();
 }

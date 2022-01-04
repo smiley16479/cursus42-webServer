@@ -224,7 +224,8 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		header.clean_body();
 		header.cgi_writer();
 		client.get_info(fd).redir_mode = NONE;
-		client.clear(fd);
+//		if (client.get_info(fd).redir_mode == CGI_OUT)
+			client.clear(fd);
 		select_send_method(client, header, fd);
 	}
 	else if (client.is_request_fulfilled(fd)) {
@@ -233,11 +234,25 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		redir = header.choose_method();
 		if (redir != NONE)
 		{
-			if (redir == READ)
+			if (redir == CGI_OUT)
 			{
 				client.get_info(fd).redir_mode = redir;
 				client.get_info(fd).buf = header.get_body();
 				client.get_info(fd).redir_fd = header.get_redir_fd();
+			}
+			else if (redir == READ)
+			{
+				client.get_info(fd).redir_mode = redir;
+				client.get_info(fd).buf = header.get_response();
+				client.get_info(fd).redir_fd = header.get_redir_fd();
+			}
+			else if (redir == WRITE)
+			{
+				client.get_info(fd).redir_mode = redir;
+				client.get_info(fd).buf = header.get_body();
+				client.get_info(fd).rqst = header.get_response();
+				client.get_info(fd).redir_fd = header.get_redir_fd();
+				header.clean();
 			}
 			return ;
 		}

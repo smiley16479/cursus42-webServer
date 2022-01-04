@@ -312,8 +312,8 @@ int	client_handler::chunked_resp(int fd)	{
 		tmp.clear();
 		if (pos != std::string::npos)
 			tmp.append(this->clients[fd].resp.substr(0, pos + 4));
-		std::cout << "chunked header:" << std::endl;
-		std::cout << tmp << std::endl;
+//		std::cout << "chunked header:" << std::endl;
+//		std::cout << tmp << std::endl;
 		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
 		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
 		{
@@ -377,6 +377,33 @@ int	client_handler::chunked_resp(int fd)	{
 	}
 }
 
+int	client_handler::redir_cgi(client_info& client)
+{
+	int	read_bytes;
+	char sd[MAX_LEN];
+
+	(void)client;
+	read_bytes = read(client.redir_fd, sd, MAX_LEN);
+	client.buf.append(sd, read_bytes);
+//	std::cout << client.buf << std::endl;
+	if (read_bytes == -1)
+	{
+		std::cout << "error read" << std::endl;
+		return (0);
+	}
+	else if (read_bytes < MAX_LEN)
+	{
+		std::cout << read_bytes << std::endl;
+		std::cout << "end read" << std::endl;
+		close(client.redir_fd);
+		client.redir_fd = -1;
+		client.redir_mode = NONE;
+		return (1);
+	}
+	std::cout << "keep reading !" << std::endl;
+	return (0);
+}
+
 int	client_handler::redir_read(client_info& client)
 {
 	int	read_bytes;
@@ -385,7 +412,7 @@ int	client_handler::redir_read(client_info& client)
 	(void)client;
 	read_bytes = read(client.redir_fd, sd, MAX_LEN);
 	client.buf.append(sd, read_bytes);
-	std::cout << client.buf << std::endl;
+//	std::cout << client.buf << std::endl;
 	if (read_bytes == -1)
 	{
 		std::cout << "error read" << std::endl;
@@ -406,8 +433,38 @@ int	client_handler::redir_read(client_info& client)
 
 int	client_handler::redir_write(client_info& client)
 {
-	(void)client;
-	return (1);
+	int	wrote_bytes;
+	std::string	tmp;
+
+	if (client.buf.length() > MAX_LEN)
+	{
+		tmp = client.buf.substr(0, MAX_LEN);
+		client.buf = client.buf.substr(MAX_LEN);
+		wrote_bytes = write(client.redir_fd, tmp.c_str(), tmp.length());
+		if (wrote_bytes == -1)
+		{
+			std::cout << "error write" << std::endl;
+			return (0);
+		}
+		std::cout << "keep writing !" << std::endl;
+		return (0);
+	}
+	else
+	{
+		wrote_bytes = write(client.redir_fd, client.buf.c_str(), client.buf.length());
+		if (wrote_bytes == -1)
+		{
+			std::cout << "error write" << std::endl;
+			return (0);
+		}
+		std::cout << "end write" << std::endl;
+//		std::cout << client.rqst << std::endl;
+		close(client.redir_fd);
+		client.redir_fd = -1;
+		client.redir_mode = NONE;
+		client.buf.clear();
+		return (1);
+	}
 }
 
 std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
@@ -418,7 +475,13 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	{
 		if (it->second.redir_fd != -1)
 		{
-			if (it->second.redir_mode == READ)
+	std::cout << "On passe la" << std::endl;
+			if (it->second.redir_mode == CGI_OUT)
+			{
+				if (redir_cgi(it->second))
+					ret.push_back(it->first);
+			}
+			else if (it->second.redir_mode == READ)
 			{
 				if (redir_read(it->second))
 					ret.push_back(it->first);
@@ -426,7 +489,9 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 			else
 			{
 				if (redir_write(it->second))
-					;
+				{
+					ret.push_back(it->first);
+				}
 			}
 			++it;
 		}

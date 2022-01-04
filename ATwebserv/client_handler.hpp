@@ -50,6 +50,7 @@ public:
 	std::map<int, client_info>*	data() { return (&this->clients); };
 	bool is_post_rqst_fulfilled(client_info& client);
 	bool is_chunked_rqst_fulfilled(client_info& client);
+	int					redir_cgi(client_info& client);
 	int					redir_read(client_info& client);
 	int					redir_write(client_info& client);
 	std::vector<int>	handle_chunks(struct_epoll& _epoll);

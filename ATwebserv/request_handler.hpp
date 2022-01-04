@@ -18,6 +18,8 @@
 #include <unistd.h> // pipe pour le script perl
 #include <sys/wait.h> // pipe pour le script perl
 
+#include <fcntl.h>
+
 
 using namespace std;
 
@@ -95,6 +97,7 @@ public:
 	string &get_body(void);
 	void set_body(const string &);
 	int get_redir_fd(void);
+	void clean(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
