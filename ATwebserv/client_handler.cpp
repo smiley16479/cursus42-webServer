@@ -310,7 +310,10 @@ int	client_handler::chunked_resp(int fd)	{
 	{
 		pos = this->clients[fd].resp.find("\r\n\r\n");
 		tmp.clear();
-		tmp.append(this->clients[fd].resp.substr(0, pos + 4));
+		if (pos != std::string::npos)
+			tmp.append(this->clients[fd].resp.substr(0, pos + 4));
+		std::cout << "chunked header:" << std::endl;
+		std::cout << tmp << std::endl;
 		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
 		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
 		{
@@ -341,7 +344,6 @@ int	client_handler::chunked_resp(int fd)	{
 		}
 		else
 		{
-			std::cout << "YOYOYOYOYOYO" << std::endl;
 			this->time_reset(this->clients[fd].time_out, fd);
 		}
 		return (0);
@@ -381,17 +383,24 @@ int	client_handler::redir_read(client_info& client)
 	char sd[MAX_LEN];
 
 	(void)client;
-	if ((read_bytes = read(client.redir_fd, sd, MAX_LEN)) != -1)
+	read_bytes = read(client.redir_fd, sd, MAX_LEN);
+	client.buf.append(sd, read_bytes);
+	std::cout << client.buf << std::endl;
+	if (read_bytes == -1)
 	{
-		client.buf.append(sd, read_bytes);
+		std::cout << "error read" << std::endl;
+		return (0);
 	}
-	if (read_bytes < MAX_LEN)
+	else if (read_bytes < MAX_LEN)
 	{
+		std::cout << read_bytes << std::endl;
+		std::cout << "end read" << std::endl;
 		close(client.redir_fd);
 		client.redir_fd = -1;
 		client.redir_mode = NONE;
 		return (1);
 	}
+	std::cout << "keep reading !" << std::endl;
 	return (0);
 }
 
@@ -411,7 +420,6 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 		{
 			if (it->second.redir_mode == READ)
 			{
-				std::cout << "COUCOU" << std::endl;
 				if (redir_read(it->second))
 					ret.push_back(it->first);
 			}
@@ -420,8 +428,9 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 				if (redir_write(it->second))
 					;
 			}
+			++it;
 		}
-		if (!it->second.rqst.empty())
+		else if (!it->second.rqst.empty())
 		{
 			if (chunked_rqst(_epoll, it->first))
 				ret.push_back(it->first);

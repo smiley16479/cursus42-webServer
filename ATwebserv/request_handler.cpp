@@ -812,7 +812,7 @@ void	request_handler::clean_body()
 			index = tmp.substr(0, pos);
 			cout << "index=" << index << endl;
 			if (index != "X-Powered-By")
-				_htx[index].push_back(tmp.substr(0, tmp.find("\r\n")));
+				_htx[index].push_back(tmp.substr(0, tmp.find("\r\n") + 2));
 		}
 	}
 }
@@ -838,14 +838,15 @@ int	request_handler::handle_cgi(void)
 			return (NONE);
 		if (!_body.empty())
 			_body.clear();
-		if ((read_bytes = read(redir_fd, sd, MAX_LEN)) != -1)
-		{
-			_body.append(sd, read_bytes);
-		}
-		if (read_bytes < MAX_LEN)
+		read_bytes = read(redir_fd, sd, MAX_LEN);
+		_body.append(sd, read_bytes);
+		std::cout << _body << std::endl;
+		if (read_bytes == -1)
+			return (NONE);
+		else if (read_bytes < MAX_LEN)
 		{
 			close(redir_fd);
-			redir_fd = NONE;
+			redir_fd = -1;
 			clean_body();
 		}
 		else

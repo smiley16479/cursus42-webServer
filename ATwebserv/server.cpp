@@ -195,7 +195,9 @@ void	server::select_send_method(client_handler& client, request_handler& header,
 	{
 		client.fill_resp(fd, header.get_response());
 		if (client.chunked_resp(fd))
+		{
 			client.remove_fd(_epoll, fd);
+		}
 	}
 	else
 	{
@@ -216,12 +218,13 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 
 	if (client.get_info(fd).redir_mode == NONE && !client.get_info(fd).buf.empty())
 	{
-		cout << "WHYYYYYYYYY" << endl;
+		std::cout << "HERE" << std::endl;
 		header.set_body(client.get_info(fd).buf);
 		client.get_info(fd).buf.clear();
 		header.clean_body();
 		header.cgi_writer();
 		client.get_info(fd).redir_mode = NONE;
+		client.clear(fd);
 		select_send_method(client, header, fd);
 	}
 	else if (client.is_request_fulfilled(fd)) {
@@ -232,7 +235,6 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		{
 			if (redir == READ)
 			{
-				std::cout << "HEYyyyyy" << std::endl;
 				client.get_info(fd).redir_mode = redir;
 				client.get_info(fd).buf = header.get_body();
 				client.get_info(fd).redir_fd = header.get_redir_fd();
