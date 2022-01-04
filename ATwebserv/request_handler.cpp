@@ -171,8 +171,26 @@ int request_handler::choose_method(void)
 int request_handler::writer(void) {
 // PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
 /* PROBLEM REDONDANT AVEC LA METHODE GET -> VA FALLOIR CHOISIR*/
+	int	redir_mode;
+
 	add_all_field(); 
-	return (add_body());
+	redir_mode = add_body();
+	_hrx.clear();
+	_htx.clear();
+	return (redir_mode);
+}
+
+int	request_handler::cgi_writer()
+{
+	int	redir_mode;
+
+	gen_startLine( _status.find("200") );
+	gen_CLength();
+	add_all_field(); 
+	redir_mode = add_body();
+	_hrx.clear();
+	_htx.clear();
+	return (redir_mode);
 }
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
@@ -794,7 +812,7 @@ void	request_handler::clean_body()
 			index = tmp.substr(0, pos);
 			cout << "index=" << index << endl;
 			if (index != "X-Powered-By")
-				_htx[index].push_back(tmp.substr(0, tmp.size() - 3));
+				_htx[index].push_back(tmp.substr(0, tmp.find("\r\n")));
 		}
 	}
 }

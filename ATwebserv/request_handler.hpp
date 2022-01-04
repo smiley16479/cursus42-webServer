@@ -84,6 +84,8 @@ public:
 	~request_handler();
 	void reader(std::string& rqst);
 	int choose_method(void);
+	int	gen_resp(void);
+	int cgi_writer(void);
 	int writer(void);
 	void	clean_body();
 

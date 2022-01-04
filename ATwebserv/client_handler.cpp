@@ -388,7 +388,8 @@ int	client_handler::redir_read(client_info& client)
 	if (read_bytes < MAX_LEN)
 	{
 		close(client.redir_fd);
-		client.redir_fd = NONE;
+		client.redir_fd = -1;
+		client.redir_mode = NONE;
 		return (1);
 	}
 	return (0);

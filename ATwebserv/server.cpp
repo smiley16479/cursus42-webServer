@@ -207,6 +207,7 @@ void	server::select_send_method(client_handler& client, request_handler& header,
 				client.rearm(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}
+	header.get_response().clear();
 }
 
 void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
@@ -217,8 +218,10 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 	{
 		cout << "WHYYYYYYYYY" << endl;
 		header.set_body(client.get_info(fd).buf);
+		client.get_info(fd).buf.clear();
 		header.clean_body();
-		header.writer();
+		header.cgi_writer();
+		client.get_info(fd).redir_mode = NONE;
 		select_send_method(client, header, fd);
 	}
 	else if (client.is_request_fulfilled(fd)) {

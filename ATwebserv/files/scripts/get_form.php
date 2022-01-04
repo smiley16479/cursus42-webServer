@@ -1,4 +1,4 @@
-#!/bin/php
+#!/bin/php-cgi
 <!doctype html>
 <html>
 	<link href="layout.css" rel="stylesheet" type="text/css">
