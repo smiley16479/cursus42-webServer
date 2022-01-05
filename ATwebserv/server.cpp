@@ -197,7 +197,6 @@ void	server::select_send_method(client_handler& client, request_handler& header,
 
 	if (header.get_response().length() > MAX_LEN)
 	{
-	std::cout << "It's me again !" << std::endl;
 		client.fill_resp(fd, header.get_response());
 		if (client.chunked_resp(fd))
 		{
@@ -215,12 +214,10 @@ void	server::select_send_method(client_handler& client, request_handler& header,
 		}
 		else
 		{
-	std::cout << "Over there !" << std::endl;
 			client.fill_resp(fd, header.get_response());
-		//	client.rearm(_epoll, client.get_info(fd).time_out, fd);
+			client.rearm(_epoll, client.get_info(fd).time_out, fd);
 		}
 	}
-	std::cout << client.get_info(fd).rqst << std::endl;
 	header.get_response().clear();
 }
 
@@ -228,10 +225,8 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 	int	redir;
 	struct epoll_event	*ptr = get_event(_epoll, fd);
 
-	std::cout << "HANDLE DATA !!" << std::endl;
 	if (!client.get_info(fd).buf.empty())
 	{
-		std::cout << "HERE" << std::endl;
 		header.set_body(client.get_info(fd).buf);
 		client.get_info(fd).buf.clear();
 		header.clean_body();
@@ -264,13 +259,10 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 			else if (redir == WRITE)
 			{
 				client.get_info(fd).redir_mode = redir;
-				std::cout << "REDIR = " << redir << std::endl;
-				std::cout << "REDIR FD= " << header.get_redir_fd() << std::endl;
 				client.get_info(fd).buf = header.get_body();
 				client.get_info(fd).rqst = header.get_response();
 				client.get_info(fd).redir_fd = header.get_redir_fd();
 				header.clean();
-				std::cout << "REDIR AFTER CLEAR= " << redir << std::endl;
 			}
 			return ;
 		}

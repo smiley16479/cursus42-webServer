@@ -468,7 +468,6 @@ int request_handler::handle_post_rqst(void)
 						}
 					}
 					_response.append("\r\n");
-					std::cout << "REDIR MODE = " << redir_mode << std::endl;
 					return (redir_mode);
 				}
 				resolve_path();
