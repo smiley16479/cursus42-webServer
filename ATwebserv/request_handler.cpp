@@ -207,7 +207,7 @@ void	request_handler::gen_startLine(std::map<string, string>::iterator status)
 	_htx["A"][2] += "\r\n";
 // MODIFIE LE PNG DS ERROR_PAGE.HTML SI NECESSAIRE
 	if (atoi(status->first.c_str()) >= 300) {
-		fstream error_file("files/error_pages/error_4xx.html");
+		fstream error_file("files/error_pages/4xx.html");
 		error_file.seekg(1252);
 		error_file.write(status->first.c_str(), 3);
 		error_file.close();
@@ -509,7 +509,8 @@ int	request_handler::resolve_path()
 					if (it2->location == it->retour.back()) {
 						cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
 						string::const_iterator c_it = it->retour[0].begin();
-						while (c_it != it->retour[0].end() && std::isdigit(*c_it)) ++c_it;
+						while (c_it != it->retour[0].end() && std::isdigit(*c_it))
+							++c_it;
 						if ( !it->retour[0].empty() && c_it == it->retour[0].end())
 							gen_startLine( _status.find(it->retour[0]) );
 
@@ -605,11 +606,11 @@ int request_handler::file_type()
 				generate_folder_list();
 				return 1;
 			}
-			// _path = "./files/if_folder.html";			break;
-			if (_path[_path.size() -1] != '/' && _si[_s_id].location[_l_id].index[0] != '/')
-				_path += "/";
-			_path += _si[_s_id].location[_l_id].index;		
-			file_type();									break;
+			if (!_si[_s_id].location[_l_id].index.empty()) {
+				_path += _path[_path.size() -1] == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;		
+				file_type();									
+			}
+			break;
 /* 		case S_IFIFO:  printf("FIFO/pipe\n");				break;
 		case S_IFLNK:  printf("symlink\n");					break; */
 		case S_IFREG:  printf("regular file\n");			break;
@@ -620,13 +621,14 @@ int request_handler::file_type()
 			printf(RED "unknown path : %s\n" RESET, _path.c_str());
 			break;
 	}
-	if (atoi(_htx["A"][1].c_str()) >= 400) /* Faire en sorte de changer le png */
-		_path = (_si[_s_id].error_page.empty() ? "./files/error_pages/" : _si[_s_id].error_page) + "error_4xx.html";
+// AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
+	if (atoi(_htx["A"][1].c_str()) >= 400)
+		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
 	printf("_path : %s\n", _path.c_str());
 	return 0;
 }
 
-// execute le script perl er pipe sont résultat ds _body
+// Créé la liste de fichier(s) à afficher ds _body
 void request_handler::generate_folder_list()
 {
 	DIR *dpdf;

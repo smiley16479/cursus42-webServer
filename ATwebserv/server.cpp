@@ -91,15 +91,13 @@ void server::run(void) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 
 				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-	std::cout << "NEW DATA !!" << std::endl;
 				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
 				{
 					client.rqst_append(_epoll._events[i].data.fd, str, read_bytes);
 					response_handler(client, header, _epoll._events[i].data.fd);
-
-		//				client.remove(_epoll, i);
-				//		client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
-					//	close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+					// client.remove(_epoll, i);
+					// client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
+					// close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
 				else
 				{
