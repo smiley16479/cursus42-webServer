@@ -468,6 +468,7 @@ int request_handler::handle_post_rqst(void)
 						}
 					}
 					_response.append("\r\n");
+					std::cout << "REDIR MODE = " << redir_mode << std::endl;
 					return (redir_mode);
 				}
 				resolve_path();
@@ -913,7 +914,7 @@ int	request_handler::handle_cgi(void)
 void	request_handler::clean(void)	{
 	_hrx.clear();
 	_htx.clear();
-	_status.clear();
+	//_status.clear();
 	_path.clear();
 	_body.clear();
 	_response.clear();

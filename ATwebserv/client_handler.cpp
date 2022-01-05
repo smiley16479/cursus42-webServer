@@ -490,6 +490,7 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 			{
 				if (redir_write(it->second))
 				{
+//					this->rearm(_epoll, it->second.time_out, it->first);
 					ret.push_back(it->first);
 				}
 			}
