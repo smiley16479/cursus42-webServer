@@ -67,7 +67,7 @@ void server::run(void) {
 	while(1)
 	{
 		//CHUNK RESOLUTION
-		chunks = client.handle_chunks(_epoll);
+		chunks = client.handle_pendings(_epoll);
 		for (std::vector<int>::iterator it = chunks.begin(); it != chunks.end(); it++)
 			response_handler(client, header, *it);
 		chunks.clear();

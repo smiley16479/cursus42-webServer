@@ -53,7 +53,7 @@ public:
 	int					redir_cgi(client_info& client);
 	int					redir_read(client_info& client);
 	int					redir_write(client_info& client);
-	std::vector<int>	handle_chunks(struct_epoll& _epoll);
+	std::vector<int>	handle_pendings(struct_epoll& _epoll);
 	void	fill_resp(int fd, std::string& base);
 	int		chunked_rqst(struct_epoll& _epoll, int fd);
 	int		chunked_resp(int fd);

@@ -574,15 +574,14 @@ int	request_handler::resolve_path()
 	_hrx["Document-Root"].push_back(var);
 	var.clear();
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
-/*
+
 	bool allowed = false;
-	for (int i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
+	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
 		gen_startLine( _status.find("405") );
-	return allowed ? 0 : 1;  PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
-	return (false);
+	return allowed ? 0 : 1;  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
 }
 
 // Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)

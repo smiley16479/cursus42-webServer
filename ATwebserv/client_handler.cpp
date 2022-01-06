@@ -295,9 +295,17 @@ int	client_handler::chunked_resp(int fd)	{
 			tmp.append(this->clients[fd].resp.substr(0, pos + 4));
 //		std::cout << "chunked header:" << std::endl;
 //		std::cout << tmp << std::endl;
-		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-		this->time_reset(this->clients[fd].time_out, fd);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+	//		perror("Send");
+	//		this->clients[fd].resp.clear();
+	//		return (1);
+		}
+		else
+		{
+			(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
+			this->time_reset(this->clients[fd].time_out, fd);
+		}
 		return (0);
 	}
 	else if ((*this).clients[fd].resp.length() > MAX_LEN)
@@ -308,9 +316,17 @@ int	client_handler::chunked_resp(int fd)	{
 		tmp.append("\r\n");
 		tmp.append((*this).clients[fd].resp.substr(0, MAX_LEN));
 		tmp.append("\r\n");
-		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(MAX_LEN);
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-		this->time_reset(this->clients[fd].time_out, fd);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+		//	perror("Send");
+		//	this->clients[fd].resp.clear();
+		//	return (1);
+		}
+		else
+		{
+			(*this).clients[fd].resp = (*this).clients[fd].resp.substr(MAX_LEN);
+			this->time_reset(this->clients[fd].time_out, fd);
+		}
 		return (0);
 	}
 	else
@@ -320,13 +336,26 @@ int	client_handler::chunked_resp(int fd)	{
 		tmp.append(buf);
 		tmp.append("\r\n");
 		tmp.append((*this).clients[fd].resp);
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+	//		perror("Send");
+	//		this->clients[fd].resp.clear();
+	//		return (1);
+			return (0);
+		}
 		tmp.clear();
 		tmp.append("0\r\n\r\n");
 		this->clear(fd);
 		this->clients[fd].resp.clear();
-		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
-		this->time_reset(this->clients[fd].time_out, fd);
+		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
+		{
+	//		perror("Send");
+	//		this->clients[fd].resp.clear();
+	//		return (1);
+			return (0);
+		}
+		else
+			this->time_reset(this->clients[fd].time_out, fd);
 		return (1);
 	}
 }
@@ -414,7 +443,7 @@ int	client_handler::redir_write(client_info& client)
 	}
 }
 
-std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
+std::vector<int>	client_handler::handle_pendings(struct_epoll& _epoll)	{
 	std::vector<int>	ret;
 	std::map<int, client_info>::iterator tmp;
 
