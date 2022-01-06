@@ -39,22 +39,16 @@ void server::initialize(void) {
 		if (skip)
 			continue ;
 /* CREATION DU SERVER */
-	//	if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
 		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | O_NONBLOCK, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-//		int opt = 1;
-//		setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
 		int	opt = EPOLL_CTL_ADD;
 		struct epoll_event ev;
 		bzero(&ev, sizeof(ev));
 		ev.events = EPOLLIN;
 		ev.data.fd = _s[i].socket;
-//		_epoll._event.events = EPOLLIN;
-//		_epoll._event.data.fd = _s[i].socket;
-//		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &_epoll._event))
 		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &ev))
 		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
@@ -79,9 +73,7 @@ void server::run(void) {
 		chunks.clear();
 		//END
 		
-//		printf("\nPolling for input...\n");
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
-//		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && _epoll._events[i].events & EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
@@ -90,27 +82,21 @@ void server::run(void) {
 			else if (_epoll._events[i].events & EPOLLIN) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 
-				// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
 				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
 				{
 					client.rqst_append(_epoll._events[i].data.fd, str, read_bytes);
 					response_handler(client, header, _epoll._events[i].data.fd);
-					// client.remove(_epoll, i);
-					// client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
-					// close(_epoll._events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 				}
 				else
 				{
 					if (!(_epoll._events[i].events & EPOLLOUT))
 						client.remove(_epoll, _epoll._events[i].data.fd);
-//					printf("server: client just left\n");
-					perror("recv serv");
-//					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+	//				else
+	//					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
 				}			
 			}
 			else if (client.get_info(_epoll._events[i].data.fd).redir_mode != NONE)
 				;
-			//	response_handler(client, header, _epoll._events[i].data.fd);
 			else if (_epoll._events[i].events & EPOLLIN
 					|| _epoll._events[i].events & EPOLLOUT)
 			{
@@ -118,7 +104,6 @@ void server::run(void) {
 			}
 		}
 		client.check_all_timeout(_epoll);
-//		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 
 	if(close(_epoll._epoll_fd))
@@ -150,7 +135,6 @@ void server::display_server(void)
 	for (size_t i = 0; i < _s.size(); i++)
 	{
 		cout << GREEN ITALIC UNDERLINE "DISPLAY SERVER INFORMATION" RESET GREEN " :" RESET << endl;
-		// for (size_t j = 0; j < _s[i].server_name.size(); j++) // Qd server_name etait un vector
 		cout << "server_name : " << _s[i].server_name << endl;
 		cout << "time_out : " << _s[i].time_out << endl;
 		cout << "port : " << _s[i].port << endl;
@@ -230,14 +214,12 @@ void	server::response_handler(client_handler& client, request_handler& header, i
 		header.clean_body();
 		header.cgi_writer();
 		client.get_info(fd).redir_mode = NONE;
-//		if (client.get_info(fd).redir_mode == CGI_OUT)
-			client.clear(fd);
+		client.clear(fd);
 		select_send_method(client, header, fd);
 	}
 	else if (client.is_request_fulfilled(fd)) {
 		cout << "request_fulfilled !!\n";
-	//	std::cout << client.get_info(fd).rqst << std::endl;
-		header.reader(/* str */client.get_info(fd).rqst); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+		header.reader(client.get_info(fd).rqst);
 		client.get_info(fd).rqst.clear();
 		redir = header.choose_method();
 		if (redir != NONE)

@@ -137,38 +137,19 @@ bool client_handler::is_chunked_rqst_fulfilled(client_info& client)
 	}
 	if (client._cLen != 0)
 	{
-	/*
-		if ((pos = client.rqst.rfind(client.post_boundary)) != string::npos)
+		if (client._cLen <= client.rqst.length())
 		{
-			tmp = client.rqst.substr(pos + strlen(client.post_boundary.c_str()));
-			if (client._cLen > tmp.length())
-			{
-				std::cout << "dans cLen is set" << std::endl;
-				std::cout << tmp.length() << std::endl;
-			}
-			*/
-			if (client._cLen > client.rqst.length())
-			{
-				std::cout << "dans cLen is set" << std::endl;
-				std::cout << client.rqst.length() << std::endl;
-			}
-			else
-			{
-		std::cout << " COUCOU" << std::endl;
-				if (client._cLen < tmp.length())
-					client.rqst = client.rqst.substr(0, client._cLen);
-				if (client.rqst.substr(0, 5) == "CHUNK")
-					client.rqst.replace(0, 5, "POST");
-				return (true);
-			}
-	//	}
+			if (client._cLen < tmp.length())
+				client.rqst = client.rqst.substr(0, client._cLen);
+			if (client.rqst.substr(0, 5) == "CHUNK")
+				client.rqst.replace(0, 5, "POST");
+			return (true);
+		}
 	}
 	else
 	{
-		std::cout << "dans cLen is unset" << std::endl;
 		if ((pos = client.rqst.find("Content-Length: ")) != std::string::npos)
 		{
-			std::cout << "Len was set:" << pos << std::endl;
 			tmp = client.rqst.substr(pos + strlen("Content-Length: "));
 			if ((pos = tmp.find("\r\n")) != std::string::npos)
 				tmp = tmp.substr(0, pos);
@@ -315,16 +296,8 @@ int	client_handler::chunked_resp(int fd)	{
 //		std::cout << "chunked header:" << std::endl;
 //		std::cout << tmp << std::endl;
 		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(pos + 4);
-		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
-		{
-			perror("Send");
-			this->clients[fd].resp.clear();
-			return (1);
-		}
-		else
-		{
-			this->time_reset(this->clients[fd].time_out, fd);
-		}
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
+		this->time_reset(this->clients[fd].time_out, fd);
 		return (0);
 	}
 	else if ((*this).clients[fd].resp.length() > MAX_LEN)
@@ -336,16 +309,8 @@ int	client_handler::chunked_resp(int fd)	{
 		tmp.append((*this).clients[fd].resp.substr(0, MAX_LEN));
 		tmp.append("\r\n");
 		(*this).clients[fd].resp = (*this).clients[fd].resp.substr(MAX_LEN);
-		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
-		{
-			perror("Send");
-			this->clients[fd].resp.clear();
-			return (1);
-		}
-		else
-		{
-			this->time_reset(this->clients[fd].time_out, fd);
-		}
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
+		this->time_reset(this->clients[fd].time_out, fd);
 		return (0);
 	}
 	else
@@ -355,24 +320,13 @@ int	client_handler::chunked_resp(int fd)	{
 		tmp.append(buf);
 		tmp.append("\r\n");
 		tmp.append((*this).clients[fd].resp);
-		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
-		{
-			perror("Send");
-			this->clients[fd].resp.clear();
-			return (1);
-		}
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
 		tmp.clear();
 		tmp.append("0\r\n\r\n");
 		this->clear(fd);
 		this->clients[fd].resp.clear();
-		if (send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL) == -1)
-		{
-			perror("Send");
-			this->clients[fd].resp.clear();
-			return (1);
-		}
-		else
-			this->time_reset(this->clients[fd].time_out, fd);
+		send(fd, tmp.c_str(), tmp.length(), MSG_DONTWAIT | MSG_NOSIGNAL);
+		this->time_reset(this->clients[fd].time_out, fd);
 		return (1);
 	}
 }
@@ -388,19 +342,16 @@ int	client_handler::redir_cgi(client_info& client)
 //	std::cout << client.buf << std::endl;
 	if (read_bytes == -1)
 	{
-		std::cout << "error read" << std::endl;
 		return (0);
 	}
 	else if (read_bytes < MAX_LEN)
 	{
 		std::cout << read_bytes << std::endl;
-		std::cout << "end read" << std::endl;
 		close(client.redir_fd);
 		client.redir_fd = -1;
 		client.redir_mode = NONE;
 		return (1);
 	}
-	std::cout << "keep reading !" << std::endl;
 	return (0);
 }
 
@@ -415,19 +366,15 @@ int	client_handler::redir_read(client_info& client)
 //	std::cout << client.buf << std::endl;
 	if (read_bytes == -1)
 	{
-		std::cout << "error read" << std::endl;
 		return (0);
 	}
 	else if (read_bytes < MAX_LEN)
 	{
-		std::cout << read_bytes << std::endl;
-		std::cout << "end read" << std::endl;
 		close(client.redir_fd);
 		client.redir_fd = -1;
 		client.redir_mode = NONE;
 		return (1);
 	}
-	std::cout << "keep reading !" << std::endl;
 	return (0);
 }
 
@@ -475,7 +422,6 @@ std::vector<int>	client_handler::handle_chunks(struct_epoll& _epoll)	{
 	{
 		if (it->second.redir_fd != -1)
 		{
-	std::cout << "On passe la" << std::endl;
 			if (it->second.redir_mode == CGI_OUT)
 			{
 				if (redir_cgi(it->second))

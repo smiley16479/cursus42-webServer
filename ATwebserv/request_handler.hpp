@@ -39,48 +39,6 @@ private:
 	std::string							_body; // response_content (body)
 	std::string							_response; // response_content (response_header + body)
 
-
-	/* COPY DES ATTRIBUTS DE QUING_LY */
-/*
-	//status
-	int															_status;
-	std::map<int, std::string>									_status_phrases;
-	bool														_write_to_file;
-	bool														_read_from_file;
-	bool														_write_to_browser;
-	int															_bytes_written;
-	int															_bytes_read;
-
-	//Headers
-	int															_max_file_size;
-	int															_content_length;
-	std::string													_content_type;
-	std::string													_content_language;
-	std::string													_content_location;
-	std::vector<std::string>									_allow;
-	std::string													_method;
-	std::string													_file_location;
-	std::string													_uri_location;
-	std::string													_location_block_root;
-	std::string													_protocol;
-	std::string													_requested_host;
-	std::string													_user_agent;
-	std::string 												_accept_charset;
-	std::string													_accept_language;
-	std::string													_authorization;
-	std::string													_referer;
-	std::string													_body;
-	std::vector<std::string>					 				_special_x_header;
-	int															_location_index;
-	std::string													_auth_basic;
-	std::string													_auth_type;
-
-	//Response
-	int															_response_size;
-	// std::string												_response;
-	std::string													_response_file;
-	std::string													_additional_cgi_headers;
-*/
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
