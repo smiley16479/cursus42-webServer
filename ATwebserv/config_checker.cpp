@@ -171,7 +171,7 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 		else if (word == "server_name" /* && ifs >> word */) {
 			// si.server_name.push_back(word);
 			std::cout << "server_name : ";
-			extract_to_vector(ifs, si.server_name);
+			extract_to_string(ifs, si.server_name);
 			// std::cout << "server_name : " << si.server_name[si.server_name.size() - 1] << std::endl;
 		}
 		else if (word == "max_file_size") {

@@ -8,15 +8,15 @@
 #define MAX_EVENTS 1000
 
 struct locati_info {
-	std::string location;										// dossier reférent
-	std::string auth_basic;									// ?
-	std::string auth_user_file;							// fichiers autorisés à l'utilisateur
-	std::string autoindex;									// présentation du fileSystem => val (on/off)
-	std::string index;											// fichier servi par défault
-	std::string max_file_size;							// taille maximale de fichier à envoyer
-	std::string return_directive;						// redirection vers une autre location
-	std::string root;												// dossier racine
-	std::vector<std::string> allowed_method;// méthodes (GET, POST, etc) permises
+	std::string	location;
+	std::string auth_basic;							// ?
+	std::string auth_user_file;						// fichiers autorisés à l'utilisateur
+	std::string autoindex;							// présentation du fileSystem => val (on/off)
+	std::string index;								// fichier servi par défault
+	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
+	std::string return_directive;					// redirection vers une autre location
+	std::string root;								// dossier racine
+	std::vector<std::string> allowed_method;		// méthodes (GET, POST, etc) permises
 	std::vector<std::string> retour;				// directive return
 };
 
@@ -24,17 +24,20 @@ struct server_info {
 	int socket;
 	std::string port;
 	std::string host;
-	std::vector<std::string> server_name;
+	std::string server_name;
 	std::string error_page;
-	std::string max_file_size;				// taille maximale de fichier à envoyer
+	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
 	std::string time_out;
-	std::vector<std::string> cgi_file_types;// type de file gérées pour les cgi
+	std::vector<std::string> cgi_file_types;		// type de file gérées pour les cgi
 	std::vector<locati_info> location;
 };
 
 struct client_info {
+	std::string	resp; //Ajout Arthur
 	std::string rqst;
+	std::string post_boundary; //Ajout Arthur
 	time_t		rqst_time_start;
+	size_t		_cLen; //Ajout Arthur
 	int			time_out;
 };
 
@@ -45,7 +48,6 @@ struct struct_epoll
 	epoll_event _event;
 	epoll_event _events[MAX_EVENTS];
 };
-
 
 /* 
 #include <algorithm> 

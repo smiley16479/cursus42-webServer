@@ -1,6 +1,6 @@
 #include "server.hpp"
 #include "config_checker.hpp"
-#include "header_handler.hpp"
+#include "request_handler.hpp"
 #include "client_handler.hpp"
 #include <stdexcept>
 
@@ -27,10 +27,18 @@ void server::initialize(void) {
 		throw std::runtime_error("ERROR IN EPOLL INSTANCE CREATION");
 /* INITIALISATION DES SOCKET DES SERVER(S) VIRTUEL(S) */
 	for (size_t i = 0; i < _s.size(); i++) {
+		bool skip = false;
 		bzero(&servaddr, sizeof(servaddr));
 		servaddr.sin_family = AF_INET; 
 		servaddr.sin_addr.s_addr = htonl(0); //127.0.0.1 -> 2130706433
 		servaddr.sin_port = htons(atoi(_s[i].port.c_str()));
+/* VERIFIE QUE LE SERVER A BIND N'AIT PAS D'HOMOLOGUE */
+		for (int j = i - 1; i && j >= 0; --j)
+				if (_s[j].host == _s[i].host && _s[j].port == _s[i].port && (skip = true))
+					break ;
+		if (skip)
+			continue ;
+/* CREATION DU SERVER */
 		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
@@ -45,7 +53,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	header_handler header(_s);
+	request_handler header(_s);
 	client_handler client;
 	int serv_id;
 
@@ -130,8 +138,8 @@ void server::display_server(void)
 	for (size_t i = 0; i < _s.size(); i++)
 	{
 		cout << GREEN ITALIC UNDERLINE "DISPLAY SERVER INFORMATION" RESET GREEN " :" RESET << endl;
-		for (size_t j = 0; j < _s[i].server_name.size(); j++)
-			cout << "server_name : " << _s[i].server_name[j] << endl;
+		// for (size_t j = 0; j < _s[i].server_name.size(); j++) // Qd server_name etait un vector
+		cout << "server_name : " << _s[i].server_name << endl;
 		cout << "time_out : " << _s[i].time_out << endl;
 		cout << "port : " << _s[i].port << endl;
 		cout << "host : " << _s[i].host << endl;

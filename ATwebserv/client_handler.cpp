@@ -15,12 +15,12 @@ bool client_handler::is_request_fulfilled(int client_fd)
 	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
 	if (clients[client_fd].rqst.substr(0, 4) == "POST")
 		/* return false */; // ADD CODE TO HANDLE RECOGNITION OF ENDED POST RQST // PROBLEM
-	for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
-		cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
+	// for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
+	// 	cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
+	// cout << clients[client_fd].rqst.back();
 	
-	cout << clients[client_fd].rqst.back();
 	size_t len = clients[client_fd].rqst.size();
-	if (len >= 4 && clients[client_fd].rqst.substr(len - 4, len) == "\r\n\r\n")
+	if (len >= 4 && clients[client_fd].rqst.substr(len - 4, len) == "\r\n\r\n") // SUREMENT UNE MAUVAISE FAÇON DE LE FAIRE
 		return true ;
 	return false ;
 }
