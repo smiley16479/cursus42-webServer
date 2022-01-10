@@ -17,8 +17,8 @@ void	client_info::fd_out(request_handler& header)	{
 		return (write_handler(header));
 	else if (mode == SEND)
 		return (send_handler(header));
-//	else if (mode == CGI_OUT)
-//		return (cgi_resp_handler(header));
+	else if (mode == CGI_OUT)
+		return (cgi_resp_handler(header));
 	return ;
 }
 
@@ -41,11 +41,14 @@ void	client_info::compute(request_handler& header)	{
 				rqst = header.get_response();
 				resp = header.get_body();
 			}
+			else if (ret == CGI_OUT)
+				resp = header.get_body();
 			return ;
 		}
 		mode = SEND;
 	}
-//	else
+	else
+		mode = RECV;
 //		remove();
 	//SHOULD SEND A BAD REQUEST RESP
 	//OR FIGURE WHETHER THE MSG IS CHUNKED
@@ -60,7 +63,7 @@ void	client_info::recv_handler(request_handler& header)	{
 	if (recv_bytes == -1)
 	{
 		std::cout << "RECV ERROR" << std::endl;
-		remove();
+//		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
@@ -114,29 +117,36 @@ void	client_info::write_handler(request_handler& header)	{
 
  	if (resp.length() > (unsigned int)MAX_LEN)
 	{
-		std::cout << "MSG TOO LONG" << std::endl;
+		std::cout << "FILE TOO BIG" << std::endl;
 		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
-		std::cout << "MSG RECUT" << std::endl;
+		resp = resp.substr(0, MAX_LEN);
+		std::cout << "FILE RECUT" << std::endl;
 	}
-	wrote_bytes = write(loc_fd, resp.c_str(), MAX_LEN);
+	wrote_bytes = write(loc_fd, resp.c_str(), resp.length());
 	if (wrote_bytes == -1)
 	{
 		std::cout << "WRITE ERROR" << std::endl;
-		close(loc_fd);
-		resp.clear();
-		mode = SEND;
+		tmp.append(resp);
+		resp = tmp;
+//		close(loc_fd);
+//		resp.clear();
+//		mode = SEND;
 		return ;
 	}
 	else if (wrote_bytes == 0)
 	{
 		std::cout << "WRITE EOF" << std::endl;
-		mode = SEND;
+		tmp.clear();
+		close(loc_fd);
+		mode = COMPUTE;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
 		std::cout << "WRITE MSG END" << std::endl;
-		mode = SEND;
+		tmp.clear();
+		close(loc_fd);
+		mode = COMPUTE;
 	}
 	resp = tmp;
 }
@@ -151,29 +161,78 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "MSG TOO LONG" << std::endl;
 		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
+		resp = resp.substr(0, MAX_LEN);
 		std::cout << "MSG RECUT" << std::endl;
 	}
-	sent_bytes = send(com_socket, resp.c_str(), MAX_LEN, MSG_NOSIGNAL);
+	sent_bytes = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
 	if (sent_bytes == -1)
 	{
 		std::cout << "SEND ERROR" << std::endl;
-		remove();
+		tmp.append(resp);
+		resp = tmp;
+//		remove(); //BETTER TO TRY TO SEND AGAIN
 		return ;
 	}
 	else if (sent_bytes == 0)
 	{
 		std::cout << "SEND EOF" << std::endl;
-		mode = READ;
+		tmp.clear();
+		mode = RECV;
+		this->time_reset();
 	}
 	else if (sent_bytes < MAX_LEN)
 	{
 		std::cout << "SEND MSG END" << std::endl;
-		mode = READ;
+		tmp.clear();
+		mode = RECV;
+		this->time_reset();
 	}
 	resp = tmp;
+	tmp.clear();
 }
 
+void	client_info::cgi_resp_handler(request_handler& header)	{
+	(void)header;
+	int	read_bytes;
+	char	buf[MAX_LEN];
 
+	read_bytes = read(loc_fd, &buf, MAX_LEN);
+	if (read_bytes == -1)
+	{
+		std::cout << "CGI ERROR" << std::endl;
+//		close(loc_fd);
+//		header.set_body(resp);
+//		header.clean_body();
+//		mode = SEND;
+		return ;
+	}
+	else
+	{
+		resp.append(buf, read_bytes);
+		std::cout << "A CGI READ HAPPENED" << std::endl;
+		if (read_bytes == 0)
+		{
+			std::cout << "CGI EOF" << std::endl;
+			header.set_body(resp);
+			resp.clear();
+			header.clean_body();
+			header.cgi_writer();
+			resp = header.get_response();
+			mode = SEND;
+			close(loc_fd);
+		}
+		else if (read_bytes < MAX_LEN)
+		{
+			std::cout << "CGI MSG END" << std::endl;
+			header.set_body(resp);
+			header.clean_body();
+			header.cgi_writer();
+			resp = header.get_response();
+			mode = SEND;
+			close(loc_fd);
+		}
+	}
+}
 
 
 bool client_info::is_request_fulfilled()
@@ -323,9 +382,13 @@ bool client_info::is_chunked_rqst_fulfilled()
 	return (false);
 }
 
-void client_info::remove()
-{
+void	client_info::time_reset()	{
+	time(&rqst_time_start);
+}
+
+void	client_info::remove()	{
 	epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL);
 	if (close(com_socket))
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+	com_socket = -1;
 }

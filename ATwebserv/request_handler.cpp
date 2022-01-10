@@ -187,7 +187,9 @@ int	request_handler::cgi_writer()
 	gen_startLine( _status.find("200") );
 	gen_CLength();
 	add_all_field(); 
+	std::cout << "All fields added" << std::endl;
 	redir_mode = add_body();
+	std::cout << "Body added" << std::endl;
 	_hrx.clear();
 	_htx.clear();
 	return (redir_mode);
@@ -677,6 +679,7 @@ int request_handler::add_body()
 		_body.clear();
 		return (NONE);
 	}
+	std::cout << "body appended" << std::endl;
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
 	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
 		cout << RED "File written !" RESET  << endl;

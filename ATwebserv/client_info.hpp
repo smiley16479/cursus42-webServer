@@ -28,11 +28,13 @@ class client_info {
 		void	read_handler(request_handler& header);
 		void	write_handler(request_handler& header);
 		void	send_handler(request_handler& header);
+		void	cgi_resp_handler(request_handler& header);
 
 		bool	is_request_fulfilled();
 		bool	is_post_rqst_fulfilled();
 		bool	is_chunked_rqst_fulfilled();
 
+		void 	time_reset();
 		void 	remove();
 };
 

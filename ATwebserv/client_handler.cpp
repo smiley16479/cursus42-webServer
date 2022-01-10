@@ -20,17 +20,22 @@ string client_handler::get_rqst(int client_fd){return clients[client_fd].rqst;}
 // si la requete d'un des clients est plus longue a traiter que son time_out (set ds la config) on ferme la connexion ... puis on remove le client
 void client_handler::check_all_timeout() 
 {
+	size_t	tmp;
+
 	if (!clients.size() || clients.empty())
 		return ;
-	for (std::vector<client_info>::iterator it = clients.begin(); it != clients.end(); ++it)
+	for (std::vector<client_info>::iterator it = clients.begin(); it < clients.end(); ++it)
 	{
-		if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
-	//		cout << "elapsed time : " << time(NULL) - it->second.rqst_time_start <<  "it->second.time_out : " <<  it->second.time_out << endl;
-	//		epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
-	//		if (close(it->first)) 
-	//			throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
-	//		clients.erase(it->first);
+		if (it->com_socket == -1)
+		{
+			tmp = it - clients.begin();
+			clients.erase(it);
+			std::cout << "Client erased !" << std::endl;
+			it = clients.begin() + tmp;
+		}
+		else if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
 			std::cout << "CLIENT TIMED OUT" << std::endl;
+			std::cout << "Client removed from tracked fd !" << std::endl;
 			it->remove();
 			return ;
 		}
