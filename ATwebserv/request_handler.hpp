@@ -20,7 +20,6 @@
 
 #include <fcntl.h>
 
-
 using namespace std;
 
 class request_handler

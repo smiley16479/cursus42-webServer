@@ -61,7 +61,7 @@ void request_handler::reader(std::string& rqst)
 	string buf_1, buf_2;
 	std::string ss_1(rqst);
 
-//	cout << RED "DANS HEADER CGI_OUTER" RESET "\n" << str << endl;
+//	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (!ss_1.empty() && (pos = ss_1.find("\r\n")) != string::npos)
 	{
@@ -670,8 +670,6 @@ void request_handler::add_all_field()
 // Ajout du fichier ou du body À LA SUITE des header dans response
 int request_handler::add_body()
 {
-	int	read_bytes;
-	char	sd[MAX_LEN];
 /* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
 		return ; */
 	if (!_body.empty()) {
@@ -682,22 +680,14 @@ int request_handler::add_body()
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
 	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
 		cout << RED "File written !" RESET  << endl;
-		redir_fd = open(_path.c_str(), O_RDONLY);
+		redir_fd = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
 		if (redir_fd == -1)
-			return (NONE);
-		read_bytes = read(redir_fd, sd, MAX_LEN);
-		_response.append(sd, read_bytes);
-//		std::cout << _body << std::endl;
-		if (read_bytes == -1)
-			return (NONE);
-		else if (read_bytes < MAX_LEN)
 		{
-			close(redir_fd);
-			redir_fd = -1;
-//			clean_body();
+			std::cout << "Open error" << std::endl;
+			return (NONE);
 		}
-		else
-			return (READ);
+//		std::cout << _body << std::endl;
+		return (READ);
 	}
 	return (NONE);
 }
@@ -874,8 +864,6 @@ void	request_handler::clean_body()
 
 int	request_handler::handle_cgi(void)
 {
-	char	sd[MAX_LEN];
-	int		read_bytes;
 	std::vector<std::string>	env;
 
 	//HERE!
@@ -891,21 +879,7 @@ int	request_handler::handle_cgi(void)
 		redir_fd = go_cgi(_hrx["BODY"], env);
 		if (redir_fd == -1)
 			return (NONE);
-		if (!_body.empty())
-			_body.clear();
-		read_bytes = read(redir_fd, sd, MAX_LEN);
-		_body.append(sd, read_bytes);
-//		std::cout << _body << std::endl;
-		if (read_bytes == -1)
-			return (NONE);
-		else if (read_bytes < MAX_LEN)
-		{
-			close(redir_fd);
-			redir_fd = -1;
-			clean_body();
-		}
-		else
-			return (CGI_OUT);
+		return (CGI_OUT);
 	//EN CHANTIER !!!
 	}
 	return (NONE);

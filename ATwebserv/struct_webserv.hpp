@@ -6,12 +6,16 @@
 # include <vector>
 # include <map>
 
-enum	e_redir	{
+enum	e_mode	{
 	NONE,
 	WRITE,
 	READ,
+	COMPUTE,
+	RECV,
+	SEND,
 	CGI_OUT
 };
+
 
 #define MAX_LEN 8192
 
@@ -40,18 +44,6 @@ struct server_info {
 	std::string time_out;
 	std::vector<std::string> cgi_file_types;		// type de file gérées pour les cgi
 	std::vector<locati_info> location;
-};
-
-struct client_info {
-	int			redir_fd;
-	char		redir_mode;
-	std::string	resp;
-	std::string rqst;
-	std::string buf;
-	std::string post_boundary;
-	time_t		rqst_time_start;
-	size_t		_cLen;
-	int			time_out;
 };
 
 struct struct_epoll
