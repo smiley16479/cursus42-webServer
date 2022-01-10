@@ -562,7 +562,7 @@ int	request_handler::resolve_path()
 	_hrx["Path-Info"].push_back(var);
 	var.clear();
 	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
-	var = (_path[0] == '/' ? _path.substr(1) : _path);
+	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
 	_hrx["Script-Name"].push_back(var);
 	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
 	pos = _path.find_last_of("/");
