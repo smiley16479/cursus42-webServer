@@ -45,18 +45,6 @@
 		print "REMOTE_HOST: ";
 		print $_SERVER["REMOTE_HOST"];
 		print "<br>";
-//		print "REMOTE_ADDR: ";
-//		print $_SERVER["REMOTE_ADDR"];
-//		print "<br>";
-		print "AUTH_TYPE: ";
-		print $_SERVER["AUTH_TYPE"];
-		print "<br>";
-		print "REMOTE_USER: ";
-		print $_SERVER["REMOTE_USER"];
-		print "<br>";
-		print "REMOTE_IDENT: ";
-		print $_SERVER["REMOTE_IDENT"];
-		print "<br>";
 		print "CONTENT_TYPE: ";
 		print $_SERVER["CONTENT_TYPE"];
 		print "<br>";
@@ -72,9 +60,6 @@
 		print "HTTP_USER_AGENT: ";
 		print $_SERVER["HTTP_USER_AGENT"];
 		print "<br>";
-//		print "HTTP_COOKIE: ";
-//		print $_SERVER["HTTP_COOKIE"];
-//		print "<br>";
 		print "HTTP_REFERER: ";
 		print $_SERVER["HTTP_REFERER"];
 		print "<br>";

@@ -131,22 +131,20 @@ void	client_info::write_handler(request_handler& header)	{
 	{
 		std::cout << "WRITE ERROR" << std::endl;
 		tmp.append(resp);
-		resp = tmp;
-//		close(loc_fd);
-//		resp.clear();
-//		mode = SEND;
 		return ;
 	}
 	else if (wrote_bytes == 0)
 	{
 		std::cout << "WRITE EOF" << std::endl;
 		tmp.clear();
+		std::cout << rqst << std::endl;
 		close(loc_fd);
 		mode = COMPUTE;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
 		std::cout << "WRITE MSG END" << std::endl;
+		std::cout << rqst << std::endl;
 		tmp.clear();
 		close(loc_fd);
 		mode = COMPUTE;
@@ -229,6 +227,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 		{
 			std::cout << "CGI MSG END" << std::endl;
 			header.set_body(resp);
+			resp.clear();
 			header.clean_body();
 			header.cgi_writer();
 			resp = header.get_response();

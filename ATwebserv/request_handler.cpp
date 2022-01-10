@@ -382,17 +382,11 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			buf.append(msg.substr(0, pos));
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
-			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY);
+			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd == -1)
-			{
-				std::cout << "BAD" << std::endl;
 				return (NONE);
-			}
 			else
-			{
-				std::cout << "GOOD" << std::endl;
 				return (WRITE);
-			}
 		}
 		else
 		{
@@ -407,6 +401,7 @@ int request_handler::handle_post_rqst(void)
 {
 	int			redir_mode;
 	std::string	tmp;
+	std::string	boundary;
 
 	redir_mode = NONE;
 	if (_hrx.find("Content-Type:") != _hrx.end())
@@ -422,8 +417,9 @@ int request_handler::handle_post_rqst(void)
 
 // POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
 	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
-	string boundary = _hrx["Content-Type:"][1].substr(strlen("boundary=--"));
-	std::cout << boundary << std::endl;
+	if (_hrx["Content-Type:"].size() > 1)
+		boundary = _hrx["Content-Type:"][1].substr(strlen("boundary=--"));
+//	std::cout << boundary << std::endl;
 	cout << endl << "BODY : " << endl;
 	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
 	// 	cout << "[" << *i << "]" << endl;
