@@ -39,12 +39,14 @@ void server::initialize(void) {
 		if (skip)
 			continue ;
 /* CREATION DU SERVER */
+		int	opt = 1;
 		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM | O_NONBLOCK, 0)) < 0 
+				|| setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int))
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 /* && AJOUT DE CES DERNIERS À L'INSTANCE EPOLL */
-		int	opt = EPOLL_CTL_ADD;
+		opt = EPOLL_CTL_ADD;
 		struct epoll_event ev;
 		bzero(&ev, sizeof(ev));
 		ev.events = EPOLLIN;

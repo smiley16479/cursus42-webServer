@@ -152,6 +152,7 @@ void	client_info::write_handler(request_handler& header)	{
 		mode = COMPUTE;
 	}
 	resp = tmp;
+	time_reset();
 }
 
 void	client_info::send_handler(request_handler& header)	{
@@ -181,14 +182,14 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND EOF" << std::endl;
 		tmp.clear();
 		mode = RECV;
-		this->time_reset();
+		time_reset();
 	}
 	else if (sent_bytes < MAX_LEN)
 	{
 		std::cout << "SEND MSG END" << std::endl;
 		tmp.clear();
 		mode = RECV;
-		this->time_reset();
+		time_reset();
 	}
 	resp = tmp;
 	tmp.clear();
@@ -301,9 +302,6 @@ bool client_info::is_post_rqst_fulfilled()
 
 		if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
 			post_boundary = rqst.substr(boundary_pos, rqst.find_first_of('\r', boundary_pos) - boundary_pos);
-			// cout << "boundary_pos : "<< boundary_pos << ", boundary_pos of fisrt \\r in boundary : " << clients[client_fd].rqst.find_first_of('\r', boundary_pos) << endl;
-			// cout << "boundary : [" << clients[client_fd].post_boundary << "]" RESET << endl;
-			// cout << "boundary : [" << clients[client_fd].post_boundary + "--\r\n" << "]" RESET << endl;
 	}
 	else
 	{
