@@ -3,12 +3,12 @@
 
 #include <iostream>
 #include <sstream>
-#include <map>
 #include <string>
 #include <netdb.h>		// pour struct sockaddr_in
 #include <unistd.h>		// pour close
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
+#include "client_info.hpp"
 #include "server.hpp"
 
 #include <vector>
@@ -24,7 +24,7 @@ using namespace std;
 class client_handler
 {
 private:
-	map <int, client_info> clients;
+	vector <client_info> clients;
 
 public:
 	client_handler(/* args */);
@@ -37,7 +37,7 @@ public:
 	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
 	void remove_fd(struct_epoll& _epoll, int fd); // REMOVE A CLIENT
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
-	void check_all_timeout(struct_epoll& _epoll);
+	void check_all_timeout();
 
 	/* Function rubrique : getter setter */
 	void clear(int client_fd); // CLEAR CLIENT CONTENT
@@ -46,8 +46,9 @@ public:
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
-	client_info&	get_info(int fd) { return (clients[fd]); };
-	std::map<int, client_info>*	data() { return (&this->clients); };
+	client_info*	get_info(int fd);
+
+	std::vector<client_info>*	data() { return (&this->clients); };
 	bool is_post_rqst_fulfilled(client_info& client);
 	bool is_chunked_rqst_fulfilled(client_info& client);
 	int					redir_cgi(client_info& client);
@@ -58,7 +59,6 @@ public:
 	int		chunked_rqst(struct_epoll& _epoll, int fd);
 	int		chunked_resp(int fd);
 	void 	time_reset(int time_out, int fd); // Reset client fd
-	void 	rearm(struct_epoll& _epoll, int time_out, int fd); // Reset client fd
 	int		no_chunk(int fd);
 };
 

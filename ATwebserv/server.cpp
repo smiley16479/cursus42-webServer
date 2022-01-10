@@ -58,21 +58,14 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	int				read_bytes;
 	std::vector<int>	chunks;
-	request_handler header(_s);
-	client_handler client;
-	int serv_id;
+	request_handler		header(_s);
+	client_handler		client;
+	client_info*		ptr;
+	int					serv_id;
 
 	while(1)
 	{
-		//CHUNK RESOLUTION
-		chunks = client.handle_pendings(_epoll);
-		for (std::vector<int>::iterator it = chunks.begin(); it != chunks.end(); it++)
-			response_handler(client, header, *it);
-		chunks.clear();
-		//END
-		
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && _epoll._events[i].events & EPOLLIN) {
@@ -80,30 +73,19 @@ void server::run(void) {
 				printf("New client added\n");
 			}
 			else if (_epoll._events[i].events & EPOLLIN) {
-				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-
-				if ((read_bytes = recv(_epoll._events[i].data.fd, str, sizeof(str), MSG_DONTWAIT | MSG_NOSIGNAL)) != -1)
-				{
-					client.rqst_append(_epoll._events[i].data.fd, str, read_bytes);
-					response_handler(client, header, _epoll._events[i].data.fd);
-				}
-				else
-				{
-					if (!(_epoll._events[i].events & EPOLLOUT))
-						client.remove(_epoll, _epoll._events[i].data.fd);
-	//				else
-	//					client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
-				}			
-			}
-			else if (client.get_info(_epoll._events[i].data.fd).redir_mode != NONE)
-				;
-			else if (_epoll._events[i].events & EPOLLIN
-					|| _epoll._events[i].events & EPOLLOUT)
 			{
-				client.rearm(_epoll, client.get_info(_epoll._events[i].data.fd).time_out, _epoll._events[i].data.fd);
+				ptr = client.get_info(_epoll._events[i].data.fd);
+				if (ptr != NULL)
+					ptr->fd_in(header);
+			}
+			}
+			else if (_epoll._events[i].events & EPOLLOUT)	{
+				ptr = client.get_info(_epoll._events[i].data.fd);
+				if (ptr != NULL)
+					ptr->fd_out(header);
 			}
 		}
-		client.check_all_timeout(_epoll);
+		client.check_all_timeout();
 	}
 
 	if(close(_epoll._epoll_fd))
@@ -126,10 +108,10 @@ int server::is_new_client(int fd) {
 int server::get_time_out(int id_serv) {
 	return atoi(_s[id_serv].time_out.c_str());
 };
+
 /*
 * AFFICHE TOUTES LES INFORMATIONS CONTENUES DS LES STRUCTURES GÉNÉRÉES PAR LE FICHIER DE .CONF
 */
-
 void server::display_server(void)
 {
 	for (size_t i = 0; i < _s.size(); i++)
@@ -171,88 +153,4 @@ struct epoll_event*	get_event(struct_epoll& _epoll, int fd)
 			return (&_epoll._events[i]);
 	}
 	return (NULL);
-}
-
-void	server::select_send_method(client_handler& client, request_handler& header, int fd)
-{
-	struct epoll_event	*ptr = get_event(_epoll, fd);
-
-	if (header.get_response().length() > MAX_LEN)
-	{
-		client.fill_resp(fd, header.get_response());
-		if (client.chunked_resp(fd))
-		{
-			client.remove_fd(_epoll, fd);
-		}
-	}
-	else
-	{
-		if (ptr != NULL && ptr->events & EPOLLOUT)
-		{
-			if (send(fd, header.get_response().c_str(), header.get_response().length(), MSG_DONTWAIT | MSG_NOSIGNAL) != -1)
-				client.remove_fd(_epoll, fd);
-			else
-				client.rearm(_epoll, client.get_info(fd).time_out, fd);
-		}
-		else
-		{
-			client.fill_resp(fd, header.get_response());
-			client.rearm(_epoll, client.get_info(fd).time_out, fd);
-		}
-	}
-	header.get_response().clear();
-}
-
-void	server::response_handler(client_handler& client, request_handler& header, int fd)	{
-	int	redir;
-	struct epoll_event	*ptr = get_event(_epoll, fd);
-
-	if (!client.get_info(fd).buf.empty())
-	{
-		header.set_body(client.get_info(fd).buf);
-		client.get_info(fd).buf.clear();
-		header.clean_body();
-		header.cgi_writer();
-		client.get_info(fd).redir_mode = NONE;
-		client.clear(fd);
-		select_send_method(client, header, fd);
-	}
-	else if (client.is_request_fulfilled(fd)) {
-		cout << "request_fulfilled !!\n";
-		header.reader(client.get_info(fd).rqst);
-		client.get_info(fd).rqst.clear();
-		redir = header.choose_method();
-		if (redir != NONE)
-		{
-			if (redir == CGI_OUT)
-			{
-				client.get_info(fd).redir_mode = redir;
-				client.get_info(fd).buf = header.get_body();
-				client.get_info(fd).redir_fd = header.get_redir_fd();
-			}
-			else if (redir == READ)
-			{
-				client.get_info(fd).redir_mode = redir;
-				client.get_info(fd).buf = header.get_response();
-				client.get_info(fd).redir_fd = header.get_redir_fd();
-			}
-			else if (redir == WRITE)
-			{
-				client.get_info(fd).redir_mode = redir;
-				client.get_info(fd).buf = header.get_body();
-				client.get_info(fd).rqst = header.get_response();
-				client.get_info(fd).redir_fd = header.get_redir_fd();
-				header.clean();
-			}
-			return ;
-		}
-		else
-			client.clear(fd);
-		select_send_method(client, header, fd);
-	}
-	else
-	{
-		if (ptr != NULL && (ptr->events & EPOLLIN || ptr->events & EPOLLOUT))
-			client.rearm(_epoll, client.get_info(fd).time_out, fd);
-	}
 }

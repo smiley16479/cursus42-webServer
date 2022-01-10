@@ -4,6 +4,7 @@ SRC += config_checker.cpp
 SRC += server.cpp
 SRC += request_handler.cpp
 SRC += client_handler.cpp
+SRC += client_info.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
@@ -22,7 +23,7 @@ CPP_FLAGS += -g
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
-CPP_FLAGS += -std=c++98
+#CPP_FLAGS += -std=c++98
 
 ifeq ($(d), 0)
 CPP_FLAGS += -fsanitize=address
