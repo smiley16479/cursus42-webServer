@@ -48,8 +48,11 @@ void	client_info::compute(request_handler& header)	{
 		mode = SEND;
 	}
 	else
+	{
+		if (!(rqst.substr(0, 5) == "CHUNK"))
+			remove();
 		mode = RECV;
-//		remove();
+	}
 	//SHOULD SEND A BAD REQUEST RESP
 	//OR FIGURE WHETHER THE MSG IS CHUNKED
 }
@@ -68,8 +71,8 @@ void	client_info::recv_handler(request_handler& header)	{
 	}
 	else if (recv_bytes == 0)
 	{
-		if (is_request_fulfilled())
-			mode = COMPUTE;
+//		if (is_request_fulfilled())
+		mode = COMPUTE;
 		std::cout << "RECV EOF" << std::endl;
 	}
  	else if (recv_bytes < MAX_LEN)
