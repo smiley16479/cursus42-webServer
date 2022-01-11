@@ -16,8 +16,7 @@ enum	e_mode	{
 	CGI_OUT
 };
 
-
-#define MAX_LEN 8192
+# define MAX_LEN 8192
 
 # define MAX_EVENTS 1000
 

@@ -28,6 +28,7 @@ void	client_info::compute(request_handler& header)	{
 	ret = is_request_fulfilled();
 	if (ret == true)
 	{
+		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
 		header.reader(rqst);
 		ret = header.choose_method();
 		rqst.clear();
@@ -51,6 +52,8 @@ void	client_info::compute(request_handler& header)	{
 	{
 		if (!(rqst.substr(0, 5) == "CHUNK"))
 			remove();
+		else
+			time_reset();
 		mode = RECV;
 	}
 	//SHOULD SEND A BAD REQUEST RESP
@@ -139,7 +142,7 @@ void	client_info::write_handler(request_handler& header)	{
 		tmp.clear();
 		std::cout << rqst << std::endl;
 		close(loc_fd);
-		mode = SEND;
+		mode = COMPUTE;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
@@ -147,7 +150,7 @@ void	client_info::write_handler(request_handler& header)	{
 		std::cout << rqst << std::endl;
 		tmp.clear();
 		close(loc_fd);
-		mode = SEND;
+		mode = COMPUTE;
 	}
 	resp = tmp;
 	time_reset();
@@ -182,13 +185,6 @@ void	client_info::send_handler(request_handler& header)	{
 		mode = RECV;
 		time_reset();
 	}
-	else if (sent_bytes < MAX_LEN)
-	{
-		std::cout << "SEND MSG END" << std::endl;
-		tmp.clear();
-		mode = RECV;
-		time_reset();
-	}
 	resp = tmp;
 	tmp.clear();
 }
@@ -215,17 +211,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 		if (read_bytes == 0)
 		{
 			std::cout << "CGI EOF" << std::endl;
-			header.set_body(resp);
-			resp.clear();
-			header.clean_body();
-			header.cgi_writer();
-			resp = header.get_response();
-			mode = SEND;
-			close(loc_fd);
-		}
-		else if (read_bytes < MAX_LEN)
-		{
-			std::cout << "CGI MSG END" << std::endl;
+			waitpid(-1, NULL, 0);
 			header.set_body(resp);
 			resp.clear();
 			header.clean_body();

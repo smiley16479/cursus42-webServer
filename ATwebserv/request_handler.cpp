@@ -132,7 +132,7 @@ int request_handler::choose_method(void)
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
 		;
-	else if (is_cgi(_hrx["A"], _si[_s_id].cgi_file_types))
+	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].cgi_file_types) != -1))
 		redir_mode = handle_cgi();
 	else if (_hrx["A"][0] == "POST")
 		redir_mode = handle_post_rqst();
@@ -480,8 +480,7 @@ int request_handler::handle_post_rqst(void)
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
 int	request_handler::resolve_path()
 {
-	size_t len, pos;
-	std::string			var;
+	size_t len;
 
 #ifdef _debug_
 	cout << GREEN "DS RESOLVE_PATH [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path (cleared afterward): " << _path << endl;
@@ -538,39 +537,6 @@ int	request_handler::resolve_path()
 	cout << BLUE "resolved_path : " RESET << _path << endl;
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
-	//CGI variables initialisation
-	if ((len = _path.find("?")) != std::string::npos)
-	{
-		var = _path.substr(len + 1);
-		_path = _path.substr(0, len);
-	}
-	std::cout << "PATH=" << _path << std::endl;
-	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
-	_hrx["Path-Translated"].push_back(_path);
-	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	_hrx["Query-String"].push_back(var);
-	var.clear();
-	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	pos = _path.find(".php");
-	if (pos != std::string::npos)
-	{
-		var = _path.substr(pos + 4);
-		_path = _path.substr(0, pos + 4);
-	}
-	if (!var.empty() && (pos = var.find("/")) != std::string::npos)
-		var = var.substr(pos + 1);
-	_hrx["Path-Info"].push_back(var);
-	var.clear();
-	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
-	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
-	_hrx["Script-Name"].push_back(var);
-	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
-	pos = _path.find_last_of("/");
-	var = _path.substr(0, pos);
-	if (var.substr(0, 2) == "./")
-		var = var.substr(2);
-	_hrx["Document-Root"].push_back(var);
-	var.clear();
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 
 	bool allowed = false;
@@ -677,7 +643,7 @@ int request_handler::add_body()
 	}
 	std::cout << "body appended" << std::endl;
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
-	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
+	if (!_hrx["A"].empty() && (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST")) {
 		cout << RED "File written !" RESET  << endl;
 		redir_fd = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
 		if (redir_fd == -1)
@@ -861,6 +827,45 @@ void	request_handler::clean_body()
 	}
 }
 
+void	request_handler::cgi_var_init()	{
+	size_t				len, pos;
+	std::string			var;
+
+	//CGI variables initialisation
+	if ((len = _path.find("?")) != std::string::npos)
+	{
+		var = _path.substr(len + 1);
+		_path = _path.substr(0, len);
+	}
+	std::cout << "PATH=" << _path << std::endl;
+	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
+	_hrx["Path-Translated"].push_back(_path);
+	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
+	_hrx["Query-String"].push_back(var);
+	var.clear();
+	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
+	pos = _path.find(_si[_s_id].cgi_file_types[ext_id]);
+	if (pos != std::string::npos)
+	{
+		var = _path.substr(pos + 4);
+		_path = _path.substr(0, pos + 4);
+	}
+	if (!var.empty() && (pos = var.find("/")) != std::string::npos)
+		var = var.substr(pos + 1);
+	_hrx["Path-Info"].push_back(var);
+	var.clear();
+	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
+	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
+	_hrx["Script-Name"].push_back(var);
+	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
+	pos = _path.find_last_of("/");
+	var = _path.substr(0, pos);
+	if (var.substr(0, 2) == "./")
+		var = var.substr(2);
+	_hrx["Document-Root"].push_back(var);
+	var.clear();
+}
+
 int	request_handler::handle_cgi(void)
 {
 	std::vector<std::string>	env;
@@ -879,6 +884,8 @@ int	request_handler::handle_cgi(void)
 			gen_startLine( _status.find("403") );
 			return (NONE);
 		}
+		std::cout << "Launching cgi" << std::endl;
+		cgi_var_init();
 		env = extract_env(_hrx, _si[_s_id]);
 		redir_fd = go_cgi(_si[_s_id].cgi_path, _hrx["BODY"], env);
 		if (redir_fd == -1)

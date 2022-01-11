@@ -10,17 +10,18 @@ void debug_mp_out(std::map<std::string, std::vector<std::string> >& mp)
 	}
 }
 
-bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions)
+int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions)
 {
-	for (std::vector<std::string>::iterator type = extensions.begin(); type != extensions.end(); type++)
+	int	i = 0;
+	for (std::vector<std::string>::iterator type = extensions.begin(); type != extensions.end(); type++, i++)
 	{
 		for (std::vector<std::string>::iterator it = query.begin(); it != query.end(); it++)
 		{
 			if ((it->find(*type)) != std::string::npos)
-				return (true);
+				return (i);
 		}
 	}
-	return (false);
+	return (-1);
 }
 
 int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vector<std::string>& env)
@@ -30,7 +31,7 @@ int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vecto
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
-	char		*e_path = NULL;
+	char		*e_path[2] = { NULL, NULL };
 	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
@@ -51,6 +52,11 @@ int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vecto
 	if (pipe(bfd) == -1)
 		return (-1);
 //		return (CRASH_PIPE);
+//	int	opt = 1;
+//	setsockopt(fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
+//	setsockopt(fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
+	fcntl(fd[0], F_SETFL, O_NONBLOCK);
+	fcntl(fd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		return (-1);
@@ -87,7 +93,7 @@ int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vecto
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(cgi_path.c_str(),&e_path, c_env);
+		execve(cgi_path.c_str(),e_path, c_env);
 		exit(1);
 	}
 	else
@@ -95,9 +101,7 @@ int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vecto
 		close(bfd[0]);
 		close(bfd[1]);
 		close(fd[1]);
-		waitpid(pid, NULL, 0);
 	}
-	delete [] e_path;
 	delete [] c_env;
 	return (fd[0]);
 }

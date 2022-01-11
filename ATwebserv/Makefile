@@ -19,7 +19,7 @@ NAME = webserv
 
 CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"
 
-CPP_FLAGS += -g
+#CPP_FLAGS += -g
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra

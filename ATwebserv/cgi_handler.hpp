@@ -12,6 +12,7 @@
 # include <unistd.h>
 # include <cstring>
 # include <map>
+#include <fcntl.h>
 //# include <stringstram>
 
 # include "struct_webserv.hpp"
@@ -21,7 +22,7 @@
 //# define SCRIPT "files/scripts/hello.php"
 # define SCRIPT "files/scripts/variables.php"
 
-bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
+int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
 int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vector<std::string>& env);
 size_t	getcLen(std::vector<std::string>& env);
 

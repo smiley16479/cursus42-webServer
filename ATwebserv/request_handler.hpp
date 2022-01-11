@@ -31,6 +31,7 @@ private:
 	int									_s_id; // server id <- quel server doit répondre à la requete actuelle : '_s_id' est l'index de '_si'
 	int									_l_id; // location id <- quel location doit répondre à la requete actuelle : '_l_id' est l'index de 'location' ds '_si'
 	int									redir_fd;
+	int									ext_id;
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
 	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
@@ -82,6 +83,7 @@ private:
 	int multipart_form(string& boundary, string& msg);
 	int handle_post_rqst(void);
 	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
+	void	cgi_var_init();
 	int handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */
