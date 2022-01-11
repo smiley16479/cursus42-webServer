@@ -139,7 +139,7 @@ void	client_info::write_handler(request_handler& header)	{
 		tmp.clear();
 		std::cout << rqst << std::endl;
 		close(loc_fd);
-		mode = COMPUTE;
+		mode = SEND;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
@@ -147,7 +147,7 @@ void	client_info::write_handler(request_handler& header)	{
 		std::cout << rqst << std::endl;
 		tmp.clear();
 		close(loc_fd);
-		mode = COMPUTE;
+		mode = SEND;
 	}
 	resp = tmp;
 	time_reset();

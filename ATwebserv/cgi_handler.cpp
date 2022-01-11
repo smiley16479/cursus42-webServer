@@ -23,21 +23,20 @@ bool	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extension
 	return (false);
 }
 
-int	go_cgi(std::vector<std::string>& post_args, std::vector<std::string>& env)
+int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vector<std::string>& env)
 {
 	size_t		_cLen;
 	std::string	tmp;
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
-	char		**e_path = new char*[2];
+	char		*e_path = NULL;
 	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
 	_cLen = getcLen(env);
-	e_path[0] = (char*)CGI;
-	e_path[1] = NULL;
+//	e_path[0] = cgi_path.c_str();
 //	e_path[1] = (char*)CGI_MODE;
 //	e_path[2] = NULL;
 	i = 0;
@@ -88,7 +87,7 @@ int	go_cgi(std::vector<std::string>& post_args, std::vector<std::string>& env)
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(e_path[0],e_path, c_env);
+		execve(cgi_path.c_str(),&e_path, c_env);
 		exit(1);
 	}
 	else

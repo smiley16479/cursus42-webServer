@@ -874,8 +874,13 @@ int	request_handler::handle_cgi(void)
 	else
 	{
 	//EN CHANTIER !!!
+		if (_si[_s_id].cgi_path.empty())
+		{
+			gen_startLine( _status.find("403") );
+			return (NONE);
+		}
 		env = extract_env(_hrx, _si[_s_id]);
-		redir_fd = go_cgi(_hrx["BODY"], env);
+		redir_fd = go_cgi(_si[_s_id].cgi_path, _hrx["BODY"], env);
 		if (redir_fd == -1)
 			return (NONE);
 		return (CGI_OUT);

@@ -75,11 +75,9 @@ void server::run(void) {
 				printf("New client added\n");
 			}
 			else if (_epoll._events[i].events & EPOLLIN) {
-			{
 				ptr = client.get_info(_epoll._events[i].data.fd);
 				if (ptr != NULL)
 					ptr->fd_in(header);
-			}
 			}
 			else if (_epoll._events[i].events & EPOLLOUT)	{
 				ptr = client.get_info(_epoll._events[i].data.fd);
