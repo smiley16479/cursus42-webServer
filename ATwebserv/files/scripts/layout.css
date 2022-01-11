@@ -5,6 +5,26 @@ body
 	color:	#00BBBD;
 }
 
+a:link
+{
+	color:	#00BBBD;
+}
+
+a:visited
+{
+	color:	hotpink;
+}
+
+a:hover
+{
+	color:	hotpink;
+}
+
+a:active
+{
+	color:	hotpink;
+}
+
 .header
 {
     background-color: #18171b;

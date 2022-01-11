@@ -37,6 +37,10 @@ void client_handler::check_all_timeout()
 			std::cout << "CLIENT TIMED OUT" << std::endl;
 			std::cout << "Client removed from tracked fd !" << std::endl;
 			it->remove();
+			tmp = it - clients.begin();
+			clients.erase(it);
+			std::cout << "Client erased !" << std::endl;
+			it = clients.begin() + tmp;
 			return ;
 		}
 	}
