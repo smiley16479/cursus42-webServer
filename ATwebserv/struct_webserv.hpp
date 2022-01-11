@@ -42,6 +42,7 @@ struct server_info {
 	std::string error_page;
 	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
 	std::string time_out;
+	std::string cgi_path;							// Path de l'executable chargé des cgi
 	std::vector<std::string> cgi_file_types;		// type de file gérées pour les cgi
 	std::vector<locati_info> location;
 };

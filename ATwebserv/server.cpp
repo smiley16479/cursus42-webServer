@@ -125,6 +125,7 @@ void server::display_server(void)
 		cout << "host : " << _s[i].host << endl;
 		cout << "error_page : " << _s[i].error_page << endl;
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
+		cout << "cgi_path : " << _s[i].cgi_path << endl;
 		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (size_t j = 0; j < _s[i].location.size(); j++) {
