@@ -55,11 +55,11 @@ request_handler::~request_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void request_handler::reader(const char *str)
+void request_handler::reader(const client_info& cl_info)
 {
 	string buf_1, buf_2;
-	std::stringstream ss_1(str);
-	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
+	std::stringstream ss_1(cl_info.rqst);
+	cout << RED "DANS HEADER READER" RESET "\n" << endl; //cl_info.rqst << endl;
 	// LECTURE DE LA START_LINE
 	if (std::getline(ss_1, buf_1)) {
 		std::stringstream ss_2(buf_1);
@@ -73,6 +73,7 @@ void request_handler::reader(const char *str)
 		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
 			while (std::getline(ss_1, buf_1))
 				_hrx["BODY"].push_back(buf_1);
+			cout << "BODY size : " << _hrx["BODY"].size() << endl;
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -104,20 +105,19 @@ void request_handler::writer(void) {
 	gen_serv();
 
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
-	if (resolve_path())
-		;
-	else if (_hrx["A"][0] == "GET")
+	if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "POST") {
+		// handle_post_rqst();
 		if (_hrx.find("Content-Type:") != _hrx.end())
 			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
 			cout << "[" << *i << "]" << endl;
 		string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 		cout << "boundary : " << boundary << endl;
-		cout << endl << "BODY : " << endl;
-		for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
-			cout << "[" << *i << "]" << endl;
+		// cout << endl << "BODY : " << endl;
+		// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
+		// 	cout << "[" << *i << "]" << endl;
 	}
 	else if (_hrx["A"][0] == "PUT") {
 		cout << "Facultatif PUT method not implemented yet\n";
@@ -137,7 +137,6 @@ void request_handler::writer(void) {
 		else
 			puts( "File successfully deleted" );
 	}
-	file_type();
 	gen_CType(string());
 	gen_CLength();
 	add_all_field(); 
@@ -283,6 +282,8 @@ tiennent pas à un autre serveur) */
 
 void request_handler::handle_get_rqst(void)
 {
+	resolve_path();
+	file_type();
 	// gen_CType(string());
 	// gen_CLength();
 	// add_all_field();
@@ -310,7 +311,7 @@ void request_handler::handle_post_rqst(void)
 
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
 	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
-	std::cout << "YOLO" << std::endl;
+		std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
 	}

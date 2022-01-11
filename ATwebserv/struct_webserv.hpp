@@ -7,6 +7,8 @@
 
 #define MAX_EVENTS 1000
 
+enum e_rqst_type{NONE, GET, POST_REG, POST_CHUNCK, DELETE, INVALID};
+
 struct locati_info {
 	std::string	location;
 	std::string auth_basic;							// ?
@@ -27,17 +29,18 @@ struct server_info {
 	std::string server_name;
 	std::string error_page;
 	std::string max_file_size;						// Sets the maximum allowed size of the client request body. If the size in a request exceeds the configured value, the 413 (Request Entity Too Large) error is returned to the client. Please be aware that browsers cannot correctly display this error. Setting size to 0 disables checking of client request body size. 
-	std::string time_out;
+	std::string time_out;							// Temps imparti à la gestion d'une requete avant d'être rejetée par un time_out
+	std::string cgi_path;							// Path de l'executable chargé des cgi
 	std::vector<std::string> cgi_file_types;		// type de file gérées pour les cgi
 	std::vector<locati_info> location;
 };
 
 struct client_info {
-	std::string	resp; //Ajout Arthur
+	std::string	resp; //Ajout Arthur mais je pense ne pas en avoir besoin car prévoit d'envoyer les réponses d'un coup
 	std::string rqst;
 	std::string post_boundary; //Ajout Arthur
 	time_t		rqst_time_start;
-	size_t		_cLen; //Ajout Arthur
+	e_rqst_type rqst_type;// = NONE;
 	int			time_out;
 };
 

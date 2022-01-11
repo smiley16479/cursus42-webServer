@@ -55,6 +55,7 @@ void server::run(void) {
 	initialize();
 	request_handler header(_s);
 	client_handler client;
+	int byte_recved;
 	int serv_id;
 
 	while(1)
@@ -87,17 +88,17 @@ void server::run(void) {
 			} */
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-				if (recv(_epoll._events[i].data.fd, str, sizeof(str), 0) <= 0) {
+				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
 						client.remove(_epoll, i);
 						printf("server: client just left\n");
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-					client.rqst_append(_epoll._events[i].data.fd, str);
+					client.rqst_append(_epoll._events[i].data.fd, str, byte_recved);
 					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
 						cout << "request_fulfilled !!\n";
-						header.reader(/* str */client.get_rqst(_epoll._events[i].data.fd).c_str()); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+						header.reader(client.get_rqst(_epoll._events[i].data.fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
 						header.writer();
 						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
 
@@ -145,6 +146,7 @@ void server::display_server(void)
 		cout << "host : " << _s[i].host << endl;
 		cout << "error_page : " << _s[i].error_page << endl;
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
+		cout << "cgi_path : " << _s[i].cgi_path << endl;
 		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
 			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (size_t j = 0; j < _s[i].location.size(); j++) {

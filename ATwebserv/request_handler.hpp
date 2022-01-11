@@ -78,7 +78,7 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	void reader(const char *);
+	void reader(const client_info& cl_info);
 	void writer(void);
 
 	/* FONCTION ACCESSEUR */
