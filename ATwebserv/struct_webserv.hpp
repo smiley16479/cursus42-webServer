@@ -7,13 +7,13 @@
 # include <map>
 
 enum	e_mode	{
-	NONE,
+	RECV,
+	COMPUTE,
 	WRITE,
 	READ,
-	COMPUTE,
-	RECV,
 	SEND,
-	CGI_OUT
+	CGI_OUT,
+	NONE
 };
 
 # define MAX_LEN 8192

@@ -10,8 +10,7 @@ class client_info {
 	public:
 		int			com_socket;
 		int			loc_fd;
-		int			redir_mode;
-		char		mode;
+		size_t		mode;
 		std::string	resp;
 		std::string rqst;
 		std::string buf;
@@ -37,5 +36,7 @@ class client_info {
 		void 	time_reset();
 		void 	remove();
 };
+
+typedef void	(client_info::*t_func)(request_handler&);
 
 #endif

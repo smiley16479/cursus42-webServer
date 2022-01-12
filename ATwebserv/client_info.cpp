@@ -1,25 +1,20 @@
 #include "client_info.hpp"
 
 void	client_info::fd_in(request_handler& header)	{
-	if (mode == COMPUTE)
-		return (compute(header));
-	else if (mode == RECV)
-		return (recv_handler(header));
-	return ;
+	t_func	func[2] = { &client_info::recv_handler,
+						&client_info::compute };
+	if (mode <= COMPUTE)
+		return (((*this).*func[mode])(header));
 }
 
 void	client_info::fd_out(request_handler& header)	{
-	if (mode == COMPUTE)
-		return (compute(header));
-	else if (mode == READ)
-		return (read_handler(header));
-	else if (mode == WRITE)
-		return (write_handler(header));
-	else if (mode == SEND)
-		return (send_handler(header));
-	else if (mode == CGI_OUT)
-		return (cgi_resp_handler(header));
-	return ;
+	t_func	func[5] = { &client_info::compute,
+						&client_info::write_handler,
+						&client_info::read_handler,
+						&client_info::send_handler,
+						&client_info::cgi_resp_handler };
+	if (mode > RECV && mode < NONE)
+		return (((*this).*func[mode - 1])(header));
 }
 
 void	client_info::compute(request_handler& header)	{
@@ -28,7 +23,7 @@ void	client_info::compute(request_handler& header)	{
 	ret = is_request_fulfilled();
 	if (ret == true)
 	{
-		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
+//		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
 		header.reader(rqst);
 		ret = header.choose_method();
 		rqst.clear();
@@ -198,10 +193,6 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	if (read_bytes == -1)
 	{
 		std::cout << "CGI ERROR" << std::endl;
-//		close(loc_fd);
-//		header.set_body(resp);
-//		header.clean_body();
-//		mode = SEND;
 		return ;
 	}
 	else

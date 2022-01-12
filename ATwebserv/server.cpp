@@ -85,7 +85,7 @@ void server::run(void) {
 					ptr->fd_out(header);
 			}
 		}
-		std::cout << "Epoll events checked" << std::endl;
+//		std::cout << "Epoll events checked" << std::endl;
 		client.check_all_timeout();
 	}
 
