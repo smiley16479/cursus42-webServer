@@ -53,7 +53,7 @@ void server::initialize(void) {
 
 void server::run(void) {
 	initialize();
-	request_handler header(_s);
+	request_handler rqst(_s);
 	client_handler client;
 	int byte_recved;
 	int serv_id;
@@ -98,9 +98,9 @@ void server::run(void) {
 					client.rqst_append(_epoll._events[i].data.fd, str, byte_recved);
 					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
 						cout << "request_fulfilled !!\n";
-						header.reader(client.get_rqst(_epoll._events[i].data.fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
-						header.writer();
-						send(_epoll._events[i].data.fd, header.get_response().c_str(), header.get_response().length(), 0);
+						rqst.reader(client.get_rqst(_epoll._events[i].data.fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+						rqst.writer();
+						send(_epoll._events[i].data.fd, rqst.get_response().c_str(), rqst.get_response().length(), 0);
 
 						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
 						// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
@@ -120,8 +120,8 @@ void server::run(void) {
 	return;
 }
 
-int server::is_new_client(int fd) {
-	for (int i = 0; i < _s.size(); ++i)
+size_t server::is_new_client(int fd) {
+	for (size_t i = 0; i < _s.size(); ++i)
 		if (fd == _s[i].socket)
 			return i;
 	return -1;
@@ -152,7 +152,7 @@ void server::display_server(void)
 		for (size_t j = 0; j < _s[i].location.size(); j++) {
 			cout << GREEN "LOCATION : " RESET << endl;
 			cout << "location : " << _s[i].location[j].location << endl;
-			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
+			cout << "download_path : " << _s[i].location[j].download_path << endl;
 			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
 			cout << "autoindex : " << _s[i].location[j].autoindex << endl;
 			cout << "index : " << _s[i].location[j].index << endl;

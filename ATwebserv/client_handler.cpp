@@ -13,16 +13,16 @@ client_handler::~client_handler()
 bool client_handler::is_request_fulfilled(int client_fd)
 {
 	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
-	if (clients[client_fd].rqst.substr(0, 4) == "POST")
-		return is_POST_request_fulfilled(client_fd); // ADD CODE TO HANDLE RECOGNITION OF ENDED POST RQST // PROBLEM
-	// for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
-	// 	cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
-	// cout << clients[client_fd].rqst.back();
-	
-	size_t len = clients[client_fd].rqst.size();
-	if (len >= 4 && clients[client_fd].rqst.substr(len - 4, len) == "\r\n\r\n") // SUREMENT UNE MAUVAISE FAÇON DE LE FAIRE
-		return true ;
-	return false ;
+	client_info& client = clients[client_fd];
+
+	if (client.request_fulfilled)
+		return true;
+	if (client.rqst.substr(0, 4) == "POST")
+		return (client.request_fulfilled = is_POST_request_fulfilled(client_fd));
+	size_t len = client.rqst.size();
+	if (len >= 4 && client.rqst.substr(len - 4, len) == "\r\n\r\n") // SUREMENT UNE MAUVAISE FAÇON DE LE FAIRE
+		return (client.request_fulfilled = true) ;
+	return (client.request_fulfilled = false) ;
 }
 
 /* 
@@ -40,26 +40,40 @@ bool client_handler::is_POST_request_fulfilled(int client_fd)
 {//https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.3
 	cout << BLUE "DANS is_POST_request_fulfilled, size of current reqst : " << clients[client_fd].rqst.length() << "\n" RESET;
 
-	switch (clients[client_fd].rqst_type)
+	client_info& client = clients[client_fd];
+	switch (client.rqst_type)
 	{
-	case NONE: // Si NONE, identifie le type de post requete concernée :
-		cout << YELLOW "HELLO :) rqst_type tjrs NONE(0)? " << clients[client_fd].rqst_type << "\n" RESET;
-		if (clients[client_fd].rqst.find("\r\n\r\n") == string::npos)
+	case NONE: // Si NONE, identifie le type de post requete concernée (POST_REG / POST_CHUNCK):
+		cout << YELLOW "HELLO :) rqst_type tjrs NONE(0)? " << client.rqst_type << "\n" RESET;
+		if (client.rqst.find("\r\n\r\n") == string::npos) // Vérifie qu'on a au moins les headers
 			return false;
 		// PROBLEM SI ON A PAS L'UN DE CES DEUX TYPE DE HEADER ET QUE LA REQUETE EST LONGUE ON VA FREEZE LE TEMPS DE LIRE TOUTE LA REQST
-		else if (clients[client_fd].rqst.find("Content-Length:") != string::npos)
-			clients[client_fd].rqst_type = POST_REG;
-		else if (clients[client_fd].rqst.find("Transfer-Encoding:") != string::npos) {
-			if (clients[client_fd].rqst.find("chunked") != string::npos)
-				clients[client_fd].rqst_type = POST_CHUNCK;
+		// D'UN AUTRE COTE LA TAILLE LIMIT D'UN HEADER EST DE 8KB...
+		else if (client.rqst.find("Content-Length:") != string::npos){
+			client.rqst_type = POST_REG;
+			// ON CHOPE LA BOUNDARY : boundary=[------------------------772ed66a82c8bebbM] (QUE C QU'IL Y A ENTRE LES CROCHETS)
+			size_t pos1  = client.rqst.find_first_of("\r\n", client.rqst.find("boundary=--------"));
+			size_t pos2  = client.rqst.find_last_of('=', pos1) + 1;
+			// Stockage de la boundary de la requete post ds la struct client_info (client.post_boundary)
+			cout << RED "Post_boundary : " RESET << (client.post_boundary = client.rqst.substr(pos2, pos1 - pos2)) << endl;
+		}
+		else if (client.rqst.find("Transfer-Encoding:") != string::npos) {
+			if ( client.rqst.find("chunked") != string::npos )
+				client.rqst_type = POST_CHUNCK;
 		}
 		else
 			return false;
-	// Traitement du type précédement identifié :
+		break;
 	case POST_REG:
-		return is_POST_regular_fulfilled(client_fd);
+	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
+		if (client.rqst.substr(client.rqst.size() - 46).find("--" + client.post_boundary + "--") != string::npos)
+			return true;
+		break;
 	case POST_CHUNCK:
-		return is_POST_chunk_fulfilled(client_fd);
+	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
+		if (client.rqst.find("0\r\n\r\n", client.rqst.size() - 5) != string::npos)
+			return true;
+		break;
 	default:
 		cout << RED "WTF?\n" RESET;
 		break;
@@ -69,7 +83,10 @@ bool client_handler::is_POST_request_fulfilled(int client_fd)
 
 bool client_handler::is_POST_chunk_fulfilled(int client_fd)
 {
-	return false;
+	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
+	if (clients[client_fd].rqst.find("0\r\n\r\n", clients[client_fd].rqst.size() - 5) == string::npos)
+		return false;
+	return true;
 }
 
 bool client_handler::is_POST_regular_fulfilled(int client_fd)
@@ -82,7 +99,7 @@ bool client_handler::is_POST_regular_fulfilled(int client_fd)
 	if ((pos = clients[client_fd].rqst.find("Content-Length:")) == string::npos)
 		return false;
 	body_size =  atoi (&clients[client_fd].rqst[pos + 15]); // (+15 == "Content-Length:")
-	// RECHERCHE DU COMMENCEMENT DE LA TRANSMISSION DU BODY ( ici --> "\r\n\r\n------------------------772ed66a82c8bebb")
+	// RECHERCHE DE LA FIN DES HEADERS
 	if ((pos_boundary = clients[client_fd].rqst.find("\r\n\r\n")) == string::npos)
 		return false;
 	pos_boundary += 4; // (+4 == "\r\n\r\n")
@@ -99,14 +116,17 @@ bool client_handler::is_POST_regular_fulfilled(int client_fd)
 	pos1 = clients[client_fd].rqst.find_first_of("\r\n", clients[client_fd].rqst.find("boundary=--------"));
 	pos  = clients[client_fd].rqst.find_last_of('=', pos1) + 1;
 	// Stockage de la boundary de la requete post ds la struct client_info (clients[client_fd].post_boundary)
-	cout << RED "1 : " RESET << (clients[client_fd].post_boundary = clients[client_fd].rqst.substr(pos, pos1 - pos)) << endl;
+	cout << RED "Post_boundary : " RESET << (clients[client_fd].post_boundary = clients[client_fd].rqst.substr(pos, pos1 - pos)) << endl;
 
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
 	if (clients[client_fd].rqst.substr(clients[client_fd].rqst.size() - 46).find("--" + clients[client_fd].post_boundary + "--") == string::npos)
 		return false;
-	cout << "END POST BOUNDARY FOUND : [" << clients[client_fd].rqst.substr(clients[client_fd].rqst.size() - 46) << "]\n";
-	cout << RED "2 : " RESET << (pos_last_boundary = clients[client_fd].rqst.find_last_of("\r\n", clients[client_fd].rqst.size() - 4)) << endl;
 
+	pos_last_boundary = clients[client_fd].rqst.find_last_of("\r\n", clients[client_fd].rqst.size() - 4);
+	cout << "END POST BOUNDARY FOUND : [" << clients[client_fd].rqst.substr(clients[client_fd].rqst.size() - 46) << "]\n";
+	cout << RED "Pos_last_boundary : " RESET << pos_last_boundary << endl;
+
+/* dans handle_post_reqst */
 // GET NAME AND FILENAME INSIDE BOUNDARY
 	string name("name=\"");
 	string filename("filename=\"");
@@ -124,10 +144,12 @@ bool client_handler::is_POST_regular_fulfilled(int client_fd)
 // END GET NAME AND FILENAME INSIDE BOUNDARY
 
 	ofstream my_file(name + "_transfer");
-	if ((pos = clients[client_fd].rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) // +=4 == "\r\n\r\n"
+	if ((pos = clients[client_fd].rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
 		if (my_file.is_open())
 			my_file << clients[client_fd].rqst.substr(pos, pos_last_boundary - pos - 1);
-	
+		else
+			cout << RED "download path invalid \n" RESET;
+	}
 	return true ;
 }
 
@@ -165,7 +187,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	socklen_t len = sizeof(clientaddr);
 	if ((client_fd = accept(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-	clientaddr.sin_addr;
+	// clientaddr.sin_addr;
 	_epoll._event.events = EPOLLIN;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
@@ -176,6 +198,26 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	clients[client_fd].time_out = time_out;
 	time(&clients[client_fd].rqst_time_start);
 }
+
+//Return the position of needle found in haystack otherwise return npos
+//Beware that haystack must be bigger than needle and its boundary accurate, otherwise 😕🤮
+size_t client_handler::portion_search(string haystack, string needle,
+				  size_t from, size_t to)
+{
+	string::iterator first  = haystack.begin() + from,
+					 last   = haystack.begin() + (to > haystack.size() ? haystack.size() : to),
+					 s_last = needle.end();
+	while (1) {
+		string::iterator it = first;
+		for (string::iterator s_it = needle.begin(); ; ++it, ++s_it) {
+			if (s_it == s_last) return first - haystack.begin();
+			if (it == last) return string::npos;
+			if (!(*it == *s_it)) break;
+		}
+		++first;
+	}
+}
+
 
 /* POST / HTTP/1.1
 Host: 127.0.0.1:8080
@@ -188,7 +230,7 @@ User-Agent: curl/7.64.0
 Accept: +/+
 Content-Length: 674
 Content-Type: multipart/form-data; boundary=------------------------772ed66a82c8bebbM
-    
+	
 --------------------------772ed66a82c8bebbM
 Content-Disposition: form-data; name="image"; filename="index2.html"M
 Content-Type: text/htmlM
@@ -196,18 +238,18 @@ M
 <!doctype html>
 <html>
   <head>
-    <link rel="icon" 
-      type="image/png" 
-      href="favicon.ico">
-    <title>This is the title of the webpage!</title>
+	<link rel="icon" 
+	  type="image/png" 
+	  href="favicon.ico">
+	<title>This is the title of the webpage!</title>
   </head>
   <body>
-    <p>This is the index<strong>2</strong>.html</p>
-    <p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
-    <div style="margin: auto;">
-      <img src="favicon.ico" alt="Tako" >
-    </div>
-    <!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
+	<p>This is the index<strong>2</strong>.html</p>
+	<p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
+	<div style="margin: auto;">
+	  <img src="favicon.ico" alt="Tako" >
+	</div>
+	<!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
   </body>
 </html>
 M
@@ -227,6 +269,7 @@ M
 
 
 // MULTIPLE FILE ENVOYÉES !!
+// curl -X POST -F image=@files/index2.html -F image=@files/index.html 127.0.0.1:8080
 
 /* 
 M
@@ -237,18 +280,18 @@ M
 <!doctype html>
 <html>
   <head>
-    <link rel="icon" 
-      type="image/png" 
-      href="favicon.ico">
-    <title>This is the title of the webpage!</title>
+	<link rel="icon" 
+	  type="image/png" 
+	  href="favicon.ico">
+	<title>This is the title of the webpage!</title>
   </head>
   <body>
-    <p>This is the index<strong>2</strong>.html</p>
-    <p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
-    <div style="margin: auto;">
-      <img src="favicon.ico" alt="Tako" >
-    </div>
-    <!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
+	<p>This is the index<strong>2</strong>.html</p>
+	<p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
+	<div style="margin: auto;">
+	  <img src="favicon.ico" alt="Tako" >
+	</div>
+	<!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
   </body>
 </html>
 M
@@ -259,18 +302,18 @@ M
 <!doctype html>
 <html>
   <head>
-    <link rel="icon" 
-      type="image/png" 
-      href="favicon.ico">
-    <title>This is the title of the webpage!</title>
+	<link rel="icon" 
+	  type="image/png" 
+	  href="favicon.ico">
+	<title>This is the title of the webpage!</title>
   </head>
   <body>
-    <p>This is the index.html</p>
-    <p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
-    <div style="margin: auto;">
-      <img src="favicon.ico" alt="Tako" >
-    </div>
-    <!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
+	<p>This is the index.html</p>
+	<p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
+	<div style="margin: auto;">
+	  <img src="favicon.ico" alt="Tako" >
+	</div>
+	<!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
   </body>
 </html>
 --------------------------f3547eb9f0e8057e--M
@@ -292,18 +335,18 @@ M
 <!doctype html>
 <html>
   <head>
-    <link rel="icon" 
-      type="image/png" 
-      href="favicon.ico">
-    <title>This is the title of the webpage!</title>
+	<link rel="icon" 
+	  type="image/png" 
+	  href="favicon.ico">
+	<title>This is the title of the webpage!</title>
   </head>
   <body>
-    <p>This is the index<strong>2</strong>.html</p>
-    <p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
-    <div style="margin: auto;">
-      <img src="favicon.ico" alt="Tako" >
-    </div>
-    <!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
+	<p>This is the index<strong>2</strong>.html</p>
+	<p>With a picture <img src="favicon.ico" alt="Tako" style="margin: auto;">.</p>
+	<div style="margin: auto;">
+	  <img src="favicon.ico" alt="Tako" >
+	</div>
+	<!-- <meta http-equiv="refresh" content="5; URL=./Gas.mp4" /> -->
   </body>
 </html>
 M

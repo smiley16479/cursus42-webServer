@@ -4,14 +4,13 @@
 #include <string>
 #include <iostream>
 #include <vector>
-
 #define MAX_EVENTS 1000
 
 enum e_rqst_type{NONE, GET, POST_REG, POST_CHUNCK, DELETE, INVALID};
 
 struct locati_info {
 	std::string	location;
-	std::string auth_basic;							// ?
+	std::string download_path;						// path de stockage des fichier upload sur le server
 	std::string auth_user_file;						// fichiers autorisés à l'utilisateur
 	std::string autoindex;							// présentation du fileSystem => val (on/off)
 	std::string index;								// fichier servi par défault
@@ -38,10 +37,11 @@ struct server_info {
 struct client_info {
 	std::string	resp; //Ajout Arthur mais je pense ne pas en avoir besoin car prévoit d'envoyer les réponses d'un coup
 	std::string rqst;
-	std::string post_boundary; //Ajout Arthur
+	std::string post_boundary;
 	time_t		rqst_time_start;
-	e_rqst_type rqst_type;// = NONE;
+	e_rqst_type rqst_type;
 	int			time_out;
+	bool		request_fulfilled;
 };
 
 struct struct_epoll

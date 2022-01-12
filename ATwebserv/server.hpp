@@ -27,7 +27,7 @@ public:
     void run(void); // lance les étapes de configuration des sockets initialize(), de run
 
     /* PRIVATE */
-    int is_new_client(int fd);
+    size_t is_new_client(int fd);
     int get_time_out(int id_serv);
 };
 

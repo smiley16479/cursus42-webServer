@@ -32,6 +32,7 @@ private:
 	std::string							_path; // response_path file
 	std::string							_body; // response_content (body)
 	std::string							_response; // response_content (response_header + body)
+	client_info*						_c_info_ptr;
 
 
 	/* COPY DES ATTRIBUTS DE QUING_LY */
@@ -78,7 +79,7 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	void reader(const client_info& cl_info);
+	void reader(client_info& cl_info);
 	void writer(void);
 
 	/* FONCTION ACCESSEUR */
@@ -88,6 +89,7 @@ public:
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 private:
+	void extract_post_rqst_body(const client_info& cl_info);
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
 	void gen_serv(void);

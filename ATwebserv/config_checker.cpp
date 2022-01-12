@@ -233,9 +233,9 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 	for (ifs >> word; word != "}"; /* cout << BLUE "loca_tour de boucle word1 : " RESET << word << " bracket : " << bracket << endl, */ ifs >> word) {
 		if (word == "allowed_method")
 			extract_to_vector(ifs, si.location[si.location.size() - 1].allowed_method);
-		else if (word == "auth_basic") {
-			extract_to_string(ifs, si.location[si.location.size() - 1].auth_basic);
-			std::cout << GREEN "auth_basic : " RESET << si.location[si.location.size() - 1].auth_basic << std::endl;
+		else if (word == "download_path") {
+			extract_to_string(ifs, si.location[si.location.size() - 1].download_path);
+			std::cout << GREEN "download_path : " RESET << si.location[si.location.size() - 1].download_path << std::endl;
 		}
 		else if (word == "auth_user_file") {
 			extract_to_string(ifs, si.location[si.location.size() - 1].auth_user_file);

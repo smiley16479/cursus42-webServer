@@ -25,10 +25,15 @@ public:
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
 	void check_all_timeout(struct_epoll& _epoll);
 
-	/* Function rubrique : getter setter */
+	/* FUNCTION RUBRIQUE : GETTER SETTER */
 	void clear(int client_fd); // CLEAR CLIENT CONTENT
 	void rqst_append(int client_id, char *str, int byte_recved); // APPEND DIFFERENT REQUEST CHUNK
 	client_info& get_rqst(int); // RETURN FINAL REQUEST
+
+	/* FUNCTION RUBRIQUE : UTILITAIRE */
+
+	// recherche uniquement dans une sous-portion de la string
+	size_t portion_search(string haystack, string needle, size_t from = 0, size_t to = string::npos);
 
 };
 

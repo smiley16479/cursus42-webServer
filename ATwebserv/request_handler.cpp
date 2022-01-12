@@ -55,9 +55,10 @@ request_handler::~request_handler()
 
 /* cout << distance(mymap.begin(),mymap.find("198765432")); */ // <- Get index of the pair(key_type, mapped_type) TIPS&TRICKS
 
-void request_handler::reader(const client_info& cl_info)
+void request_handler::reader(client_info& cl_info)
 {
 	string buf_1, buf_2;
+	_c_info_ptr = &cl_info;
 	std::stringstream ss_1(cl_info.rqst);
 	cout << RED "DANS HEADER READER" RESET "\n" << endl; //cl_info.rqst << endl;
 	// LECTURE DE LA START_LINE
@@ -70,10 +71,14 @@ void request_handler::reader(const client_info& cl_info)
 		cout << "*it : " << *it << endl;
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
-		if (buf_1[0] == '\r') { // SI C'EST UNE REQUESTE POST ON STOCK LE BODY POUR USAGE ULTÉRIEUR
-			while (std::getline(ss_1, buf_1))
-				_hrx["BODY"].push_back(buf_1);
-			cout << "BODY size : " << _hrx["BODY"].size() << endl;
+		if (buf_1[0] == '\r') { // 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _C_INFO_PTR
+			// 2eme SOLUTION :
+		// C'EST ICI QU'ON DOIT UTILISER extract_post_rqst_body peut être utiliser slmt des position poour ne pas faire de copie ou
+			// extract_post_rqst_body(cl_info);
+			// 1ere SOLUTION :
+			// while (std::getline(ss_1, buf_1))
+			// 	_hrx["BODY"].push_back(buf_1);
+			// cout << "BODY size : " << _hrx["BODY"].size() << endl;
 			break ;
 		}
 		std::stringstream ss_2(buf_1);
@@ -97,6 +102,41 @@ void request_handler::reader(const client_info& cl_info)
 	// this->display();
 }
 
+void request_handler::extract_post_rqst_body(const client_info& cl_info)
+{
+	size_t pos, pos1;
+// PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
+	size_t pos_boundary = cl_info.rqst.find("\r\n\r\n") + 4;
+	size_t pos_last_boundary = cl_info.rqst.find_last_of("\r\n", cl_info.rqst.size() - 4);
+// GET NAME AND FILENAME INSIDE BOUNDARY
+	string name("name=\"");
+	string filename("filename=\"");
+	// cout << "name [" << name + "]" << endl;
+	if ( (pos = cl_info.rqst.find(name, pos_boundary)) != string::npos )
+		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + name.size())) != string::npos )
+			name = cl_info.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
+	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
+
+	// cout << "filename [" << filename + "]" << endl;
+	if ( (pos = cl_info.rqst.find(filename, pos_boundary)) != string::npos )
+		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + filename.size())) != string::npos )
+			filename = cl_info.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
+	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
+// END GET NAME AND FILENAME INSIDE BOUNDARY
+
+// CREER ET ECRIT DS LE FICHIER
+	ofstream my_file(name + "_transfer");
+	if ((pos = cl_info.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
+		if (my_file.is_open()) {
+			my_file << cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
+			my_file << "\n\n" + cl_info.rqst;
+		}
+		else
+			cout << RED "download path invalid \n" RESET;
+	}
+}
+
+
 void request_handler::writer(void) {
 
 // PAR DEFAULT ON CONSIDÈRE QUE TOUT SE PASSE BIEN ON CHANGE PAR LA SUITE LE STATUS SI UNE EXCEPTION ARRIVE
@@ -104,7 +144,6 @@ void request_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
-// DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "POST") {
@@ -257,14 +296,14 @@ void request_handler::set_server_id(void)
 	// PROBLEM : SPARADRAP
 //	if (host == "127.0.0.1") host = "localhost";
 	string port(_hrx["Host:"][0].substr(colon_pos +1));
-	for (int i = 0; i < _si.size(); ++i)
+	for (size_t i = 0; i < _si.size(); ++i)
 		if ( (_si[i].host == host || _si[i].server_name == host) && _si[i].port == port ) {
 			_s_id = i;
 			cout << RED "_s_id : " RESET << _s_id << endl;
 			return ;
 		}
 // SI LE HOST:PORT N'A PAS ETE TROUVE ON SELECT LE PREMIER SERVER CORRESPONDANT
-	for (int i = 0; i < _si.size(); ++i)
+	for (size_t i = 0; i < _si.size(); ++i)
 		if (_si[i].port == port) {
 			_s_id = i;
 			break;
@@ -309,8 +348,9 @@ void request_handler::handle_post_rqst(void)
 	// 	cout << "[" << *i << "]" << endl;
 //	cout << _hrx["BODY"][0] << endl;
 
-	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
-	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > atoi(_si[_s_id].max_file_size.c_str()) ) {
+	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large)
+	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
+	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > max_file_size ) {
 		std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
@@ -415,7 +455,7 @@ int	request_handler::resolve_path()
 #endif
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 	bool allowed = false;
-	for (int i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
+	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
@@ -429,7 +469,9 @@ int	request_handler::resolve_path()
 int request_handler::file_type()
 {
 	cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
-	struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
+	// struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
+	struct stat sb;
+	bzero(&sb, sizeof(sb));
 	if (lstat(_path.c_str(), &sb) == -1)
 		perror("lstat");
 
@@ -438,19 +480,16 @@ int request_handler::file_type()
 		// case S_IFCHR:  printf("character device\n");		break;
 		case S_IFDIR:  printf("directory\n");
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
-// PROBLEM
 				generate_folder_list();
 				return 1;
 			}
 			if (!_si[_s_id].location[_l_id].index.empty()) {
-				_path += _path.back() == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;		
+				_path += _path.back() == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;
 				file_type();									
 			}
 			break;
-/* 		case S_IFIFO:  printf("FIFO/pipe\n");				break;
-		case S_IFLNK:  printf("symlink\n");					break; */
-		case S_IFREG:  printf("regular file\n");			break;
-/* 		case S_IFSOCK: printf("socket\n");					break; */
+		case S_IFREG:  printf("regular file\n");
+			break;
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
 				gen_startLine( _status.find("404") );
