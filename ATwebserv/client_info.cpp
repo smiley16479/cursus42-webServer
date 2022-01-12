@@ -3,6 +3,7 @@
 void	client_info::fd_in(request_handler& header)	{
 	t_func	func[2] = { &client_info::recv_handler,
 						&client_info::compute };
+
 	if (mode <= COMPUTE)
 		return (((*this).*func[mode])(header));
 }
@@ -13,6 +14,7 @@ void	client_info::fd_out(request_handler& header)	{
 						&client_info::read_handler,
 						&client_info::send_handler,
 						&client_info::cgi_resp_handler };
+
 	if (mode > RECV && mode < NONE)
 		return (((*this).*func[mode - 1])(header));
 }
@@ -23,7 +25,7 @@ void	client_info::compute(request_handler& header)	{
 	ret = is_request_fulfilled();
 	if (ret == true)
 	{
-//		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
+		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
 		header.reader(rqst);
 		ret = header.choose_method();
 		rqst.clear();
@@ -170,7 +172,6 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND ERROR" << std::endl;
 		tmp.append(resp);
 		resp = tmp;
-//		remove(); //BETTER TO TRY TO SEND AGAIN
 		return ;
 	}
 	else if (sent_bytes == 0)
@@ -178,7 +179,16 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND EOF" << std::endl;
 		tmp.clear();
 		mode = RECV;
-		time_reset();
+		remove();
+//		time_reset();
+	}
+	else if (sent_bytes < MAX_LEN)
+	{
+		std::cout << "MSG SENT" << std::endl;
+		tmp.clear();
+		mode = RECV;
+		remove();
+//		time_reset();
 	}
 	resp = tmp;
 	tmp.clear();

@@ -154,7 +154,14 @@ int request_handler::choose_method(void)
 			gen_startLine( _status.find("404") ); //  IF NOT FOUND -> 404
 		}
 		else
+		{
 			puts( "File successfully deleted" );
+			gen_startLine( _status.find("204") );
+			redir_mode = writer();
+			_hrx.clear();
+			_htx.clear();
+			return (NONE);
+		}
 	}
 	if (redir_mode == NONE)
 	{
@@ -573,6 +580,8 @@ int request_handler::file_type()
 				_path += _path[_path.size() -1] == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;		
 				file_type();									
 			}
+			else
+				gen_startLine( _status.find("403") );
 			break;
 /* 		case S_IFIFO:  printf("FIFO/pipe\n");				break;
 		case S_IFLNK:  printf("symlink\n");					break; */

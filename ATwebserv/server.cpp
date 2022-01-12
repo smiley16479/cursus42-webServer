@@ -74,15 +74,17 @@ void server::run(void) {
 				client.add(_epoll, get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
-			else if (_epoll._events[i].events & EPOLLIN) {
+			else
+			{
 				ptr = client.get_info(_epoll._events[i].data.fd);
-				if (ptr != NULL)
-					ptr->fd_in(header);
-			}
-			else if (_epoll._events[i].events & EPOLLOUT)	{
-				ptr = client.get_info(_epoll._events[i].data.fd);
-				if (ptr != NULL)
-					ptr->fd_out(header);
+				if (_epoll._events[i].events & EPOLLIN) {
+					if (ptr != NULL)
+						ptr->fd_in(header);
+				}
+				else if (_epoll._events[i].events & EPOLLOUT)	{
+					if (ptr != NULL)
+						ptr->fd_out(header);
+				}
 			}
 		}
 //		std::cout << "Epoll events checked" << std::endl;

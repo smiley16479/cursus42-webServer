@@ -16,6 +16,7 @@ enum	e_mode	{
 	NONE
 };
 
+//# define MAX_LEN 20971520
 # define MAX_LEN 8192
 
 # define MAX_EVENTS 1000
