@@ -7,3 +7,8 @@
 
 # commit: d822b03f -> non le header response 'Content-Disposition : inline' ne permet l'affichage directement ds le navigateur
 # // IF YOU WANT THE BROWSER TO READ WITHOUT ASKING TO DOWNLOAD IT, DON'T ADD THE TRAILING '/' OR DON'T MENTION ITS FILE TYPE
+
+il manque :
+les post request uploads pas encore fait
+les chunck
+les cgi

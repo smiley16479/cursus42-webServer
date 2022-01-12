@@ -71,7 +71,9 @@ void request_handler::reader(client_info& cl_info)
 		cout << "*it : " << *it << endl;
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
-		if (buf_1[0] == '\r') { // 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _C_INFO_PTR
+		if (buf_1[0] == '\r') { 
+			// 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _C_INFO_PTR (on utilise celle la pour le moment)
+			break ;
 			// 2eme SOLUTION :
 		// C'EST ICI QU'ON DOIT UTILISER extract_post_rqst_body peut être utiliser slmt des position poour ne pas faire de copie ou
 			// extract_post_rqst_body(cl_info);
@@ -79,7 +81,6 @@ void request_handler::reader(client_info& cl_info)
 			// while (std::getline(ss_1, buf_1))
 			// 	_hrx["BODY"].push_back(buf_1);
 			// cout << "BODY size : " << _hrx["BODY"].size() << endl;
-			break ;
 		}
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
@@ -101,41 +102,6 @@ void request_handler::reader(client_info& cl_info)
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
 }
-
-void request_handler::extract_post_rqst_body(const client_info& cl_info)
-{
-	size_t pos, pos1;
-// PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
-	size_t pos_boundary = cl_info.rqst.find("\r\n\r\n") + 4;
-	size_t pos_last_boundary = cl_info.rqst.find_last_of("\r\n", cl_info.rqst.size() - 4);
-// GET NAME AND FILENAME INSIDE BOUNDARY
-	string name("name=\"");
-	string filename("filename=\"");
-	// cout << "name [" << name + "]" << endl;
-	if ( (pos = cl_info.rqst.find(name, pos_boundary)) != string::npos )
-		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + name.size())) != string::npos )
-			name = cl_info.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
-
-	// cout << "filename [" << filename + "]" << endl;
-	if ( (pos = cl_info.rqst.find(filename, pos_boundary)) != string::npos )
-		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + filename.size())) != string::npos )
-			filename = cl_info.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
-// END GET NAME AND FILENAME INSIDE BOUNDARY
-
-// CREER ET ECRIT DS LE FICHIER
-	ofstream my_file(name + "_transfer");
-	if ((pos = cl_info.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
-		if (my_file.is_open()) {
-			my_file << cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
-			my_file << "\n\n" + cl_info.rqst;
-		}
-		else
-			cout << RED "download path invalid \n" RESET;
-	}
-}
-
 
 void request_handler::writer(void) {
 
@@ -386,9 +352,44 @@ void request_handler::handle_post_rqst(void)
 		{
 			output << _hrx["BODY"][0];
 		}
-		gen_startLine( _status.find("200") ); 
+		gen_startLine( _status.find("200") );
 	}
 	// sinon on execute les cgi ?
+}
+
+void request_handler::extract_post_rqst_body(void)
+{
+	client_info& cl_info = *_c_info_ptr;
+	size_t pos, pos1;
+// PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
+	size_t pos_boundary = cl_info.rqst.find("\r\n\r\n") + 4;
+	size_t pos_last_boundary = cl_info.rqst.find_last_of("\r\n", cl_info.rqst.size() - 4);
+// GET NAME AND FILENAME INSIDE BOUNDARY
+	string name("name=\"");
+	string filename("filename=\"");
+	// cout << "name [" << name + "]" << endl;
+	if ( (pos = cl_info.rqst.find(name, pos_boundary)) != string::npos )
+		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + name.size())) != string::npos )
+			name = cl_info.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
+	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
+
+	// cout << "filename [" << filename + "]" << endl;
+	if ( (pos = cl_info.rqst.find(filename, pos_boundary)) != string::npos )
+		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + filename.size())) != string::npos )
+			filename = cl_info.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
+	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
+// END GET NAME AND FILENAME INSIDE BOUNDARY
+
+// CREER ET ECRIT DS LE FICHIER
+	ofstream my_file(name + "_transfer");
+	if ((pos = cl_info.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
+		if (my_file.is_open()) {
+			my_file << cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
+			my_file << "\n\n" + cl_info.rqst;
+		}
+		else
+			cout << RED "download path invalid \n" RESET;
+	}
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -425,7 +426,7 @@ int	request_handler::resolve_path()
 						while (c_it != it->retour[0].end() && std::isdigit(*c_it))
 							++c_it;
 						if ( !it->retour[0].empty() && c_it == it->retour[0].end())
-							gen_startLine( _status.find(it->retour[0]) );
+							gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
 
 						_path = it2->root.back() == '/' ? it2->root : it2->root + "/";
 						_l_id = it2 - _si[_s_id].location.begin();
@@ -453,14 +454,8 @@ int	request_handler::resolve_path()
 	cout << BLUE "resolved_path : " RESET << _path << endl;
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
-// VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
-	bool allowed = false;
-	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
-		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
-			allowed = true;
-	if (!allowed)
-		gen_startLine( _status.find("405") );
-	return allowed ? 0 : 1; /* PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+// VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE (maj gen_stratLine 405 si besoin)
+	return !is_method_allowed(); // retourne 1 en cas d'erreur d'ou le '!'
 }
 
 // Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -560,6 +555,18 @@ void request_handler::add_body()
 		_response.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
+}
+
+// verifie si la méthode ds la location concernée est autorisée
+bool request_handler::is_method_allowed(void)
+{
+	bool allowed = false;
+	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
+		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
+			allowed = true;
+	if (!allowed)
+		gen_startLine( _status.find("405") );
+	return allowed;
 }
 
 // Remove multiple '/' and the '/' at url's end

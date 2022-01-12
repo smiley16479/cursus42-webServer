@@ -85,7 +85,8 @@ void server::run(void) {
 						printf("%zd bytes written.\n", bytes_read);
 						read_buffer[bytes_read] = '\0';
 						printf("Written '%s'\n", read_buffer);
-			} */
+			} 
+*/
 			else {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {

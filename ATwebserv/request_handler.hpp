@@ -89,7 +89,7 @@ public:
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 private:
-	void extract_post_rqst_body(const client_info& cl_info);
+	void extract_post_rqst_body(void);
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
 	void gen_serv(void);
@@ -103,8 +103,7 @@ private:
 	void handle_get_rqst(void);
 		void	verify_file_openess();
 			int 	resolve_path();
-				void	location_lookup();
-				int	location_lookup_2();
+				bool is_method_allowed(void);
 				int	file_type();
 					void generate_folder_list();
 	void add_all_field();
