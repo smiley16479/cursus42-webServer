@@ -112,7 +112,12 @@ void request_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
-	if (_hrx["A"][0] == "GET")
+// EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION -> 403 (FORBIDDEN)
+	if (resolve_path())
+		return ;
+	// else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].cgi_file_types) != -1)) // POur le moment pas adapte de Arthur
+		// redir_mode = handle_cgi();
+	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
 	else if (_hrx["A"][0] == "POST")
 		handle_post_rqst();
@@ -287,7 +292,6 @@ tiennent pas à un autre serveur) */
 
 void request_handler::handle_get_rqst(void)
 {
-	resolve_path();
 	file_type();
 	// gen_CType(string());
 	// gen_CLength();
@@ -302,9 +306,6 @@ void request_handler::handle_post_rqst(void)
 	cout << "boundary : " << boundary << endl;
 	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
 
-	// EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION -> 403 (FORBIDDEN)
-	if (resolve_path())
-		return gen_startLine( _status.find("403") ); 
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
 	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
 	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
@@ -317,9 +318,9 @@ void request_handler::handle_post_rqst(void)
 		extract_postREG_rqst_body();
 	else if (_c_info_ptr->rqst_type == POST_CHUNCK)
 		extract_postCHUNK_rqst_body();
-
 }
 
+// Extrait le body du message de la post request et le mets a la fois ds le _body pour la reponse et ds le fichier specifie si ce n'est pas un fichier a traiter par les cgi
 void request_handler::extract_postREG_rqst_body(void)
 {
 	client_info& cl_info = *_c_info_ptr;
@@ -327,6 +328,7 @@ void request_handler::extract_postREG_rqst_body(void)
 // PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
 	size_t pos_boundary = cl_info.rqst.find("\r\n\r\n") + 4;
 	size_t pos_last_boundary = cl_info.rqst.find_last_of("\r\n", cl_info.rqst.size() - 4);
+
 // GET NAME AND FILENAME INSIDE BOUNDARY
 	string name("name=\"");
 	string filename("filename=\"");
@@ -360,9 +362,9 @@ void request_handler::extract_postCHUNK_rqst_body(void)
 {
 }
 
-// Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
-// si l'url a plusieurs niveau de dossiers, choisi la loc la plus adaptée
+// Permet de séléctionner la location qui partage le plus avec l'url,
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
+// Verifie si la methode est autorisee (maj gen_stratLine 405 ou 403 si besoin)
 int	request_handler::resolve_path()
 {
 	size_t len;
@@ -534,15 +536,24 @@ void request_handler::add_body()
 	}
 }
 
-// verifie si la méthode ds la location concernée est autorisée (maj gen_stratLine 405 si besoin)
+// Verifie si elle est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
+// puis si la méthode ds la location concernée est autorisée (maj gen_stratLine 403 si besoin)
 bool request_handler::is_method_allowed(void)
-{
+{/* PROBLEME (A TESTER) */
 	bool allowed = false;
+	for (char *strs[6] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL}; *strs; ++*strs)
+		if (*strs == _hrx["A"][0])
+			allowed = true;
+	if (!allowed){
+		gen_startLine( _status.find("405") );
+		return allowed;
+	}
+	allowed = false;
 	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
-		gen_startLine( _status.find("405") );
+		gen_startLine( _status.find("403") );
 	return allowed;
 }
 
