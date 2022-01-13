@@ -22,7 +22,8 @@ enum	e_rqmode	{
 	MULTIPART,
 	CLEN,
 	CHUNKED,
-	COMPLETE
+	COMPLETE,
+	INCOMPLETE
 };
 
 //# define MAX_LEN 20971520

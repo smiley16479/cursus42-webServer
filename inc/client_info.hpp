@@ -25,8 +25,6 @@ class client_info {
 
 		void	solve_request(request_handler& header);
 
-		void	compute(request_handler& header);
-
 		void	recv_handler(request_handler& header);
 		void	read_handler(request_handler& header);
 
@@ -34,8 +32,13 @@ class client_info {
 		void	send_handler(request_handler& header);
 		void	cgi_resp_handler(request_handler& header);
 
+		void	compute(request_handler& header);
+
+		bool	get_rq_type();
+
 		bool	is_request_fulfilled();
-		bool	is_post_rqst_fulfilled();
+		bool	is_multipart_rqst_fulfilled();
+		bool	is_clen_rqst_fulfilled();
 		bool	is_chunked_rqst_fulfilled();
 
 		void 	time_reset();
