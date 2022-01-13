@@ -25,7 +25,7 @@ void	client_info::compute(request_handler& header)	{
 	ret = is_request_fulfilled();
 	if (ret == true)
 	{
-		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
+//		std::cout << BLUE "request : \n" RESET << rqst << std::endl;
 		header.reader(rqst);
 		ret = header.choose_method();
 		rqst.clear();
@@ -36,8 +36,8 @@ void	client_info::compute(request_handler& header)	{
 			loc_fd = header.get_redir_fd();
 			if (ret == WRITE)
 			{
-				rqst = header.get_response();
-				resp = header.get_body();
+				rqst = header.get_response(); //on sauvegarde des infos de header pour former une nouvelle requete
+				resp = header.get_body();//on sauvegard le body de la requete precedente pour l'ecrire dans le fichier
 			}
 			else if (ret == CGI_OUT)
 				resp = header.get_body();
@@ -47,7 +47,7 @@ void	client_info::compute(request_handler& header)	{
 	}
 	else
 	{
-		if (!(rqst.substr(0, 5) == "CHUNK"))
+		if (rq_mode == NORMAL)
 			remove();
 		else
 			time_reset();
@@ -130,21 +130,22 @@ void	client_info::write_handler(request_handler& header)	{
 	if (wrote_bytes == -1)
 	{
 		std::cout << "WRITE ERROR" << std::endl;
-		tmp.append(resp);
+		//si le write echoue, on reecrit le message dans le buffer, ce dernier sera set
+//		tmp.append(resp);
+		resp.append(tmp);
 		return ;
 	}
 	else if (wrote_bytes == 0)
 	{
 		std::cout << "WRITE EOF" << std::endl;
 		tmp.clear();
-		std::cout << rqst << std::endl;
 		close(loc_fd);
+		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
 		mode = COMPUTE;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
 		std::cout << "WRITE MSG END" << std::endl;
-		std::cout << rqst << std::endl;
 		tmp.clear();
 		close(loc_fd);
 		mode = COMPUTE;
@@ -170,8 +171,9 @@ void	client_info::send_handler(request_handler& header)	{
 	if (sent_bytes == -1)
 	{
 		std::cout << "SEND ERROR" << std::endl;
-		tmp.append(resp);
-		resp = tmp;
+		//tmp.append(resp);
+		//resp = tmp;
+		resp.append(tmp);
 		return ;
 	}
 	else if (sent_bytes == 0)
@@ -201,10 +203,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 
 	read_bytes = read(loc_fd, &buf, MAX_LEN);
 	if (read_bytes == -1)
-	{
-		std::cout << "CGI ERROR" << std::endl;
 		return ;
-	}
 	else
 	{
 		resp.append(buf, read_bytes);
@@ -228,19 +227,16 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 bool client_info::is_request_fulfilled()
 {
 	// cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
-		
-	if (rqst.substr(0, 4) == "POST")
-	{
-		return is_post_rqst_fulfilled(); // HANDLE RECOGNITION OF ENDED POST RQST
-	}
-	else if (rqst.substr(0, 5) == "CHUNK")
-	{
-		return is_chunked_rqst_fulfilled(); // HANDLE RECOGNITION OF ENDED POST RQST
-	}
 
 	// for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
 	// 	cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
+	if (rq_mode == CHUNKED)
+		return (is_chunked_rqst_fulfilled());
+	else if (is_post_rqst_fulfilled())
+		return (true);
 
+	if (mode != NORMAL)
+		return (false);
 	size_t len = rqst.size();
 	if (len >= 4 && rqst.substr(len - 4, len) == "\r\n\r\n") // SUREMENT UNE MAUVAISE FAÇON DE LE FAIRE
 		return true ;
@@ -257,8 +253,8 @@ bool client_info::is_post_rqst_fulfilled()
 	_cLen = 0;
 	if ((pos = rqst.find("Transfer-Encoding: chunked")) != std::string::npos)
 	{
-		rqst.replace(0, 4, "CHUNK", 5);
 		std::cout << "chunks:" << pos << std::endl;
+		rq_mode = CHUNKED;
 	}
 	else if ((pos = rqst.find("\r\n\r\n")) != string::npos)
 	{
@@ -272,22 +268,29 @@ bool client_info::is_post_rqst_fulfilled()
 			std::cout << "Len was set:" << _cLen << std::endl;
 			if (rqst.substr(rqst.find("\r\n\r\n") + 4).length() >= _cLen)
 			{
+				rq_mode = COMPLETE;
 				return (true);
 			}
 			if (_cLen > MAX_LEN)
 			{
-				rqst.replace(0, 4, "CHUNK");
+				rq_mode = CLEN;
 				std::cout << "len requires chunking" << std::endl;
 			}
 		}
 		else
+		{
+			rq_mode = COMPLETE;
 			return (true);
+		}
 	}
-	if (post_boundary.empty()) {
+	if (!(rq_mode == CLEN) && !(rq_mode == CHUNKED) && post_boundary.empty()) {
 		size_t boundary_pos;
 
 		if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
+		{
 			post_boundary = rqst.substr(boundary_pos, rqst.find_first_of('\r', boundary_pos) - boundary_pos);
+			rq_mode = MULTIPART;
+		}
 	}
 	else
 	{
@@ -300,8 +303,7 @@ bool client_info::is_post_rqst_fulfilled()
 			}
 			else
 			{
-				if (rqst.substr(0, 5) == "CHUNK")
-					rqst.replace(0, 5, "POST", 4);
+				rq_mode = COMPLETE;
 				return (true);
 			}
 		}
@@ -312,6 +314,7 @@ bool client_info::is_post_rqst_fulfilled()
 bool client_info::is_chunked_rqst_fulfilled()
 {
 //	cout << YELLOW "DANS IS_CHUNKED_REQUEST_FULFILLED\n" RESET << std::endl;
+	int		size;
 	size_t	pos;
 	std::string	tmp;
 	std::stringstream	ss;
@@ -320,12 +323,14 @@ bool client_info::is_chunked_rqst_fulfilled()
 		size_t boundary_pos;
 
 		if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
+		{
 			post_boundary = rqst.substr(boundary_pos, rqst.find_first_of('\r', boundary_pos) - boundary_pos);
+			rq_mode = MULTIPART;
+		}
 	}
-	if ((pos = rqst.find(post_boundary + "--")) != std::string::npos)
+	if (!(rq_mode == CLEN) && !(rq_mode == CHUNKED) && !post_boundary.empty() && (pos = rqst.find(post_boundary + "--")) != std::string::npos)
 	{
-		if (rqst.substr(0, 5) == "CHUNK")
-			rqst.replace(0, 5, "POST");
+		rq_mode = COMPLETE;
 		return (true);
 	}
 	if (_cLen != 0)
@@ -334,8 +339,7 @@ bool client_info::is_chunked_rqst_fulfilled()
 		{
 			if (_cLen < tmp.length())
 				rqst = rqst.substr(0, _cLen);
-			if (rqst.substr(0, 5) == "CHUNK")
-				rqst.replace(0, 5, "POST");
+			rq_mode = COMPLETE;
 			return (true);
 		}
 	}
@@ -352,18 +356,46 @@ bool client_info::is_chunked_rqst_fulfilled()
 				return (true);
 			if (_cLen > MAX_LEN)
 			{
-				rqst.replace(0, 4, "CHUNK");
+				rq_mode = CLEN;
 				std::cout << "len requires chunking" << std::endl;
 			}
 		}
 	}
 //	pos = rqst.length();
 //	if (pos > 5 && rqst.substr(pos - 5, pos) == "0\r\n\r\n")
-	if (rqst.rfind("0\r\n\r\n") != std::string::npos)
+	std::cout << "Cleaning chunked request" << std::endl;
+	bool	first = false;
+	if (rq_mode == CHUNKED)
 	{
-		if (rqst.substr(0, 5) == "CHUNK")
-			rqst.replace(0, 5, "POST");
-		return (true);
+		while ((pos = rqst.find("\r\n\r\n")) != std::string::npos)
+		{
+			if (!first)
+			{
+				first = true;
+				continue;
+			}
+			tmp.clear();
+			for (size_t i = 0;; i++)
+			{
+				if (!rqst[pos - i] || !isxdigit(rqst[pos - i]))
+					break;
+				std::cout << "found an hex digit, incrementin tmp: " << tmp << std::endl;
+				tmp = rqst[pos - i] + tmp;
+			}
+			ss.str() = tmp;
+			ss >> size;
+			std::cout << "Found chunk size delimiter: " << size << std::endl;
+			if (size == 0)
+			{
+				if (rqst.substr(0, 5) == "CHUNK")
+					rqst.replace(0, 5, "POST");
+				return (true);
+			}
+			else
+			{
+				rqst = rqst.substr(0, pos - size) + rqst.substr(pos + 4);
+			}
+		}
 	}
 //	std::cout << rqst << std::endl;
 	return (false);

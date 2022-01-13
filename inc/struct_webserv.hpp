@@ -19,14 +19,14 @@ enum	e_mode	{
 
 enum	e_rqmode	{
 	NORMAL,
-	CLEN,
 	MULTIPART,
+	CLEN,
 	CHUNKED,
 	COMPLETE
 };
 
 //# define MAX_LEN 20971520
-# define MAX_LEN 8192
+//# define MAX_LEN 8192
 
 # define MAX_EVENTS 1000
 

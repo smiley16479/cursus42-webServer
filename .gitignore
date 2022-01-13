@@ -4,13 +4,12 @@
 # binary stuff
 *.o
 *.out
-ATwebserv/webserv
+webserv
 
 # tmp files
-ATwebserv/out.html
 
 # changing 4xx.html
-ATwebserv/files/error_pages/error_4xx.html
+files/error_pages/error_4xx.html
 
 # debug
 *.out.dSYM

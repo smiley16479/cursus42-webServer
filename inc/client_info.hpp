@@ -13,7 +13,7 @@ class client_info {
 		size_t		mode;
 		std::string	resp;
 		std::string rqst;
-		std::string buf;
+		size_t		rq_mode;
 		std::string post_boundary;
 		time_t		rqst_time_start;
 		size_t		_cLen;
@@ -22,9 +22,14 @@ class client_info {
 
 		void	fd_in(request_handler& header);
 		void	fd_out(request_handler& header);
+
+		void	solve_request(request_handler& header);
+
 		void	compute(request_handler& header);
+
 		void	recv_handler(request_handler& header);
 		void	read_handler(request_handler& header);
+
 		void	write_handler(request_handler& header);
 		void	send_handler(request_handler& header);
 		void	cgi_resp_handler(request_handler& header);

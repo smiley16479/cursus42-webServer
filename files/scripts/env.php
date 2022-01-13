@@ -1,7 +1,7 @@
 #!/bin/php
 <!doctype html>
 <html>
-	<link href="layout.css" rel="stylesheet" type="text/css">
+	<link href="./layout.css" rel="stylesheet" type="text/css">
     <link rel="icon" 
       type="image/png" 
       href="/favicon.ico">

@@ -126,9 +126,6 @@ void server::display_server(void)
 		cout << "host : " << _s[i].host << endl;
 		cout << "error_page : " << _s[i].error_page << endl;
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
-		cout << "cgi_path : " << _s[i].cgi_path << endl;
-		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
-			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (size_t j = 0; j < _s[i].location.size(); j++) {
 			cout << GREEN "LOCATION : " RESET << endl;
 			cout << "location : " << _s[i].location[j].location << endl;
@@ -139,6 +136,9 @@ void server::display_server(void)
 			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
 			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
 			cout << "root : " << _s[i].location[j].root << endl;
+			cout << "cgi_path : " << _s[i].location[j].cgi_path << endl;
+			for (size_t k = 0; k < _s[i].location[j].cgi_file_types.size(); k++)
+				cout << "cgi_file_types : " << _s[i].location[j].cgi_file_types[k] << endl;
 			cout << "allowed_method : ";
 			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
 				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");

@@ -35,6 +35,18 @@ CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
 
+MAX_LEN = 8192
+
+ULIMIT = $(shell ulimit -s)
+
+ifeq ($(shell test $(MAX_LEN) -gt $(ULIMIT); echo $$), 0)
+	echo "yoyoyoyoyoyoy"
+else
+MAX_LEN = $(ULIMIT)
+endif
+
+SET_LEN = -D MAX_LEN=$(MAX_LEN)
+
 ifeq ($(d), 0)
 CPP_FLAGS += -fsanitize=address
 endif
@@ -55,10 +67,10 @@ goo-nav:
 	google-chrome $(CGI_OUT)
 
 $(NAME):	$(OBJ)
-	$(CC) $(CPP_FLAGS) -o $(NAME) $(OBJ) $(INC)
+	$(CC) $(CPP_FLAGS) $(SET_LEN) -o $(NAME) $(OBJ) $(INC)
 
 $(OBJ_DIR)/%.o:	$(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CC) $(INC) $(CPP_FLAGS) -c $< -o $@
+	$(CC) $(INC) $(SET_LEN) $(CPP_FLAGS) -c $< -o $@
 
 $(OBJ_DIR):
 	mkdir -p $@

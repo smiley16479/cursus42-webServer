@@ -118,7 +118,7 @@ int request_handler::choose_method(void)
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
 		;
-	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].cgi_file_types) != -1))
+	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1))
 		redir_mode = handle_cgi();
 	else if (_hrx["A"][0] == "POST")
 		redir_mode = handle_post_rqst();
@@ -378,6 +378,8 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			buf.append(msg.substr(0, pos));
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
+			if (!_si[_s_id].location[_l_id].root.empty())
+				path = _si[_s_id].location[_l_id].root + path;
 			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd == -1)
 				return (NONE);
@@ -398,6 +400,17 @@ int request_handler::handle_post_rqst(void)
 	int			redir_mode;
 	std::string	tmp;
 	std::string	boundary;
+
+	std::cout << "Here comes a new file" << std::endl;
+	_body = _hrx["BODY"][0];
+	redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
+	if (redir_fd == -1)
+		return (NONE);
+	else
+	{
+		std::cout << "File: " << _path << " successfully created" << std::endl;
+		return (WRITE);
+	}
 
 	redir_mode = NONE;
 	if (_hrx.find("Content-Type:") != _hrx.end())
@@ -434,6 +447,10 @@ int request_handler::handle_post_rqst(void)
 			{
 				_response.clear();
 				redir_mode = multipart_form(boundary, _hrx["BODY"][0]);
+		//Si la redir_mode est set (sur WRITE), on extrait une partie certaines infos pour creer une nouvelle requete
+		//Il faudrait en fait faire une redirect 301
+		//Puis ajouter la Location du fichier a ecrire
+		//Ainsi que son type et sa len
 				if (redir_mode != NONE)
 				{
 					for (map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
@@ -849,7 +866,7 @@ void	request_handler::cgi_var_init()	{
 	_hrx["Query-String"].push_back(var);
 	var.clear();
 	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	pos = _path.find(_si[_s_id].cgi_file_types[ext_id]);
+	pos = _path.find(_si[_s_id].location[_l_id].cgi_file_types[ext_id]);
 	if (pos != std::string::npos)
 	{
 		var = _path.substr(pos + 4);
@@ -884,7 +901,7 @@ int	request_handler::handle_cgi(void)
 	else
 	{
 	//EN CHANTIER !!!
-		if (_si[_s_id].cgi_path.empty())
+		if (_si[_s_id].location[_l_id].cgi_path.empty())
 		{
 			gen_startLine( 403 );
 			return (NONE);
@@ -892,7 +909,7 @@ int	request_handler::handle_cgi(void)
 		std::cout << "Launching cgi" << std::endl;
 		cgi_var_init();
 		env = extract_env(_hrx, _si[_s_id]);
-		redir_fd = go_cgi(_si[_s_id].cgi_path, _hrx["BODY"], env);
+		redir_fd = go_cgi(_si[_s_id].location[_l_id].cgi_path, _hrx["BODY"], env);
 		if (redir_fd == -1)
 			return (NONE);
 		return (CGI_OUT);

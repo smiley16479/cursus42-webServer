@@ -187,16 +187,6 @@ void config_checker::check_serv_part(std::ifstream& ifs, server_info& si) {
 			extract_to_string(ifs, si.time_out);
 			std::cout << "time_out : " << si.time_out << std::endl;
 		}
-		else if (word == "cgi_path") {
-			extract_to_string(ifs, si.cgi_path);
-			std::cout << "cgi_path : " << si.cgi_path << std::endl;
-		}
-		else if (word == "cgi_file_types" /* && ifs >> word */) {
-			// si.cgi_file_types.push_back(word);
-			std::cout << "cgi_file_types : ";
-			extract_to_vector(ifs, si.cgi_file_types);
-			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
-		}
 		else if (word == "location") {
 			check_loca_part(ifs, si);  // ?
 		}
@@ -259,6 +249,20 @@ void config_checker::check_loca_part(std::ifstream& ifs, server_info& si){
 		else if (word == "root") {
 			extract_to_string(ifs, si.location[si.location.size() - 1].root);
 			std::cout << GREEN "root : " RESET << si.location[si.location.size() - 1].root << std::endl;
+		}
+		else if (word == "cgi_path") {
+			extract_to_string(ifs, si.location[si.location.size() - 1].cgi_path);
+			std::cout << "cgi_path : " << si.location[si.location.size() - 1].cgi_path << std::endl;
+		}
+		else if (word == "cgi_file_types" /* && ifs >> word */) {
+			// si.cgi_file_types.push_back(word);
+			std::cout << "cgi_file_types : ";
+			extract_to_vector(ifs, si.location[si.location.size() - 1].cgi_file_types);
+			// std::cout << "cgi_file_types : " << si.cgi_file_types[si.cgi_file_types.size() - 1] << std::endl;
+		}
+		else if (word == "upload_path") {
+			extract_to_string(ifs, si.location[si.location.size() - 1].upload_path);
+			std::cout << "upload_path : " << si.location[si.location.size() - 1].upload_path << std::endl;
 		}
 		else if (word == "{" || word == "}")
 			word == "{" ? ++bracket : --bracket;
