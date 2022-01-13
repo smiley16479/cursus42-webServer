@@ -67,8 +67,10 @@ void request_handler::reader(client_info& cl_info)
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
 	}
+
 	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
 		cout << "*it : " << *it << endl;
+
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { 
@@ -84,7 +86,7 @@ void request_handler::reader(client_info& cl_info)
 		}
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
-			// if (_hrx.find(buf_2) != _hrx.end()) {
+			// if (_hrx.find(buf_2) != _hrx.end()) { // VERIFICATION DE LA SYNTAXE DES HEADERS AU CAS OU L'ON VEUILLE FAIRE DE LA SÉCURITÉ...
 				string index = buf_2;
 				while (ss_2 >> buf_2)
 					_hrx[index].push_back(buf_2);
@@ -112,18 +114,8 @@ void request_handler::writer(void) {
 
 	if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
-	else if (_hrx["A"][0] == "POST") {
-		// handle_post_rqst();
-		if (_hrx.find("Content-Type:") != _hrx.end())
-			cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
-		for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
-			cout << "[" << *i << "]" << endl;
-		string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
-		cout << "boundary : " << boundary << endl;
-		// cout << endl << "BODY : " << endl;
-		// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
-		// 	cout << "[" << *i << "]" << endl;
-	}
+	else if (_hrx["A"][0] == "POST")
+		handle_post_rqst();
 	else if (_hrx["A"][0] == "PUT") {
 		cout << "Facultatif PUT method not implemented yet\n";
 	}
@@ -190,7 +182,7 @@ void	request_handler::gen_date()
 	_htx["Date"].push_back(date);
 }
 
-void	request_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS LA REQUETE TU SEGV PAR EX POUR UN POST DS GD TAILLE*/
+void	request_handler::gen_serv()
 {
 	if (_htx["Server"].size() != 3)
 		_htx["Server"].resize(3, string());
@@ -229,6 +221,7 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
+
 // génération du field Content-Length et d'un status d'erreur (413) si length > max_file_size
 void	request_handler::gen_CLength()
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
@@ -237,13 +230,20 @@ void	request_handler::gen_CLength()
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
 
 	stringstream ss;
-	if (_body.empty()) {
+	if (_c_info_ptr->rqst_type == POST_REG) {
+		ss << _hrx["Content-Length:"][0];
+		// cout << MAGENTA "la\n" RESET;
+	}
+	else if (_body.empty()) {
+		// cout << MAGENTA "ici\n" RESET;
 		ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate);
 		ss << fs.tellg();
 		fs.close();
 	}
-	else
+	else {
+		// cout << MAGENTA "là\n" RESET;
 		ss << _body.size();
+	}
 	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
 // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT (A DECOMMENTER -AV SON HOMOLOGUE DS gen_CLength()- SI CHANGEMENT D'AVIS)
@@ -297,67 +297,30 @@ void request_handler::handle_get_rqst(void)
 
 void request_handler::handle_post_rqst(void) 
 {
-	size_t	pos;
-	std::string	tmp;
 
-	if (_hrx.find("Content-Type:") != _hrx.end())
-		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
-	for (auto i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
-		cout << "[" << *i << "]" << endl;
-
-// POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
-	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
 	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 	cout << "boundary : " << boundary << endl;
-	cout << endl << "BODY : " << endl;
-	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
-	// 	cout << "[" << *i << "]" << endl;
-//	cout << _hrx["BODY"][0] << endl;
+	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
 
-	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large)
+	// EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION -> 403 (FORBIDDEN)
+	if (resolve_path())
+		return gen_startLine( _status.find("403") ); 
+	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
 	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
-	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > max_file_size ) {
+	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
 		std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
 		return ;
 	}
-	else
-	{
-		if (!_hrx["BODY"].empty() && !boundary.empty())
-		{
-			if ((pos = _hrx["BODY"][0].find("\r\n\r\n")) != std::string::npos)
-			{
-				tmp.append(_hrx["BODY"][0].substr(0, pos), _hrx["BODY"][0].substr(0,pos).length());
-				_hrx["BODY"][0] = _hrx["BODY"][0].substr(pos + 4);
-			}
-			else
-				tmp.append(_hrx["BODY"][0]);
-			
-		}
-		if (!tmp.empty() && (pos = tmp.find("filename=\"")) != std::string::npos)
-		{
-			_hrx["A"][1] = "./files/";
-			_hrx["A"][1].append(tmp.substr(pos + strlen("filename=\""), tmp.substr(pos + strlen("filename=\"")).find("\"")));
-		}
-		std::ofstream	output(_hrx["A"][1]);
-		if (!boundary.empty())
-		{
-				pos = _hrx["BODY"][0].find(boundary);
-				if (pos != std::string::npos)
-					output << _hrx["BODY"][0].substr(pos);
-				else
-					output << _hrx["BODY"][0];
-		}
-		else
-		{
-			output << _hrx["BODY"][0];
-		}
-		gen_startLine( _status.find("200") );
-	}
-	// sinon on execute les cgi ?
+	// SI TOUT S'EST BIEN PASSÉ ON DÉTACHE LE BODY DE LA REQUETE POST (DS _BODY)
+	if (_c_info_ptr->rqst_type == POST_REG)
+		extract_postREG_rqst_body();
+	else if (_c_info_ptr->rqst_type == POST_CHUNCK)
+		extract_postCHUNK_rqst_body();
+
 }
 
-void request_handler::extract_post_rqst_body(void)
+void request_handler::extract_postREG_rqst_body(void)
 {
 	client_info& cl_info = *_c_info_ptr;
 	size_t pos, pos1;
@@ -380,16 +343,21 @@ void request_handler::extract_post_rqst_body(void)
 	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
 // END GET NAME AND FILENAME INSIDE BOUNDARY
 
-// CREER ET ECRIT DS LE FICHIER
-	ofstream my_file(name + "_transfer");
+// CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
+	ofstream my_file(_path + '/' + name + "_transfer");
 	if ((pos = cl_info.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
+		_body = cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
 		if (my_file.is_open()) {
-			my_file << cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
-			my_file << "\n\n" + cl_info.rqst;
+			my_file << _body;
+			cout << "Upload location : " + _path + '/' + name + "_transfer\n\n" + cl_info.rqst + "\n\n";
 		}
 		else
 			cout << RED "download path invalid \n" RESET;
 	}
+}
+
+void request_handler::extract_postCHUNK_rqst_body(void)
+{
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
@@ -409,8 +377,10 @@ int	request_handler::resolve_path()
 		_path = "files" + _hrx["A"][1];
 		return 1;
 	}
+// ON ENLEVE LES ARGUMENTS S'IL Y EN A DS L'URL
 	if ((len = _path.find("?")) != std::string::npos)
 		_path = _path.substr(0, len);
+
 	_l_id = 0;
 	int index = _si[_s_id].location.size() - 1;
 	len = 0;
@@ -428,13 +398,16 @@ int	request_handler::resolve_path()
 						if ( !it->retour[0].empty() && c_it == it->retour[0].end())
 							gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
 
-						_path = it2->root.back() == '/' ? it2->root : it2->root + "/";
+						_path = it2->root + "/";
 						_l_id = it2 - _si[_s_id].location.begin();
 						break ;
 					}
 			} // SINON
 			else {
-				_path = it->root.back() == '/' ? it->root : it->root + "/";
+				_path = it->root + "/";
+			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
+				if ((_c_info_ptr->rqst_type == POST_REG || _c_info_ptr->rqst_type == POST_CHUNCK) && !it->download_path.empty())
+				_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
 			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
@@ -455,7 +428,7 @@ int	request_handler::resolve_path()
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE (maj gen_stratLine 405 si besoin)
-	return !is_method_allowed(); // retourne 1 en cas d'erreur d'ou le '!'
+	return !is_method_allowed(); // retourne 1 si allowed d'ou le '!'
 }
 
 // Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
@@ -471,13 +444,12 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		// case S_IFBLK:  printf("block device\n");			break;
-		// case S_IFCHR:  printf("character device\n");		break;
 		case S_IFDIR:  printf("directory\n");
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 				generate_folder_list();
 				return 1;
 			}
+// S'IL S'AGIT D'UN DOSSIER DS LEQUEL IL Y A UN INDEX.HTML A RÉCUPÉRER
 			if (!_si[_s_id].location[_l_id].index.empty()) {
 				_path += _path.back() == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;
 				file_type();									
@@ -491,7 +463,7 @@ int request_handler::file_type()
 			printf(RED "unknown path : %s\n" RESET, _path.c_str());
 			break;
 	}
-// AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
+// SI ERROR, AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
 		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
 	printf("_path : %s\n", _path.c_str());
@@ -527,7 +499,7 @@ void request_handler::generate_folder_list()
 	_body.append("</div></body></html>");
 }
 
-// Clear la string (response) et y ajoute tous les field, puis clear _hrx
+// Clear la string (response) et y ajoute tous les field
 void request_handler::add_all_field()
 {
 	_response.clear();
@@ -544,20 +516,25 @@ void request_handler::add_body()
 /* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
 		return ; */
 	if (!_body.empty()) {
+		cout << RED "Body (folder) written !" RESET  << endl;
 		_response += _body;
 		_body.clear();
 		return ;
 	}
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
-	if (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST") {
+	if (_hrx["A"][0] == "GET") {
 		cout << RED "File written !" RESET  << endl;
 		ifstream fs(_path);
 		_response.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
+	else if (_hrx["A"][0] == "POST") {
+		cout << RED "Post body written !" RESET  << endl;
+		_response.append(_body);
+	}
 }
 
-// verifie si la méthode ds la location concernée est autorisée
+// verifie si la méthode ds la location concernée est autorisée (maj gen_stratLine 405 si besoin)
 bool request_handler::is_method_allowed(void)
 {
 	bool allowed = false;

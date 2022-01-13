@@ -41,10 +41,9 @@ bool client_handler::is_POST_request_fulfilled(int client_fd)
 	cout << BLUE "DANS is_POST_request_fulfilled, size of current reqst : " << clients[client_fd].rqst.length() << "\n" RESET;
 
 	client_info& client = clients[client_fd];
-	switch (client.rqst_type)
-	{
-	case NONE: // Si NONE, identifie le type de post requete concernée (POST_REG / POST_CHUNCK):
-		cout << YELLOW "HELLO :) rqst_type tjrs NONE(0)? " << client.rqst_type << "\n" RESET;
+	// Si NONE, identifie le type de post requete concernée (POST_REG / POST_CHUNCK):
+	if (client.rqst_type == NONE) {
+		cout << YELLOW "NONE\n" RESET;
 		if (client.rqst.find("\r\n\r\n") == string::npos) // Vérifie qu'on a au moins les headers
 			return false;
 		// PROBLEM SI ON A PAS L'UN DE CES DEUX TYPE DE HEADER ET QUE LA REQUETE EST LONGUE ON VA FREEZE LE TEMPS DE LIRE TOUTE LA REQST
@@ -63,96 +62,23 @@ bool client_handler::is_POST_request_fulfilled(int client_fd)
 		}
 		else
 			return false;
-		break;
-	case POST_REG:
+	}
+	if (client.rqst_type == POST_REG) {
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
+		cout << YELLOW "POST_REG\n" RESET;
 		if (client.rqst.substr(client.rqst.size() - 46).find("--" + client.post_boundary + "--") != string::npos)
 			return true;
-		break;
-	case POST_CHUNCK:
+	}
+	else if (client.rqst_type == POST_CHUNCK) {	
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
+		cout << YELLOW "POST_CHUNCK\n" RESET;
 		if (client.rqst.find("0\r\n\r\n", client.rqst.size() - 5) != string::npos)
 			return true;
-		break;
-	default:
-		cout << RED "WTF?\n" RESET;
-		break;
 	}
+	else
+		cout << RED "WTF?\n" RESET;
 	return false;
 }
-
-bool client_handler::is_POST_chunk_fulfilled(int client_fd)
-{
-	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
-	if (clients[client_fd].rqst.find("0\r\n\r\n", clients[client_fd].rqst.size() - 5) == string::npos)
-		return false;
-	return true;
-}
-
-bool client_handler::is_POST_regular_fulfilled(int client_fd)
-{
-	size_t body_size;
-	size_t pos, pos1, pos_boundary, pos_last_boundary;
-	// PROBLEM ON NE FAIT PAS LE MULTI FILES TRANSFERT LÀ !
-	// RECHERCHE DU HEADER DE LA TAILLE DU BODY (Content-Length)
-	// SI 'Content-Length:' N'EST PAS LÀ, LE HEADER Transfer-Encoding LE REMPLACERA À PRIORI (ou est-ce "Content-Type:")
-	if ((pos = clients[client_fd].rqst.find("Content-Length:")) == string::npos)
-		return false;
-	body_size =  atoi (&clients[client_fd].rqst[pos + 15]); // (+15 == "Content-Length:")
-	// RECHERCHE DE LA FIN DES HEADERS
-	if ((pos_boundary = clients[client_fd].rqst.find("\r\n\r\n")) == string::npos)
-		return false;
-	pos_boundary += 4; // (+4 == "\r\n\r\n")
-#ifdef _debug_
-	cout << "commencement du body (pos_boundary) : " << pos_boundary << endl;
-	cout << RED "rqst.size() : " RESET << clients[client_fd].rqst.size() << endl;
-	cout << "body_size : " << body_size<< endl;
-#endif
-	// SI LA TAILLE DU BODY N'EST PAS COMPLETE
-	if ( (clients[client_fd].rqst.size() - pos_boundary) < body_size )
-		return false;
-
-// ON CHOPE LA BOUNDARY : boundary=[------------------------772ed66a82c8bebbM] (QUE C QU'IL Y A ENTRE LES CROCHETS)
-	pos1 = clients[client_fd].rqst.find_first_of("\r\n", clients[client_fd].rqst.find("boundary=--------"));
-	pos  = clients[client_fd].rqst.find_last_of('=', pos1) + 1;
-	// Stockage de la boundary de la requete post ds la struct client_info (clients[client_fd].post_boundary)
-	cout << RED "Post_boundary : " RESET << (clients[client_fd].post_boundary = clients[client_fd].rqst.substr(pos, pos1 - pos)) << endl;
-
-	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
-	if (clients[client_fd].rqst.substr(clients[client_fd].rqst.size() - 46).find("--" + clients[client_fd].post_boundary + "--") == string::npos)
-		return false;
-
-	pos_last_boundary = clients[client_fd].rqst.find_last_of("\r\n", clients[client_fd].rqst.size() - 4);
-	cout << "END POST BOUNDARY FOUND : [" << clients[client_fd].rqst.substr(clients[client_fd].rqst.size() - 46) << "]\n";
-	cout << RED "Pos_last_boundary : " RESET << pos_last_boundary << endl;
-
-/* dans handle_post_reqst */
-// GET NAME AND FILENAME INSIDE BOUNDARY
-	string name("name=\"");
-	string filename("filename=\"");
-	// cout << "name [" << name + "]" << endl;
-	if ( (pos = clients[client_fd].rqst.find(name, pos_boundary)) != string::npos )
-		if ( (pos1 = clients[client_fd].rqst.find_first_of('"', pos + name.size())) != string::npos )
-			name = clients[client_fd].rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
-
-	// cout << "filename [" << filename + "]" << endl;
-	if ( (pos = clients[client_fd].rqst.find(filename, pos_boundary)) != string::npos )
-		if ( (pos1 = clients[client_fd].rqst.find_first_of('"', pos + filename.size())) != string::npos )
-			filename = clients[client_fd].rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
-// END GET NAME AND FILENAME INSIDE BOUNDARY
-
-	ofstream my_file(name + "_transfer");
-	if ((pos = clients[client_fd].rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
-		if (my_file.is_open())
-			my_file << clients[client_fd].rqst.substr(pos, pos_last_boundary - pos - 1);
-		else
-			cout << RED "download path invalid \n" RESET;
-	}
-	return true ;
-}
-
 
 void client_handler::remove(struct_epoll& _epoll,int i)
 {	

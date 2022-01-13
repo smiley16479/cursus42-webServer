@@ -104,7 +104,10 @@ void server::run(void) {
 						send(_epoll._events[i].data.fd, rqst.get_response().c_str(), rqst.get_response().length(), 0);
 
 						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
-						// close(_events[i].data.fd); // DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+						// DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA :
+						// close(_epoll._events[i].data.fd);
+						// OU VIRER LE CLIENT COMME CI DESOUS :
+						client.remove(_epoll, i);
 					}
 				}
 			}

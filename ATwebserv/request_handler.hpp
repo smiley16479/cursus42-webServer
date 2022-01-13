@@ -89,7 +89,8 @@ public:
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 private:
-	void extract_post_rqst_body(void);
+	void extract_postREG_rqst_body(void);
+	void extract_postCHUNK_rqst_body(void);
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
 	void gen_serv(void);
