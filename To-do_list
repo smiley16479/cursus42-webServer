@@ -14,3 +14,10 @@ extract cgi_path in cgi execution
 extract download_path in hqndle_post
 authorize cgi only if cgi_path is defined
 authorize download only if download_path is defined
+
+upload and cgi in location
+
+empty response for existing locations without autoindex
+
+curl -X DELETE 127.0.0.1:8081/delete.txt
+delete returns 404
