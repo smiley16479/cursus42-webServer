@@ -540,12 +540,17 @@ void request_handler::add_body()
 // puis si la méthode ds la location concernée est autorisée (maj gen_stratLine 403 si besoin)
 bool request_handler::is_method_allowed(void)
 {/* PROBLEME (A TESTER) */
+	cout << MAGENTA "is_method_allowed\n" RESET;
 	bool allowed = false;
-	for (char *strs[6] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL}; *strs; ++*strs)
+	const char *array[] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL};
+	for (const char**strs = array; *strs; ++strs){
+		// cout << MAGENTA << *strs << RESET << endl;
 		if (*strs == _hrx["A"][0])
 			allowed = true;
+	}
 	if (!allowed){
 		gen_startLine( _status.find("405") );
+		cout << MAGENTA << "not allowed 405" << RESET << endl;
 		return allowed;
 	}
 	allowed = false;
