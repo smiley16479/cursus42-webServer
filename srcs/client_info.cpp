@@ -1,7 +1,8 @@
 #include "client_info.hpp"
 
 void	client_info::fd_in(request_handler& header)	{
-	t_func	func[2] = { &client_info::recv_handler,
+	t_func	func[3] = { &client_info::recv_handler,
+						&client_info::chunked_handler,
 						&client_info::compute };
 
 	//handles EPOLLIN EVENTS
@@ -10,7 +11,8 @@ void	client_info::fd_in(request_handler& header)	{
 }
 
 void	client_info::fd_out(request_handler& header)	{
-	t_func	func[5] = { &client_info::compute,
+	t_func	func[6] = { &client_info::chunked_handler,
+						&client_info::compute,
 						&client_info::write_handler,
 						&client_info::read_handler,
 						&client_info::send_handler,
@@ -185,6 +187,56 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	}
 }
 
+void	client_info::chunked_handler(request_handler& header)	{
+	(void)header;
+	int		bytes_exchanged;
+	char	buf[MAX_LEN];
+
+	if (chunk_mode == CHUNK_INCOMPLETE)
+	{
+		bytes_exchanged = recv(loc_fd, &buf, MAX_LEN, MSG_DONTWAIT);
+		if (bytes_exchanged == -1)
+		{
+//			std::cout << "CHUNK RECV ERROR" << std::endl;
+			return ;
+		}
+		else
+			std::cout << "CHUNK INFO RECEIVED" << std::endl;
+		chunk_buffer.append(buf, bytes_exchanged);
+		chunk_mode = CHUNK_PARSING_REQ;
+	}
+	else if (chunk_mode == CHUNK_PARSING_REQ)
+	{
+		is_chunked_rqst_fulfilled();
+	}
+	else if (chunk_mode == CHUNK_COMPLETE)
+	{
+		resp = "HTTP/1.1 100 Continue\r\n"; 
+		bytes_exchanged = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
+		if (bytes_exchanged != -1)
+		{
+			if (chunk_buffer.empty())
+				chunk_mode = CHUNK_INCOMPLETE;
+			else
+				chunk_mode = CHUNK_PARSING_REQ;
+			resp.clear();
+		}
+	}
+	else if (chunk_mode == CHUNK_COMPLETE)
+	{
+		resp = "HTTP/1.1 400 Bad Request\r\n"; 
+		bytes_exchanged = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
+		if (bytes_exchanged != -1)
+		{
+			mode = RECV;
+			resp.clear();
+			chunk_buffer.clear();
+		}
+	}
+	else if (chunk_mode == TRANSMISSION_OVER)
+		mode = COMPUTE;
+}
+
 void	client_info::compute(request_handler& header)	{
 	int	ret;
 
@@ -211,7 +263,7 @@ void	client_info::compute(request_handler& header)	{
 		}
 		mode = SEND;
 	}
-	else
+	else if (!(mode == CHUNKED))
 	{
 //		if (rq_mode == NORMAL)
 //			remove();
@@ -238,9 +290,7 @@ bool client_info::is_request_fulfilled()
 	}
 	else
 	{
-		if (rq_mode == CHUNKED && is_chunked_rqst_fulfilled())
-			return (true);
-		else if (rq_mode == CLEN && is_clen_rqst_fulfilled())
+		if (rq_mode == CLEN && is_clen_rqst_fulfilled())
 			return (true);
 		else if (rq_mode == MULTIPART && is_multipart_rqst_fulfilled())
 			return (true);
@@ -257,10 +307,19 @@ bool client_info::get_rq_type()
 
 	cout << YELLOW "DANS IS_POST_REQUEST_FULFILLED\n" RESET << std::endl;
 	_cLen = 0;
-	if ((pos = rqst.find("Transfert-Encoding: chunked")) != std::string::npos)
+	if ((pos = rqst.find("Transfer-Encoding: chunked")) != std::string::npos)
 	{
+		pos = rqst.find("\r\n\r\n");
 		std::cout << "chunks:" << pos << std::endl;
-		rq_mode = CHUNKED;
+		std::cout << "rqst:" << rqst << std::endl;
+		chunk_buffer = rqst.substr(pos + 4);
+		mode = CHUNKED;
+		chunk_expected = 0;
+		rqst = rqst.substr(0, pos);
+		if (chunk_buffer.empty())
+			chunk_mode = CHUNK_COMPLETE;
+		else
+			chunk_mode = CHUNK_PARSING_REQ;
 	}
 	else if ((pos = rqst.find("Content-Length: ")) != std::string::npos)
 	{
@@ -272,7 +331,7 @@ bool client_info::get_rq_type()
 		std::cout << "Len was set:" << _cLen << std::endl;
 		if (rqst.substr(rqst.find("\r\n\r\n") + 4).length() >= _cLen)
 		{
-			rq_mode = COMPLETE;
+			rq_mode = NORMAL;
 			return (true);
 		}
 		rq_mode = CLEN;
@@ -284,7 +343,7 @@ bool client_info::get_rq_type()
 	}
 	else
 	{
-		rq_mode = COMPLETE;
+		rq_mode = NORMAL;
 		return (true);
 	}
 	return false;
@@ -295,7 +354,7 @@ bool client_info::is_multipart_rqst_fulfilled()	{
 
 	if (!post_boundary.empty() && (pos = rqst.find(post_boundary + "--")) != std::string::npos)
 	{
-		rq_mode = COMPLETE;
+		rq_mode = NORMAL;
 		return (true);
 	}
 	return (false);
@@ -309,14 +368,14 @@ bool client_info::is_clen_rqst_fulfilled()	{
 		if (_cLen <= rqst.length())
 		{
 			rqst = rqst.substr(0, _cLen);
-			rq_mode = COMPLETE;
+			rq_mode = NORMAL;
 			return (true);
 		}
 	}
 	return (false);
 }
 
-bool client_info::is_chunked_rqst_fulfilled()	{
+void client_info::is_chunked_rqst_fulfilled()	{
 //	cout << YELLOW "DANS IS_CHUNKED_REQUEST_FULFILLED\n" RESET << std::endl;
 	size_t	size;
 	size_t	pos;
@@ -325,43 +384,64 @@ bool client_info::is_chunked_rqst_fulfilled()	{
 
 //	pos = rqst.length();
 //	if (pos > 5 && rqst.substr(pos - 5, pos) == "0\r\n\r\n")
-	std::cout << "Cleaning chunked request" << std::endl;
-	tmp = rqst;
-	rqst.clear();
-	//Jumping to end of header
-	while ((pos = tmp.find("\r\n\r\n")) != std::string::npos)
+	if (chunk_expected != 0)
 	{
-		tmp = tmp.substr(pos);
-		pos = 0;
-		while (tmp[pos] && isxdigit(tmp[pos]))
+		std::cout << "Still more chunks to parse" << std::endl;
+		if (chunk_expected <= chunk_buffer.length())
 		{
-			std::cout << "found an hex digit, incrementin tmp: " << tmp << std::endl;
-			buf = tmp[pos] + buf;
-			pos++;
-		}
-//		std::cout << "Found chunk size delimiter: " << size << std::endl;
-		ss.str() = buf;
-		size = 1;
-		ss >> size;
-		if (size == 0)
-		{
-			rq_mode = COMPLETE;
-			return (true);
-		}
-		else if (size < tmp.length())
-		{
-			send(com_socket, "100 CONTINUE HTTP/1.1\r\n", 25, MSG_NOSIGNAL);
+			chunk_buffer = chunk_buffer.substr(chunk_expected);
+			chunk_expected = 0;
+			chunk_mode = CHUNK_COMPLETE;
 		}
 		else
 		{
-			if (tmp.size() > 2)
-				rqst.append(tmp.substr(2));
-			else
-				rqst.append(tmp);
+			rqst.append(chunk_buffer);
+			chunk_expected = chunk_expected - chunk_buffer.length();
+			chunk_buffer.clear();
+			chunk_mode = CHUNK_INCOMPLETE;
 		}
 	}
-//	std::cout << rqst << std::endl;
-	return (false);
+	else
+	{
+		std::cout << "Cleaning chunked request" << std::endl;
+		//Jumping to end of header
+		pos = 0;
+		while (chunk_buffer[pos] && isxdigit(chunk_buffer[pos]))
+		{
+			std::cout << "found an hex digit, incrementin chunk_buffer: " << chunk_buffer << std::endl;
+			buf += chunk_buffer[pos];
+			pos++;
+		}
+	//	std::cout << "Found chunk size delimiter: " << size << std::endl;
+		ss.str() = buf;
+		size = 1;
+		ss >> size;
+		if (chunk_buffer.length() < pos + 2 || chunk_buffer.substr(pos, pos + 2) != "\r\n")
+		{
+			chunk_mode = BAD_REQUEST;
+			return ;
+		}
+		chunk_buffer = chunk_buffer.substr(pos + 2);
+		if (size == 0)
+		{
+			chunk_mode = TRANSMISSION_OVER;
+			return ;
+		}
+		chunk_buffer = chunk_buffer.substr(4);
+		if (size <= chunk_buffer.length())
+		{
+			rqst.append(chunk_buffer.substr(0, size));
+			chunk_buffer = chunk_buffer.substr(size);
+			chunk_mode = CHUNK_COMPLETE;
+		}
+		else
+		{
+			rqst.append(chunk_buffer);
+			chunk_expected = size - chunk_buffer.length();
+			chunk_buffer.clear();
+			chunk_mode = CHUNK_INCOMPLETE;
+		}
+	}
 }
 
 void	client_info::time_reset()	{

@@ -13,6 +13,9 @@ class client_info {
 		size_t		mode;
 		std::string	resp;
 		std::string rqst;
+		std::string	chunk_buffer;
+		size_t		chunk_mode;
+		size_t		chunk_expected;
 		size_t		rq_mode;
 		std::string post_boundary;
 		time_t		rqst_time_start;
@@ -32,6 +35,8 @@ class client_info {
 		void	send_handler(request_handler& header);
 		void	cgi_resp_handler(request_handler& header);
 
+		void	chunked_handler(request_handler& header);
+
 		void	compute(request_handler& header);
 
 		bool	get_rq_type();
@@ -39,7 +44,7 @@ class client_info {
 		bool	is_request_fulfilled();
 		bool	is_multipart_rqst_fulfilled();
 		bool	is_clen_rqst_fulfilled();
-		bool	is_chunked_rqst_fulfilled();
+		void	is_chunked_rqst_fulfilled();
 
 		void 	time_reset();
 		void 	remove();

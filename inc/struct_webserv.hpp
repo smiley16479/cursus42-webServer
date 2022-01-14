@@ -9,6 +9,7 @@
 enum	e_mode	{
 //describes client status
 	RECV,//reads on communication socket
+	CHUNKED,
 	COMPUTE,//checks request fulfillment and computes response
 	WRITE,//writes to a local file
 	READ,//reads from a local file
@@ -17,13 +18,18 @@ enum	e_mode	{
 	NONE//indicates that current action doesn't necessitate a state change
 };
 
+enum	e_cmode	{
+	CHUNK_PARSING_REQ,
+	CHUNK_INCOMPLETE,
+	CHUNK_COMPLETE,
+	TRANSMISSION_OVER,
+	BAD_REQUEST
+};
+
 enum	e_rqmode	{
 	NORMAL,
 	MULTIPART,
-	CLEN,
-	CHUNKED,
-	COMPLETE,
-	INCOMPLETE
+	CLEN
 };
 
 //# define MAX_LEN 20971520
