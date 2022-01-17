@@ -19,6 +19,7 @@ enum	e_mode	{
 };
 
 enum	e_cmode	{
+	NO_CHUNK,
 	CHUNK_PARSING_REQ,
 	CHUNK_INCOMPLETE,
 	CHUNK_COMPLETE,

@@ -35,15 +35,16 @@ CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
 
-MAX_LEN = 8192
-
 ULIMIT = $(shell ulimit -s)
 
-ifeq ($(shell test $(MAX_LEN) -gt $(ULIMIT); echo $$), 0)
-	echo "yoyoyoyoyoyoy"
-else
 MAX_LEN = $(ULIMIT)
-endif
+
+#Useless test, MAX_LEN should just be set to ulimit -s
+#ifeq ($(shell test $(MAX_LEN) -gt $(ULIMIT); echo $$), 0)
+#MAX_LEN = $(ULIMIT)
+#else
+#MAX_LEN = $(ULIMIT)
+#endif
 
 SET_LEN = -D MAX_LEN=$(MAX_LEN)
 
