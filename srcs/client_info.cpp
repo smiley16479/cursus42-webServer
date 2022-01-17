@@ -241,7 +241,7 @@ void	client_info::chunked_handler(request_handler& header)	{
 	else if (chunk_mode == TRANSMISSION_OVER)
 	{
 		std::cout << "Chunked transmission complete !" << std::endl;
-		std::cout << "Decoded request:\n" << rqst << std::endl;
+//		std::cout << "Decoded request:\n" << rqst << std::endl;
 		mode = COMPUTE;
 	}
 }
@@ -327,7 +327,7 @@ bool client_info::get_rq_type()
 		pos = rqst.find("\r\n\r\n");
 		std::cout << "rqst:" << rqst << std::endl;
 		chunk_buffer = rqst.substr(pos + 4);
-		std::cout << "chunk_buffer:" << chunk_buffer << std::endl;
+//		std::cout << "chunk_buffer:" << chunk_buffer << std::endl;
 		mode = CHUNKED;
 		chunk_expected = 0;
 		rqst = rqst.substr(0, pos + 4);
@@ -409,57 +409,100 @@ void client_info::is_chunked_rqst_fulfilled()	{
 		std::cout << "Still more chunks to parse" << std::endl;
 		if (chunk_expected <= chunk_buffer.length())
 		{
+			std::cout << "chunk_buffer[chunk_expected]-[chunk_expected + 1] = " << (int)chunk_buffer[chunk_expected] << ", "
+						<< (int)chunk_buffer[chunk_expected + 1] << std::endl;
+			std::cout << "chunk_buffer[chunk_expected + 2]-[chunk_expected + 3] = " << (int)chunk_buffer[chunk_expected + 2] << ", "
+						<< (int)chunk_buffer[chunk_expected + 3] << std::endl;
 			std::cout << "Current chunk complete !" << std::endl;
+			rqst.append(chunk_buffer.substr(0, chunk_expected));
 			chunk_buffer = chunk_buffer.substr(chunk_expected);
+			if (chunk_buffer.substr(0, 2) == "\r\n")
+			{
+				std::cout << "Cleaning end of chunk marker" << std::endl;
+				chunk_buffer = chunk_buffer.substr(2);
+			}
 			chunk_expected = 0;
 			chunk_mode = CHUNK_COMPLETE;
 		}
 		else
 		{
-			rqst.append(chunk_buffer);
-			chunk_expected = chunk_expected - chunk_buffer.length();
 			std::cout << "More chunks expected : " << chunk_expected << std::endl;
-			chunk_buffer.clear();
 			chunk_mode = CHUNK_INCOMPLETE;
 		}
 	}
 	else
 	{
-		std::cout << "Cleaning chunked request" << std::endl;
-		//Jumping to end of header
-		pos = 0;
-		while (chunk_buffer[pos] && isxdigit(chunk_buffer[pos]))
-		{
-			std::cout << "found an hex digit, incrementin buf: " << buf << std::endl;
-			buf += chunk_buffer[pos];
-			pos++;
-		}
-	//	std::cout << "Found chunk size delimiter: " << size << std::endl;
-		size = 1;
-		size = std::strtoul(buf.c_str(), NULL, 16);
-		std::cout << "Hex digit translated : " << size << std::endl;
-		std::cout << "Number of bytes in buffer : " << chunk_buffer.length() << std::endl;
-		if (size == 0 && chunk_buffer.substr(pos, pos + 4) == "\r\n\r\n")
+		if (chunk_buffer.substr(0, 5) == "0\r\n\r\n")
 		{
 			std::cout << "Chunked transmission complete !" << std::endl;
 			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
 			return ;
 		}
+		std::cout << "Cleaning chunked request" << std::endl;
+		std::cout << "Number of bytes in buffer : " << chunk_buffer.length() << std::endl;
+		//if (chunk_buffer.length() > 2 && chunk_buffer.substr(0, 2) == "\r\n")
+		//	chunk_buffer = chunk_buffer.substr(2);
+		//Jumping to end of header
+		buf.clear();
+		pos = 0;
+		while (chunk_buffer[pos] && isxdigit(chunk_buffer[pos]))
+		{
+			std::cout << "found an hex digit, incrementing buf: " << buf << std::endl;
+			buf += chunk_buffer[pos];
+			pos++;
+		}
+	//	std::cout << "Found chunk size delimiter: " << size << std::endl;
+		if (buf.empty())
+		{
+			std::cout << "Error in chunked transmission !" << std::endl;
+			std::cout << "chunk_buffer[0]-[1] = " << (int)chunk_buffer[0] << ", "
+						<< (int)chunk_buffer[1] << std::endl;
+			std::cout << "chunk_buffer[2]-[3] = " << (int)chunk_buffer[2] << ", "
+					<< (int)chunk_buffer[3] << std::endl;
+			chunk_mode = BAD_REQUEST;
+			return ;
+		}
+		else
+			size = std::strtoul(buf.c_str(), NULL, 16);
+		std::cout << "Hex digit translated : " << size << std::endl;
+		std::cout << "chunk_buffer[pos]-[pos + 1] = " << (int)chunk_buffer[pos] << ", "
+					<< (int)chunk_buffer[pos + 1] << std::endl;
+		std::cout << "chunk_buffer[pos + 2]-[pos + 3] = " << (int)chunk_buffer[pos + 2] << ", "
+					<< (int)chunk_buffer[pos + 3] << std::endl;
+		if (size == 0)
+		{
+			std::cout << "Read a zero, checking for end symbol" << std::endl;
+			if (chunk_buffer.substr(pos , pos + 4) == "\r\n\r\n")
+			{
+				std::cout << "Chunked transmission complete !" << std::endl;
+				chunk_buffer.clear();
+				chunk_mode = TRANSMISSION_OVER;
+				return ;
+			}
+			else if (chunk_buffer.substr(pos, pos + 2) == "\r\n")
+			{
+				std::cout << "Might be the end" << std::endl;
+			}
+		}
 		else
 		{
-			chunk_buffer = chunk_buffer.substr(pos + 2);
-			if (chunk_buffer.length() == size)
+			chunk_buffer = chunk_buffer.substr(pos);
+			if (chunk_buffer.length() > 2)
 			{
-				std::cout << "Chunk complete, checking for more !" << std::endl;
-				rqst.append(chunk_buffer);
-				chunk_buffer.clear();
-				chunk_mode = CHUNK_COMPLETE;
+				if (chunk_buffer.substr(0, 2) == "\r\n")
+					chunk_buffer = chunk_buffer.substr(2);
+				else
+				{
+					std::cout << "Error in chunked transmission !" << std::endl;
+					chunk_mode = BAD_REQUEST;
+					return ;
+				}
 			}
-			else if (chunk_buffer.length() > size)
+			if (chunk_buffer.length() >= size + 2)
 			{
 				std::cout << "Received data bigger than chunk size" << std::endl;
-				std::cout << "Remaining to parse : " << chunk_buffer.substr(size) << std::endl;
+//				std::cout << "Remaining to parse : " << chunk_buffer.substr(size) << std::endl;
 				if (chunk_buffer.substr(size, size + 2) != "\r\n")
 				{
 					std::cout << "Error in chunked transmission !" << std::endl;
@@ -476,10 +519,8 @@ void client_info::is_chunked_rqst_fulfilled()	{
 			}
 			else
 			{
-				rqst.append(chunk_buffer);
-				chunk_expected = size - chunk_buffer.length();
-				std::cout << "Chunk incomplete, lookin for more :" << chunk_expected << std::endl;
-				chunk_buffer.clear();
+				chunk_expected = size;
+				std::cout << "Chunk incomplete, looking for more :" << chunk_expected << std::endl;
 				chunk_mode = CHUNK_INCOMPLETE;
 			}
 		}
