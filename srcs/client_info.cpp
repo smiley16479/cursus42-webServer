@@ -473,14 +473,14 @@ void client_info::is_chunked_rqst_fulfilled()	{
 		if (size == 0)
 		{
 			std::cout << "Read a zero, checking for end symbol" << std::endl;
-			if (chunk_buffer.substr(pos , pos + 4) == "\r\n\r\n")
+			if (chunk_buffer.substr(pos , 4) == "\r\n\r\n")
 			{
 				std::cout << "Chunked transmission complete !" << std::endl;
 				chunk_buffer.clear();
 				chunk_mode = TRANSMISSION_OVER;
 				return ;
 			}
-			else if (chunk_buffer.substr(pos, pos + 2) == "\r\n")
+			else if (chunk_buffer.substr(pos, 2) == "\r\n")
 			{
 				std::cout << "Might be the end" << std::endl;
 			}
@@ -491,7 +491,10 @@ void client_info::is_chunked_rqst_fulfilled()	{
 			if (chunk_buffer.length() > 2)
 			{
 				if (chunk_buffer.substr(0, 2) == "\r\n")
+				{
+					std::cout << "End of hex size removed" << std::endl;
 					chunk_buffer = chunk_buffer.substr(2);
+				}
 				else
 				{
 					std::cout << "Error in chunked transmission !" << std::endl;
@@ -502,8 +505,12 @@ void client_info::is_chunked_rqst_fulfilled()	{
 			if (chunk_buffer.length() >= size + 2)
 			{
 				std::cout << "Received data bigger than chunk size" << std::endl;
+				std::cout << "chunk_buffer[size]-[size + 1] = " << (int)chunk_buffer[size] << ", "
+							<< (int)chunk_buffer[size + 1] << std::endl;
+				std::cout << "chunk_buffer[size + 2]-[size + 3] = " << (int)chunk_buffer[size + 2] << ", "
+							<< (int)chunk_buffer[size + 3] << std::endl;
 //				std::cout << "Remaining to parse : " << chunk_buffer.substr(size) << std::endl;
-				if (chunk_buffer.substr(size, size + 2) != "\r\n")
+				if (chunk_buffer.substr(size, 2) != "\r\n")
 				{
 					std::cout << "Error in chunked transmission !" << std::endl;
 					chunk_mode = BAD_REQUEST;
