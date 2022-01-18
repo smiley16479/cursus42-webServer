@@ -123,6 +123,10 @@ client_info*	client_handler::get_info(int fd) {
 		{
 			return (&(*it));
 		}
+		else if (it->loc_fd == fd)
+		{
+			return (&(*it));
+		}
 	}
 	return (NULL);
 }

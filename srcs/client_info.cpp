@@ -407,7 +407,12 @@ void client_info::is_chunked_rqst_fulfilled()	{
 	if (chunk_expected != 0)
 	{
 		std::cout << "Still more chunks to parse" << std::endl;
-		if (chunk_expected <= chunk_buffer.length())
+		if (chunk_buffer.substr(0, 2) == "\r\n")
+		{
+			std::cout << "End of hex size removed" << std::endl;
+			chunk_buffer = chunk_buffer.substr(2);
+		}
+		if (chunk_buffer.length() >= chunk_expected + 2)
 		{
 			std::cout << "chunk_buffer[chunk_expected]-[chunk_expected + 1] = " << (int)chunk_buffer[chunk_expected] << ", "
 						<< (int)chunk_buffer[chunk_expected + 1] << std::endl;
@@ -416,12 +421,12 @@ void client_info::is_chunked_rqst_fulfilled()	{
 			std::cout << "Current chunk complete !" << std::endl;
 			rqst.append(chunk_buffer.substr(0, chunk_expected));
 			chunk_buffer = chunk_buffer.substr(chunk_expected);
+			chunk_expected = 0;
 			if (chunk_buffer.substr(0, 2) == "\r\n")
 			{
 				std::cout << "Cleaning end of chunk marker" << std::endl;
 				chunk_buffer = chunk_buffer.substr(2);
 			}
-			chunk_expected = 0;
 			chunk_mode = CHUNK_COMPLETE;
 		}
 		else
@@ -473,7 +478,7 @@ void client_info::is_chunked_rqst_fulfilled()	{
 		if (size == 0)
 		{
 			std::cout << "Read a zero, checking for end symbol" << std::endl;
-			if (chunk_buffer.substr(pos , 4) == "\r\n\r\n")
+			if (chunk_buffer.substr(pos, 4) == "\r\n\r\n")
 			{
 				std::cout << "Chunked transmission complete !" << std::endl;
 				chunk_buffer.clear();
@@ -488,7 +493,7 @@ void client_info::is_chunked_rqst_fulfilled()	{
 		else
 		{
 			chunk_buffer = chunk_buffer.substr(pos);
-			if (chunk_buffer.length() > 2)
+			if (chunk_buffer.length() >= 2)
 			{
 				if (chunk_buffer.substr(0, 2) == "\r\n")
 				{
