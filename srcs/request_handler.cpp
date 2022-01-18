@@ -378,8 +378,11 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			buf.append(msg.substr(0, pos));
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
-			if (!_si[_s_id].location[_l_id].root.empty())
-				path = _si[_s_id].location[_l_id].root + path;
+// modif 
+			// if (!_si[_s_id].location[_l_id].root.empty())
+				// path = _si[_s_id].location[_l_id].root + path;
+			_path += path;
+// modif/
 			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd == -1)
 				return (NONE);
@@ -401,16 +404,16 @@ int request_handler::handle_post_rqst(void)
 	std::string	tmp;
 	std::string	boundary;
 
-	std::cout << "Here comes a new file" << std::endl;
-	_body = _hrx["BODY"][0];
-	redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
-	if (redir_fd == -1)
-		return (NONE);
-	else
-	{
-		std::cout << "File: " << _path << " successfully created" << std::endl;
-		return (WRITE);
-	}
+	// std::cout << "Here comes a new file" << std::endl;
+	// _body = _hrx["BODY"][0];
+	// redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
+	// if (redir_fd == -1)
+	// 	return (NONE);
+	// else
+	// {
+	// 	std::cout << "File: " << _path << " successfully created" << std::endl;
+	// 	return (WRITE);
+	// }
 
 	redir_mode = NONE;
 	if (_hrx.find("Content-Type:") != _hrx.end())
@@ -536,8 +539,15 @@ int	request_handler::resolve_path()
 						break ;
 					}
 			} // SINON
+			// else {
+			// 	_path = it->root[it->root.size() - 1] == '/' ? it->root : it->root + "/";
+			// 	_l_id = index;
+			// }
 			else {
-				_path = it->root[it->root.size() - 1] == '/' ? it->root : it->root + "/";
+				_path = it->root + "/";
+			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
+				if (!it->upload_path.empty())
+				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
 			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";

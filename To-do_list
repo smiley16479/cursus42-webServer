@@ -21,3 +21,8 @@ empty response for existing locations without autoindex
 
 curl -X DELETE 127.0.0.1:8081/delete.txt
 delete returns 404
+
+LES POST :
+    -multiformpart 
+        - boundary limit a corriger
+        - download_path a corriger
