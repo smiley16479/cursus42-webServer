@@ -6,8 +6,8 @@
 #include <vector>
 #define MAX_EVENTS 1000
 
-// POST_REG = rqst post regulière (avec boundary=), POST_CHUNCK = rqst post chunked (no boundary=)
-enum e_rqst_type{NONE, GET, POST_REG, POST_CHUNCK, DELETE, INVALID};
+// POST_MULTIPART = rqst post regulière (avec boundary=), POST_CHUNCK = rqst post chunked (no boundary=)
+enum e_rqst_type{NONE, GET, POST_MULTIPART, POST_URL_ENCODED, POST_CHUNCK, DELETE, INVALID};
 
 struct locati_info {
 	std::string	location;
@@ -41,8 +41,10 @@ struct client_info {
 	std::string post_boundary;						// boundary=([)------------------------f3a140510ee62d32(])
 	time_t		rqst_time_start;
 	e_rqst_type rqst_type;
+	std::string	post_file_path;
 	int			time_out;
 	bool		request_fulfilled;
+	size_t		clen;
 };
 
 struct struct_epoll

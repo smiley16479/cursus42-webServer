@@ -89,8 +89,6 @@ public:
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 private:
-	void extract_postREG_rqst_body(void);
-	void extract_postCHUNK_rqst_body(void);
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
 	void gen_serv(void);
@@ -110,7 +108,11 @@ private:
 	void add_all_field();
 	void add_body();
 	void clean_url(string& str);
-	void handle_post_rqst(void);
+	int handle_post_rqst(void);
+		int extract_postMULTI_rqst_body(void);
+		int extract_postXFORM_rqst_body(void);
+		int extract_postCHUNK_rqst_body(void);
+
 	void	handle_cgi(void);
 
 	/* FUNCTION DE DEBUG */

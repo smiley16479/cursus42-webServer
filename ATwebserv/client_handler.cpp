@@ -40,38 +40,60 @@ bool client_handler::is_POST_request_fulfilled(int client_fd)
 {//https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.3
 	cout << BLUE "DANS is_POST_request_fulfilled, size of current reqst : " << clients[client_fd].rqst.length() << "\n" RESET;
 
+	size_t pos1, pos2;
 	client_info& client = clients[client_fd];
-	// Si NONE, identifie le type de post requete concernée (POST_REG / POST_CHUNCK):
+	// Si NONE, identifie le type de post requete concernée (POST_MULTIPART / POST_URL_ENCODED / POST_CHUNCK):
 	if (client.rqst_type == NONE) {
 		cout << YELLOW "NONE\n" RESET;
-		if (client.rqst.find("\r\n\r\n") == string::npos) // Vérifie qu'on a au moins les headers
+		if ( (pos1 = client.rqst.find("\r\n\r\n")) == string::npos ) // Vérifie qu'on a au moins les headers
 			return false;
-		// PROBLEM SI ON A PAS L'UN DE CES DEUX TYPE DE HEADER ET QUE LA REQUETE EST LONGUE ON VA FREEZE LE TEMPS DE LIRE TOUTE LA REQST
-		// D'UN AUTRE COTE LA TAILLE LIMIT D'UN HEADER EST DE 8KB...
-		else if (client.rqst.find("Content-Length:") != string::npos){
-			client.rqst_type = POST_REG;
-			// ON CHOPE LA BOUNDARY : boundary=[------------------------772ed66a82c8bebbM] (QUE C QU'IL Y A ENTRE LES CROCHETS)
-			size_t pos1  = client.rqst.find_first_of("\r\n", client.rqst.find("boundary=--------"));
-			size_t pos2  = client.rqst.find_last_of('=', pos1) + 1;
-			// Stockage de la boundary de la requete post ds la struct client_info (client.post_boundary)
-			cout << RED "Post_boundary : " RESET << (client.post_boundary = client.rqst.substr(pos2, pos1 - pos2)) << endl;
+		// PROBLEM SI ON A PAS L'UN DE CES DEUX TYPE DE HEADER ET QUE LA REQUETE EST LONGUE ON VA FREEZE LE TEMPS DE LIRE TOUTE LA REQST => resolu grace à portion_search()
+		// else if ( (pos2 = client.rqst.find("Content-Length:")) != string::npos && pos2 < pos1 ) {
+		else if ( (pos2 = portion_search(client.rqst, "Content-Length:", 0, pos1)) != string::npos && pos2 < pos1 ) {
+			pos2 += 15; // 15 == "Content-Length:"
+			client.clen = strtol(&client.rqst[pos2], NULL, 10);
+			if ( (pos2 = portion_search(client.rqst, "multipart/form-data", 0, pos1)) != string::npos && pos2 < pos1 ) {
+				// ON CHOPE LA BOUNDARY : boundary=[------------------------772ed66a82c8bebbM] (QUE C QU'IL Y A ENTRE LES CROCHETS)
+				size_t limit_end  = client.rqst.find_first_of("\r\n", client.rqst.find("boundary=--------", pos2));
+				size_t limit_beg  = client.rqst.find_last_of('=', limit_end) + 1;
+				if (limit_end == string::npos || limit_beg == string::npos)
+					return false;
+				// Stockage de la boundary de la requete post ds la struct client_info (client.post_boundary)
+				cout << RED "Post_boundary : " RESET << (client.post_boundary = client.rqst.substr(limit_beg, limit_end - limit_beg)) << endl;
+				client.rqst_type = POST_MULTIPART;
+			}
+			else if ( (pos2 = portion_search(client.rqst, "application/x-www-form-urlencoded", 0, pos1)) != string::npos && pos2 < pos1 ) {
+				pos1 += 4;
+				client.rqst_type = POST_URL_ENCODED;
+			}
 		}
-		else if (client.rqst.find("Transfer-Encoding:") != string::npos) {
-			if ( client.rqst.find("chunked") != string::npos )
+		// else if ( (pos2 = client.rqst.find("Transfer-Encoding:")) != string::npos && pos2 < pos1 ) {
+		else if ( (pos2 = portion_search(client.rqst, "Transfer-Encoding:", 0, pos1)) != string::npos && pos2 < pos1 ) {
+			// if ( (pos2 = client.rqst.find("chunked")) != string::npos && pos2 < pos1 )
+			if ( (pos2 = portion_search(client.rqst, "chunked", 0, pos1)) != string::npos && pos2 < pos1 )
 				client.rqst_type = POST_CHUNCK;
 		}
 		else
 			return false;
 	}
-	if (client.rqst_type == POST_REG) {
+
+	// ON regarde si le type de la requete est complète :
+	if (client.rqst_type == POST_MULTIPART) {
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
-		cout << YELLOW "POST_REG\n" RESET;
+		cout << YELLOW "POST_MULTIPART : \n" RESET;
+		cout << client.rqst << endl;
 		if (client.rqst.substr(client.rqst.size() - 46).find("--" + client.post_boundary + "--") != string::npos)
+			return true;
+	}
+	else if (client.rqst_type == POST_URL_ENCODED) {
+		cout << YELLOW "POST_URL_ENCODED : " << client.rqst.size() - pos1 << " client.clen : " << client.clen << "\n" RESET;
+		if (client.rqst.size() - pos1 == client.clen)
 			return true;
 	}
 	else if (client.rqst_type == POST_CHUNCK) {	
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
-		cout << YELLOW "POST_CHUNCK\n" RESET;
+		cout << YELLOW "POST_CHUNCK :\n" RESET;
+		cout << client.rqst << endl;
 		if (client.rqst.find("0\r\n\r\n", client.rqst.size() - 5) != string::npos)
 			return true;
 	}
@@ -127,8 +149,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 
 //Return the position of needle found in haystack otherwise return npos
 //Beware that haystack must be bigger than needle and its boundary accurate, otherwise 😕🤮
-size_t client_handler::portion_search(string haystack, string needle,
-				  size_t from, size_t to)
+size_t client_handler::portion_search(string haystack, string needle, size_t from, size_t to)
 {
 	string::iterator first  = haystack.begin() + from,
 					 last   = haystack.begin() + (to > haystack.size() ? haystack.size() : to),

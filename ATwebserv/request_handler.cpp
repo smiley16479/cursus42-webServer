@@ -7,7 +7,13 @@
 *      start-line     = request-line (client)/ status-line (server)
 
 		http://127.0.0.1:8080/ <- c'est ca qui fait bugger
-		curl --resolve test_server_block.com:9090:127.0.0.1 http://test_server_block.com:9090/ -X GET
+
+		// https://everything.curl.dev/http/post/chunked  // SIte web puor curl
+		curl --resolve test_server_block.com:9090:127.0.0.1 http://test_server_block.com:9090/ -X GET // Change le server_name
+		curl -X POST -F 'create_to_erase=@Makefile' 127.0.0.1:8081/(create_to_erase) -v // Fait une post request
+		curl -X PUT -F 'file=@compil.sh' 127.0.0.1:8080/create_to_erase -v
+		curl -H "Transfer-Encoding: chunked" -d @file http://example.com
+
 */
 
 
@@ -227,7 +233,7 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-// génération du field Content-Length et d'un status d'erreur (413) si length > max_file_size
+// génération du header Content-Length
 void	request_handler::gen_CLength()
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
 /* PROBLEM */ // http://127.0.0.1:8080/downloads/ n'affiche pas le poulpe -> les autre requetes sont faites sur le folder alors que le path du html est neutre, mais ça ça marche : http://127.0.0.1:8080/downloads 
@@ -235,7 +241,7 @@ void	request_handler::gen_CLength()
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
 
 	stringstream ss;
-	if (_c_info_ptr->rqst_type == POST_REG) {
+	if (_c_info_ptr->rqst_type == POST_MULTIPART) {
 		ss << _hrx["Content-Length:"][0];
 		// cout << MAGENTA "la\n" RESET;
 	}
@@ -299,9 +305,29 @@ void request_handler::handle_get_rqst(void)
 	// add_body();
 }
 
-void request_handler::handle_post_rqst(void) 
+int request_handler::handle_post_rqst(void) 
+{
+	cout << BLUE "IN HANDLE_POST_RQST" RESET << endl;
+	cout << "_hrx['Content-Type:''][1] : " << _hrx["Content-Type:"][0] << endl;
+	cout << GREEN "RQST :\n" RESET << _c_info_ptr->rqst << endl;
+// PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
+
+	// SI TOUT S'EST BIEN PASSÉ ON DÉTACHE LE BODY DE LA REQUETE POST (DS _BODY)
+	if (_c_info_ptr->rqst_type == POST_MULTIPART)
+		return extract_postMULTI_rqst_body();
+	else if (_c_info_ptr->rqst_type == POST_URL_ENCODED) // Content-Type: application/x-www-form-urlencoded
+		return extract_postXFORM_rqst_body();
+	else if (_c_info_ptr->rqst_type == POST_CHUNCK)
+		return extract_postCHUNK_rqst_body();
+	return 0;
+}
+
+// Extrait le body du message de la post request et le mets a la fois ds le _body pour la reponse
+// et ds le fichier specifie si ce n'est pas un fichier a traiter par les cgi
+int request_handler::extract_postMULTI_rqst_body(void)
 {
 
+// PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
 	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 	cout << "boundary : " << boundary << endl;
 	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
@@ -311,55 +337,73 @@ void request_handler::handle_post_rqst(void)
 	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
 		std::cout << "YOLO" << std::endl;
 		gen_startLine( _status.find("413") ); 
-		return ;
+		return 1;
 	}
-	// SI TOUT S'EST BIEN PASSÉ ON DÉTACHE LE BODY DE LA REQUETE POST (DS _BODY)
-	if (_c_info_ptr->rqst_type == POST_REG)
-		extract_postREG_rqst_body();
-	else if (_c_info_ptr->rqst_type == POST_CHUNCK)
-		extract_postCHUNK_rqst_body();
-}
 
-// Extrait le body du message de la post request et le mets a la fois ds le _body pour la reponse et ds le fichier specifie si ce n'est pas un fichier a traiter par les cgi
-void request_handler::extract_postREG_rqst_body(void)
-{
-	client_info& cl_info = *_c_info_ptr;
+
+	client_info& cl = *_c_info_ptr;
 	size_t pos, pos1;
 // PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
-	size_t pos_boundary = cl_info.rqst.find("\r\n\r\n") + 4;
-	size_t pos_last_boundary = cl_info.rqst.find_last_of("\r\n", cl_info.rqst.size() - 4);
+	size_t pos_boundary;
+	if ((pos_boundary = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
+		return 1;
+	pos_boundary += 4;
+	size_t pos_last_boundary = cl.rqst.find_last_of("\r\n", cl.rqst.size() - 4);
 
 // GET NAME AND FILENAME INSIDE BOUNDARY
 	string name("name=\"");
 	string filename("filename=\"");
 	// cout << "name [" << name + "]" << endl;
-	if ( (pos = cl_info.rqst.find(name, pos_boundary)) != string::npos )
-		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + name.size())) != string::npos )
-			name = cl_info.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
+	if ( (pos = cl.rqst.find(name, pos_boundary)) != string::npos )
+		if ( (pos1 = cl.rqst.find_first_of('"', pos + name.size())) != string::npos )
+			name = cl.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
 	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
 
 	// cout << "filename [" << filename + "]" << endl;
-	if ( (pos = cl_info.rqst.find(filename, pos_boundary)) != string::npos )
-		if ( (pos1 = cl_info.rqst.find_first_of('"', pos + filename.size())) != string::npos )
-			filename = cl_info.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
+	if ( (pos = cl.rqst.find(filename, pos_boundary)) != string::npos )
+		if ( (pos1 = cl.rqst.find_first_of('"', pos + filename.size())) != string::npos )
+			filename = cl.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
 	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
 // END GET NAME AND FILENAME INSIDE BOUNDARY
 
 // CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
-	ofstream my_file(_path + '/' + name + "_transfer");
-	if ((pos = cl_info.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
-		_body = cl_info.rqst.substr(pos, pos_last_boundary - pos - 1);
+	cl.post_file_path = _path + '/' + name + "_transfer";
+	ofstream my_file(cl.post_file_path);
+	if ((pos = cl.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
+		_body = cl.rqst.substr(pos, pos_last_boundary - pos - 1);
 		if (my_file.is_open()) {
 			my_file << _body;
-			cout << "Upload location : " + _path + '/' + name + "_transfer\n\n" + cl_info.rqst + "\n\n";
+			cout << "Upload location : " + _path + '/' + name + "_transfer\n\n" + cl.rqst + "\n\n";
 		}
 		else
 			cout << RED "download path invalid \n" RESET;
 	}
+	return 0;
 }
 
-void request_handler::extract_postCHUNK_rqst_body(void)
+int request_handler::extract_postXFORM_rqst_body(void)
 {
+	return 0;
+}
+
+int request_handler::extract_postCHUNK_rqst_body(void)
+{
+	client_info& cl = *_c_info_ptr;
+	size_t pos, count = 1;
+	cout << cl.rqst << endl;
+	if ((pos = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
+		return 1;
+	pos += 2;
+	while (count) {
+		pos += 2;
+		count = strtol(&cl.rqst[pos], NULL, 16);
+		cout << "pos : " << pos << ", count : " << count << endl;
+		pos = cl.rqst.find_first_of("\n", pos) + 1;
+		_body.append(cl.rqst, pos, count);
+		pos += count;
+	}
+	cout << "here is the concatenated string : " << endl << _body.size() << endl;
+	return 0;
 }
 
 // Permet de séléctionner la location qui partage le plus avec l'url,
@@ -408,7 +452,7 @@ int	request_handler::resolve_path()
 			else {
 				_path = it->root + "/";
 			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-				if ((_c_info_ptr->rqst_type == POST_REG || _c_info_ptr->rqst_type == POST_CHUNCK) && !it->download_path.empty())
+				if ((_c_info_ptr->rqst_type == POST_MULTIPART || _c_info_ptr->rqst_type == POST_CHUNCK) && !it->download_path.empty())
 				_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
 			}
@@ -454,7 +498,7 @@ int request_handler::file_type()
 // S'IL S'AGIT D'UN DOSSIER DS LEQUEL IL Y A UN INDEX.HTML A RÉCUPÉRER
 			if (!_si[_s_id].location[_l_id].index.empty()) {
 				_path += _path.back() == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;
-				file_type();									
+				file_type();
 			}
 			break;
 		case S_IFREG:  printf("regular file\n");

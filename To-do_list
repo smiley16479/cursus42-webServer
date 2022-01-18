@@ -12,3 +12,13 @@ il manque :
 les post request uploads pas encore fait
 les chunck
 les cgi
+
+Voici les commandes utilisées av le docker Nginx :
+curl -X DELETE  127.0.0.1:8080/to_erase										-> 404 si n'exite pas 204 si effacement réussi
+curl -X POST  127.0.0.1:8080/test.php -v									-> 404 si le fichier n'existe pas sur le server
+curl -X POST  127.0.0.1:8080/exemple.php -v									-> 200 si le fichier existe sur le server 502 si php-fpm7.4 n'est pas lancé
+curl -X GET  127.0.0.1:8080/exemple.php -v									-> 200 si le fichier existe sur le server 502 si php-fpm7.4 n'est pas lancé
+curl -X PUT -F 'file=@compil.sh' 127.0.0.1:8080/create_to_erase -v			-> 201 creer le fichier (compil.sh) sur le server av le nom : create_to_erase
+
+
+curl -X POST -F 'create_to_erase=@Makefile' 127.0.0.1:8080/exemple.php -v -> ?
