@@ -9,9 +9,10 @@
 # // IF YOU WANT THE BROWSER TO READ WITHOUT ASKING TO DOWNLOAD IT, DON'T ADD THE TRAILING '/' OR DON'T MENTION ITS FILE TYPE
 
 il manque :
-les post request uploads pas encore fait
-les chunck
-les cgi
+les post request uploads pas encore fait :
+    - multipart-form : 
+les chunck : OK
+les cgi : OK
 
 Voici les commandes utilisées av le docker Nginx :
 curl -X DELETE  127.0.0.1:8080/to_erase										-> 404 si n'exite pas 204 si effacement réussi

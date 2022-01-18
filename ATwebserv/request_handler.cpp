@@ -383,6 +383,19 @@ int request_handler::extract_postMULTI_rqst_body(void)
 
 int request_handler::extract_postXFORM_rqst_body(void)
 {
+	cout << BLUE "DS EXTRACT_POSTXFORM_RQST_BODY\n" RESET;
+	// PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
+	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
+	cout << "boundary : " << boundary << endl;
+	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
+
+	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
+	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
+	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
+		std::cout << "YOLO" << std::endl;
+		gen_startLine( _status.find("413") ); 
+		return 1;
+	}
 	return 0;
 }
 
@@ -402,7 +415,7 @@ int request_handler::extract_postCHUNK_rqst_body(void)
 		_body.append(cl.rqst, pos, count);
 		pos += count;
 	}
-	cout << "here is the concatenated string : " << endl << _body.size() << endl;
+	cout << "here is the concatenated string : " << _body.size()  << endl << _body << endl;
 	return 0;
 }
 
