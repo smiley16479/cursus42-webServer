@@ -34,6 +34,7 @@ CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
+#CPP_FLAGS += -D _debug_ # Toggle des sortie standart de debug par le preproccesseur 
 
 ULIMIT = $(shell ulimit -s)
 

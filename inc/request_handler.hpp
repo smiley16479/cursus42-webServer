@@ -76,6 +76,7 @@ private:
 				int	location_lookup_2();
 				int	file_type();
 					void generate_folder_list();
+	bool is_method_allowed(void);
 	void add_all_field();
 	int add_body();
 	void clean_url(string& str);

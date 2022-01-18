@@ -136,6 +136,7 @@ void server::display_server(void)
 			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
 			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
 			cout << "root : " << _s[i].location[j].root << endl;
+			cout << "upload_path : " << _s[i].location[j].upload_path << endl;
 			cout << "cgi_path : " << _s[i].location[j].cgi_path << endl;
 			for (size_t k = 0; k < _s[i].location[j].cgi_file_types.size(); k++)
 				cout << "cgi_file_types : " << _s[i].location[j].cgi_file_types[k] << endl;

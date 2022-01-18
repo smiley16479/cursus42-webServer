@@ -379,11 +379,15 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
 // modif 
+	// old
 			// if (!_si[_s_id].location[_l_id].root.empty())
 				// path = _si[_s_id].location[_l_id].root + path;
-			_path += path;
+	// new
+			_path += ("/" + path);
+			// cout << MAGENTA "_PATH : " RESET << _path << endl;
+			// cout << MAGENTA "PATH : " RESET << path << endl;
 // modif/
-			redir_fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
+			redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd == -1)
 				return (NONE);
 			else
@@ -534,21 +538,24 @@ int	request_handler::resolve_path()
 							gen_startLine( ret );
 						}
 
-						_path = it2->root[it2->root.size() - 1] == '/' ? it2->root : it2->root + "/";
+						_path = it2->root + "/";
 						_l_id = it2 - _si[_s_id].location.begin();
 						break ;
 					}
 			} // SINON
 			// else {
-			// 	_path = it->root[it->root.size() - 1] == '/' ? it->root : it->root + "/";
+			// 	_path = it->root + "/";
 			// 	_l_id = index;
 			// }
 			else {
 				_path = it->root + "/";
 			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-				if (!it->upload_path.empty())
-				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+				if (!it->upload_path.empty()){
+					cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
+					_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+				}
 				_l_id = index;
+				break ;
 			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 			_path += _hrx["A"][1].substr(it->location.size());
@@ -568,14 +575,33 @@ int	request_handler::resolve_path()
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
+	return !is_method_allowed();  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+}
 
+// Verifie si elle est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
+// puis si la méthode ds la location concernée est autorisée ou non (maj gen_stratLine 403 si besoin)
+bool request_handler::is_method_allowed(void)
+{/* PROBLEME (A TESTER) */
+	cout << MAGENTA "is_method_allowed\n" RESET;
 	bool allowed = false;
+	const char *array[] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL};
+	for (const char**strs = array; *strs; ++strs){
+		// cout << MAGENTA << *strs << RESET << endl;
+		if (*strs == _hrx["A"][0])
+			allowed = true;
+	}
+	if (!allowed){
+		gen_startLine( _status.find("405") );
+		cout << MAGENTA << "not allowed 405" << RESET << endl;
+		return allowed;
+	}
+	allowed = false;
 	for (size_t i = 0; i < _si[_s_id].location[_l_id].allowed_method.size(); ++i)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
-		gen_startLine( 405 );
-	return allowed ? 0 : 1;  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+		gen_startLine( _status.find("403") );
+	return allowed;
 }
 
 // Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
