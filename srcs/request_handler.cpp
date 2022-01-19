@@ -47,6 +47,9 @@ void request_handler::reader(std::string& rqst)
 	string buf_1, buf_2;
 	std::string ss_1(rqst);
 
+//DEBUG RQST OUTPUT
+//	std::cout << rqst << std::endl;
+
 //	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (!ss_1.empty() && (pos = ss_1.find("\r\n")) != string::npos)
@@ -337,10 +340,12 @@ void request_handler::handle_get_rqst(void)
 }
 
 int request_handler::multipart_form(string& boundary, string& msg)	{
-	size_t	pos, end;
+	size_t	pos;
 	string	tmp, buf, path;
 	ofstream	out;
 
+	std::cout << boundary << std::endl;
+	std::cout << msg << std::endl;
 	pos = msg.find(boundary);
 	if (pos != string::npos)
 	{
@@ -372,12 +377,17 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 		if (msg.substr(0, 2) == "\r\n")
 			msg = msg.substr(2);
 		buf.clear();
-		end = msg.find(boundary);
-		if ((pos = msg.find(boundary + "--")) == end && pos != string::npos)
+		if ((pos = msg.find(boundary + "--")) != string::npos)
 		{
 			buf.append(msg.substr(0, pos));
+			std::cout << "searching for trailing character at buffer end: " << (int)buf[buf.length() -2] << " ,"
+				<< (int)buf[buf.length() -1] << std::endl;
+			if (buf.substr(buf.length() - 3, 2) == "\r\n")
+				buf.substr(0, buf.length() -2);
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
+			if (msg.substr(0, 2) == "\r\n")
+				msg = msg.substr(2);
 // modif 
 	// old
 			// if (!_si[_s_id].location[_l_id].root.empty())
@@ -386,17 +396,13 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			_path += ("/" + path);
 			// cout << MAGENTA "_PATH : " RESET << _path << endl;
 			// cout << MAGENTA "PATH : " RESET << path << endl;
+			std::cout << "Creating file: " << _path << std::endl;
 // modif/
 			redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd == -1)
 				return (NONE);
 			else
 				return (WRITE);
-		}
-		else
-		{
-			buf.append(msg.substr(0, end));
-			msg = msg.substr(end + (boundary).length());
 		}
 	}
 	return (NONE);
@@ -408,6 +414,7 @@ int request_handler::handle_post_rqst(void)
 	std::string	tmp;
 	std::string	boundary;
 
+	// A SUPPRIMER, SEVAIT UNIQUEMENT A TESTER LES CHUNKS
 	// std::cout << "Here comes a new file" << std::endl;
 	// _body = _hrx["BODY"][0];
 	// redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
@@ -418,12 +425,13 @@ int request_handler::handle_post_rqst(void)
 	// 	std::cout << "File: " << _path << " successfully created" << std::endl;
 	// 	return (WRITE);
 	// }
+	//JUSQU'ICI !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	redir_mode = NONE;
-	if (_hrx.find("Content-Type:") != _hrx.end())
-		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
-	for (std::vector<std::string>::iterator i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
-		cout << "[" << *i << "]" << endl;
+//	if (_hrx.find("Content-Type:") != _hrx.end())
+//		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
+//	for (std::vector<std::string>::iterator i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
+//		cout << "[" << *i << "]" << endl;
 
 	if (_hrx["Content-Length:"].empty() && _hrx["Transfer-Encoding:"].empty())
 	{
@@ -434,9 +442,9 @@ int request_handler::handle_post_rqst(void)
 // POUR LIMITER LA TAILLE DU BODY DU CLIENT => JE NE SAIT PAS ENCORE COMMENT GET LA LOCATION CONCERNÉE
 	// if (_hrx.find("Content-Length:") != _hrx.end() && atoi(_hrx.find("Content-Length:")->second) > _si[_s_id]. )
 	if (_hrx["Content-Type:"].size() > 1)
-		boundary = _hrx["Content-Type:"][1].substr(strlen("boundary=--"));
+		boundary = "--" + _hrx["Content-Type:"][1].substr(strlen("boundary="));
 //	std::cout << boundary << std::endl;
-	cout << endl << "BODY : " << endl;
+//	cout << endl << "BODY : " << endl;
 	// for (auto i = _hrx["BODY"].begin(); i != _hrx["BODY"].end(); i++)
 	// 	cout << "[" << *i << "]" << endl;
 //	cout << _hrx["BODY"][0] << endl;
@@ -495,6 +503,18 @@ int request_handler::handle_post_rqst(void)
 	return (redir_mode);
 }
 
+bool	request_handler::is_regular_file(std::string path)	{
+	struct stat sb;
+
+	if (lstat(path.c_str(), &sb) == -1)
+		perror("lstat");
+	if ((sb.st_mode & S_IFMT) == S_IFREG)	{
+		printf("regular file\n");
+		return (true);
+	}
+	return (false);
+}
+
 // Permet de séléctionner la location qui partage le plus avec l'url comme le fait nginx,
 // si l'url a plusieurs niveau de dossiers, choisi la loc la plus adaptée
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
@@ -542,23 +562,20 @@ int	request_handler::resolve_path()
 						_l_id = it2 - _si[_s_id].location.begin();
 						break ;
 					}
-			} // SINON
-			// else {
-			// 	_path = it->root + "/";
-			// 	_l_id = index;
-			// }
-			else {
-				_path = it->root + "/";
-			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-				if (!it->upload_path.empty()){
-					cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
-					_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
-				}
-				_l_id = index;
-				break ;
 			}
+			// SINON
+			else {
+			 	_path = it->root + "/";
+				_l_id = index;
+				}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
-			_path += _hrx["A"][1].substr(it->location.size());
+		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
+			if (is_regular_file (_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
+				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+			}
+			else
+				_path += _hrx["A"][1].substr(it->location.size());
 			len = it->location.length();
 			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis ds file_type si necessaire
 			// 	_path += _si[_s_id].location[_l_id].index;

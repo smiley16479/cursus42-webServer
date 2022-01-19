@@ -70,7 +70,7 @@ private:
 
 	void set_server_id(void);
 	void handle_get_rqst(void);
-		void	verify_file_openess();
+		bool	is_regular_file(string path);
 			int 	resolve_path();
 				void	location_lookup();
 				int	location_lookup_2();

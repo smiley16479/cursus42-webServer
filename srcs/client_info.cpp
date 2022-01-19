@@ -72,8 +72,8 @@ void	client_info::read_handler(request_handler& header)	{
 		std::cout << "READ MSG END" << std::endl;
 		close(loc_fd);
 	}
-	else
-		std::cout << "A READ HAPPENED" << std::endl;
+//	else
+//		std::cout << "A READ HAPPENED" << std::endl;
 	resp.append(buf, read_bytes);
 }
 

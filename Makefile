@@ -29,7 +29,6 @@ INC = -I inc
 
 CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"
 
-#CPP_FLAGS += -g
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
@@ -52,6 +51,7 @@ SET_LEN = -D MAX_LEN=$(MAX_LEN)
 #Il faut ajouter -d=$ a la fin de la ligne make pour activer les options voulues
 #ex: "make re d=1" (recompile avec "-D _debug_")
 ifeq ($(d), 0)
+CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 endif
 ifeq ($(d), 1)
