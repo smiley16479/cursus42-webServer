@@ -591,7 +591,7 @@ bool request_handler::is_method_allowed(void)
 			allowed = true;
 	}
 	if (!allowed){
-		gen_startLine( _status.find("405") );
+		gen_startLine( 405 );
 		cout << MAGENTA << "not allowed 405" << RESET << endl;
 		return allowed;
 	}
@@ -600,7 +600,7 @@ bool request_handler::is_method_allowed(void)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
-		gen_startLine( _status.find("403") );
+		gen_startLine( 403 );
 	return allowed;
 }
 

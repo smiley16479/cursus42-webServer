@@ -34,7 +34,6 @@ CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
-#CPP_FLAGS += -D _debug_ # Toggle des sortie standart de debug par le preproccesseur 
 
 ULIMIT = $(shell ulimit -s)
 
@@ -49,8 +48,14 @@ MAX_LEN = $(ULIMIT)
 
 SET_LEN = -D MAX_LEN=$(MAX_LEN)
 
+#Pernet d'activer/ desactiver les flags
+#Il faut ajouter -d=$ a la fin de la ligne make pour activer les options voulues
+#ex: "make re d=1" (recompile avec "-D _debug_")
 ifeq ($(d), 0)
 CPP_FLAGS += -fsanitize=address
+endif
+ifeq ($(d), 1)
+CPP_FLAGS += -D _debug_ # Toggle des sortie standart de debug par le preproccesseur 
 endif
 
 all:	build
