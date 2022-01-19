@@ -382,8 +382,8 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			buf.append(msg.substr(0, pos));
 			std::cout << "searching for trailing character at buffer end: " << (int)buf[buf.length() -2] << " ,"
 				<< (int)buf[buf.length() -1] << std::endl;
-			if (buf.substr(buf.length() - 3, 2) == "\r\n")
-				buf.substr(0, buf.length() -2);
+			if (buf.substr(buf.length() - 2, 2) == "\r\n")
+				buf = buf.substr(0, buf.length() - 2);
 			_body = buf;
 			msg = msg.substr(pos + (boundary + "--").length());
 			if (msg.substr(0, 2) == "\r\n")
