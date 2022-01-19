@@ -7,15 +7,10 @@
 
 Si on met le double check 0 et -1 de recv et send on plante
 
-fix upload bug for Gas.mp4
 upload should return uploaded file
 clean and simplify .conf files
-extract cgi_path in cgi execution
-extract download_path in hqndle_post
 authorize cgi only if cgi_path is defined
 authorize download only if download_path is defined
-
-upload and cgi in location
 
 empty response for existing locations without autoindex
 
@@ -24,5 +19,4 @@ delete returns 404
 
 LES POST :
     -multiformpart 
-        - boundary limit a corriger
         - download_path a corriger

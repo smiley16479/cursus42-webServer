@@ -24,22 +24,23 @@ int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions
 	return (-1);
 }
 
-int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vector<std::string>& env)
+int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 {
-	size_t		_cLen;
 	std::string	tmp;
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
-	char		*e_path[2] = { NULL, NULL };
+	char		*e_path[2];
 	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
-	_cLen = getcLen(env);
-//	e_path[0] = cgi_path.c_str();
-//	e_path[1] = (char*)CGI_MODE;
-//	e_path[2] = NULL;
+	tmp = cgi_path;
+	e_path[0] = (char*)tmp.c_str();
+	e_path[1] = NULL;
+//	e_path[1] = (char*)"-c";
+//	e_path[2] = (char*)"files/scripts/php.ini";
+//	e_path[3] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
@@ -64,46 +65,23 @@ int	go_cgi(std::string cgi_path, std::vector<std::string>& post_args, std::vecto
 	if (pid == 0)
 	{
 		close(fd[0]);
-		if (!post_args.empty())
-		{
-			for (std::vector<std::string>::iterator it = post_args.begin(); it != post_args.end(); ++it)
-			{
-				//	std::cerr << "post_args = " << *it << std::endl;
-				size_t post = it->size();
-				std::cout << "post: " << post << std::endl;
-				std::cout << "cLen: " << _cLen << std::endl;
-				if (post > _cLen)
-				{
-					post = _cLen;
-					_cLen = 0;
-				}
-				else
-					_cLen -= post;
-				if (!it->empty())
-				{
-					write(bfd[1], it->c_str(), post);
-				}
-				if (_cLen == 0)
-					break ;
-			}
-		}
 		close(bfd[1]);
 		dup2(bfd[0], STDIN_FILENO);
-		close(bfd[0]);
 //		close(STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
-		execve(cgi_path.c_str(),e_path, c_env);
+		execve(tmp.c_str(),e_path, c_env);
 		exit(1);
 	}
 	else
 	{
 		close(bfd[0]);
-		close(bfd[1]);
 		close(fd[1]);
 	}
 	delete [] c_env;
-	return (fd[0]);
+	(*rfd)[0] = fd[0];
+	(*rfd)[1] = bfd[1];
+	return (0);
 }
 
 size_t	getcLen(std::vector<std::string>& env)	{

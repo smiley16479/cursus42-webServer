@@ -14,6 +14,7 @@ enum	e_mode	{
 	WRITE,//writes to a local file
 	READ,//reads from a local file
 	SEND,//sends on communication socket
+	CGI_IN,//reads on cgi pipe end
 	CGI_OUT,//reads on cgi pipe end
 	NONE//indicates that current action doesn't necessitate a state change
 };

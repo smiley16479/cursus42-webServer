@@ -77,12 +77,14 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 	new_client.time_out = time_out;
-	new_client.loc_fd = -1;
+	new_client.loc_fd[0] = -1;
+	new_client.loc_fd[1] = -1;
 	new_client.com_socket = client_fd;
 	new_client.mode = RECV;
 	new_client._epoll = &_epoll;
 	time(&new_client.rqst_time_start);
 	new_client.rq_mode = NORMAL;
+	new_client.chunk_mode = NO_CHUNK;
 	clients.push_back(new_client);
 }
 
@@ -123,7 +125,7 @@ client_info*	client_handler::get_info(int fd) {
 		{
 			return (&(*it));
 		}
-		else if (it->loc_fd == fd)
+		else if (it->loc_fd[0] == fd || it->loc_fd[1] == fd)
 		{
 			return (&(*it));
 		}

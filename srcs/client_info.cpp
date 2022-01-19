@@ -11,11 +11,12 @@ void	client_info::fd_in(request_handler& header)	{
 }
 
 void	client_info::fd_out(request_handler& header)	{
-	t_func	func[6] = { &client_info::chunked_handler,
+	t_func	func[7] = { &client_info::chunked_handler,
 						&client_info::compute,
 						&client_info::write_handler,
 						&client_info::read_handler,
 						&client_info::send_handler,
+						&client_info::cgi_write_handler,
 						&client_info::cgi_resp_handler };
 
 	//handles EPOLLOUT EVENTS
@@ -52,11 +53,12 @@ void	client_info::read_handler(request_handler& header)	{
 	int	read_bytes;
 	char	buf[MAX_LEN];
 
-	read_bytes = read(loc_fd, &buf, MAX_LEN);
+	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 	{
 		std::cout << "READ ERROR" << std::endl;
-		close(loc_fd);
+		close(loc_fd[0]);
+		close(loc_fd[1]);
 		mode = SEND;
 		return ;
 	}
@@ -64,13 +66,15 @@ void	client_info::read_handler(request_handler& header)	{
 	{
 		mode = SEND;
 		std::cout << "READ EOF" << std::endl;
-		close(loc_fd);
+		close(loc_fd[0]);
+		close(loc_fd[1]);
 	}
  	else if (read_bytes < MAX_LEN)
 	{
 		mode = SEND;
 		std::cout << "READ MSG END" << std::endl;
-		close(loc_fd);
+		close(loc_fd[0]);
+		close(loc_fd[1]);
 	}
 //	else
 //		std::cout << "A READ HAPPENED" << std::endl;
@@ -90,7 +94,7 @@ void	client_info::write_handler(request_handler& header)	{
 		resp = resp.substr(0, MAX_LEN);
 		std::cout << "FILE RECUT" << std::endl;
 	}
-	wrote_bytes = write(loc_fd, resp.c_str(), resp.length());
+	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
 	if (wrote_bytes == -1)
 	{
 		std::cout << "WRITE ERROR" << std::endl;
@@ -103,7 +107,8 @@ void	client_info::write_handler(request_handler& header)	{
 	{
 		std::cout << "WRITE EOF" << std::endl;
 		tmp.clear();
-		close(loc_fd);
+		close(loc_fd[0]);
+		close(loc_fd[1]);
 		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
 		mode = COMPUTE;
 	}
@@ -111,11 +116,12 @@ void	client_info::write_handler(request_handler& header)	{
 	{
 		std::cout << "WRITE MSG END" << std::endl;
 		tmp.clear();
-		close(loc_fd);
+		close(loc_fd[0]);
+		close(loc_fd[1]);
 		mode = COMPUTE;
 	}
 	resp = tmp;
-	time_reset();
+//	time_reset();
 }
 
 void	client_info::send_handler(request_handler& header)	{
@@ -145,7 +151,7 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND EOF" << std::endl;
 		tmp.clear();
 		mode = RECV;
-		remove();
+//		remove();
 //		time_reset();
 	}
 	else if (sent_bytes < MAX_LEN)
@@ -153,11 +159,55 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "MSG SENT" << std::endl;
 		tmp.clear();
 		mode = RECV;
-		remove();
+//		remove();
 //		time_reset();
 	}
 	resp = tmp;
 	tmp.clear();
+}
+
+void	client_info::cgi_write_handler(request_handler& header)	{
+	(void)header;
+	int	wrote_bytes;
+	std::string	tmp;
+
+ 	if (resp.length() > (unsigned int)MAX_LEN)
+	{
+		std::cout << "CGI BODY TOO BIG" << std::endl;
+		std::cout << "(len is " << resp.length() << ")" << std::endl;
+		tmp = resp.substr(MAX_LEN);
+		resp = resp.substr(0, MAX_LEN);
+		std::cout << "CGI BODY RECUT" << std::endl;
+	}
+	std::cout << "Trying to write on CGI input" << std::endl;
+	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
+	std::cout << resp.length() << " bytes written !" << std::endl;
+	if (wrote_bytes == -1)
+	{
+		std::cout << "CGI WRITE ERROR" << std::endl;
+		//si le write echoue, on reecrit le message dans le buffer, ce dernier sera set
+//		tmp.append(resp);
+		resp.append(tmp);
+		return ;
+	}
+	else if (wrote_bytes == 0)
+	{
+		std::cout << "CGI WRITE EOF" << std::endl;
+		tmp.clear();
+		close(loc_fd[1]);
+		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
+		mode = CGI_OUT;
+	}
+	else if (wrote_bytes < MAX_LEN)
+	{
+		std::cout << "CGI WRITE MSG END" << std::endl;
+		tmp.clear();
+		close(loc_fd[1]);
+		mode = CGI_OUT;
+	}
+	std::cout << "reseting buffer" << std::endl;
+	resp = tmp;
+//	time_reset();
 }
 
 void	client_info::cgi_resp_handler(request_handler& header)	{
@@ -165,7 +215,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	int	read_bytes;
 	char	buf[MAX_LEN];
 
-	read_bytes = read(loc_fd, &buf, MAX_LEN);
+	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 		return ;
 	else
@@ -182,7 +232,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 			header.cgi_writer();
 			resp = header.get_response();
 			mode = SEND;
-			close(loc_fd);
+			close(loc_fd[0]);
 		}
 	}
 }
@@ -260,14 +310,17 @@ void	client_info::compute(request_handler& header)	{
 		if (ret != NONE)
 		{
 			mode = ret;
-			loc_fd = header.get_redir_fd();
+			header.fill_redir_fd(&loc_fd);
 			if (ret == WRITE)
 			{
 				rqst = header.get_response(); //on sauvegarde des infos de header pour former une nouvelle requete
 				resp = header.get_body();//on sauvegard le body de la requete precedente pour l'ecrire dans le fichier
 			}
-			else if (ret == CGI_OUT)
+			else if (ret == CGI_IN)
+			{
+				std::cout << "Body extracted in client buffer" << std::endl;
 				resp = header.get_body();
+			}
 			return ;
 		}
 		mode = SEND;

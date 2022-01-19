@@ -9,7 +9,7 @@
 class client_info {
 	public:
 		int			com_socket;
-		int			loc_fd;
+		int			loc_fd[2];
 		size_t		mode;
 		std::string	resp;
 		std::string rqst;
@@ -33,6 +33,7 @@ class client_info {
 
 		void	write_handler(request_handler& header);
 		void	send_handler(request_handler& header);
+		void	cgi_write_handler(request_handler& header);
 		void	cgi_resp_handler(request_handler& header);
 
 		void	chunked_handler(request_handler& header);

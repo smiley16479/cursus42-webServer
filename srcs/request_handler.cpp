@@ -344,8 +344,8 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 	string	tmp, buf, path;
 	ofstream	out;
 
-	std::cout << boundary << std::endl;
-	std::cout << msg << std::endl;
+//	std::cout << boundary << std::endl;
+//	std::cout << msg << std::endl;
 	pos = msg.find(boundary);
 	if (pos != string::npos)
 	{
@@ -398,8 +398,8 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			// cout << MAGENTA "PATH : " RESET << path << endl;
 			std::cout << "Creating file: " << _path << std::endl;
 // modif/
-			redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
-			if (redir_fd == -1)
+			redir_fd[1] = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
+			if (redir_fd[1] == -1)
 				return (NONE);
 			else
 				return (WRITE);
@@ -570,11 +570,11 @@ int	request_handler::resolve_path()
 				}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-			if (is_regular_file (_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
-				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
-				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
-			}
-			else
+//			if (is_regular_file(_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+//				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
+//				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+//			}
+//			else
 				_path += _hrx["A"][1].substr(it->location.size());
 			len = it->location.length();
 			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis ds file_type si necessaire
@@ -720,8 +720,8 @@ int request_handler::add_body()
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
 	if (!_hrx["A"].empty() && (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST")) {
 		cout << RED "File written !" RESET  << endl;
-		redir_fd = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
-		if (redir_fd == -1)
+		redir_fd[0] = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
+		if (redir_fd[0] == -1)
 		{
 			std::cout << "Open error" << std::endl;
 			return (NONE);
@@ -751,7 +751,10 @@ void request_handler::set_body(const string& str)	{
 	_body = str;
 }
 
-int request_handler::get_redir_fd(void) {return redir_fd;}
+void	request_handler::fill_redir_fd(int (*loc_fd)[2]) {
+	(*loc_fd)[0] = redir_fd[0];
+	(*loc_fd)[1] = redir_fd[1];
+}
 
 	/* FUNCTION DE DEBUG */
 
@@ -877,6 +880,12 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
+	tmp = "TMPDIR=";
+	if (!_si[_s_id].location[_l_id].upload_path.empty())
+		tmp += _si[_s_id].location[_l_id].upload_path + '/';
+	else if (!_si[_s_id].location[_l_id].root.empty())
+		tmp += _si[_s_id].location[_l_id].root;
+	env.push_back(tmp);
 	return (env);
 }
 
@@ -962,10 +971,15 @@ int	request_handler::handle_cgi(void)
 		std::cout << "Launching cgi" << std::endl;
 		cgi_var_init();
 		env = extract_env(_hrx, _si[_s_id]);
-		redir_fd = go_cgi(_si[_s_id].location[_l_id].cgi_path, _hrx["BODY"], env);
-		if (redir_fd == -1)
+		if (go_cgi(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env) || (redir_fd[0] == -1 || redir_fd[1] == -1))
+		{
+			close(redir_fd[0]);
+			close(redir_fd[1]);
 			return (NONE);
-		return (CGI_OUT);
+		}
+		_body = _hrx["BODY"][0];
+		std::cout << "Buffer copied in body" << std::endl;
+		return (CGI_IN);
 	//EN CHANTIER !!!
 	}
 	return (NONE);
