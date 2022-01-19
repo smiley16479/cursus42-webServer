@@ -7,7 +7,7 @@
 #define MAX_EVENTS 1000
 
 // POST_MULTIPART = rqst post regulière (avec boundary=), POST_CHUNCK = rqst post chunked (no boundary=)
-enum e_rqst_type{NONE, GET, POST_MULTIPART, POST_URL_ENCODED, POST_CHUNCK, DELETE, INVALID};
+enum e_rqst_type{NONE, GET, PUT, POST_MULTIPART, POST_URL_ENCODED, POST_CHUNCK, DELETE, INVALID};
 
 struct locati_info {
 	std::string	location;

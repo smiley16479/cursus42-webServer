@@ -18,9 +18,10 @@ public:
 	client_handler(/* args */);
 	~client_handler();
 	bool is_request_fulfilled(int);
-	bool is_POST_request_fulfilled(int client_fd);
-		bool is_POST_chunk_fulfilled(int client_fd);
-		bool is_POST_regular_fulfilled(int client_fd);
+	bool is_PUT_request_fulfilled(client_info& client);
+	bool is_POST_request_fulfilled(client_info& client);
+		bool is_POST_chunk_fulfilled(client_info& client);
+		bool is_POST_regular_fulfilled(client_info& client);
 	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
 	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
 	void check_all_timeout(struct_epoll& _epoll);

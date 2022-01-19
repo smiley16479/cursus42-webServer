@@ -2,17 +2,13 @@
 # Verifier pourquoi quingli utilise "host" au lieu de server_name et port au lieu de listen
 # Les IP multiple ds le selectServer de jacob pourraient elles venir du pipelining ou concurrency 6.3.2 rfc 7230 ?
 
-
-
-
 # commit: d822b03f -> non le header response 'Content-Disposition : inline' ne permet l'affichage directement ds le navigateur
 # // IF YOU WANT THE BROWSER TO READ WITHOUT ASKING TO DOWNLOAD IT, DON'T ADD THE TRAILING '/' OR DON'T MENTION ITS FILE TYPE
 
-il manque :
-les post request uploads pas encore fait :
-    - multipart-form : 
-les chunck : OK
-les cgi : OK
+• on ne renvoi pas de status_error adapté ds la startLine si le check de la taille du fichier est mauvaise (409 -411)
+• On ne doit pas renvoyer les fichier POST ou PUT ds la reponse apparement (a modifier) 
+• On doit faire passer les attributs de request_handler correspondant aux clients ds les ... clients
+• On doit faire une lookUp table pour les type de request (Arthur l'a fait regarder son exemple)
 
 Voici les commandes utilisées av le docker Nginx :
 curl -X DELETE  127.0.0.1:8080/to_erase										-> 404 si n'exite pas 204 si effacement réussi

@@ -8,9 +8,10 @@
 
 		http://127.0.0.1:8080/ <- c'est ca qui fait bugger
 
-		// https://everything.curl.dev/http/post/chunked  // SIte web puor curl
+		// https://everything.curl.dev/http/post/chunked  // Site web pour curl
 		curl --resolve test_server_block.com:9090:127.0.0.1 http://test_server_block.com:9090/ -X GET // Change le server_name
 		curl -X POST -F 'create_to_erase=@Makefile' 127.0.0.1:8081/(create_to_erase) -v // Fait une post request
+		curl -T Makefile 127.0.0.1:8080/new/resource/file // Veritable put selon Site web pour curl
 		curl -X PUT -F 'file=@compil.sh' 127.0.0.1:8080/create_to_erase -v
 		curl -H "Transfer-Encoding: chunked" -d @file http://example.com
 
@@ -64,7 +65,7 @@ request_handler::~request_handler()
 void request_handler::reader(client_info& cl_info)
 {
 	string buf_1, buf_2;
-	_c_info_ptr = &cl_info;
+	_c = &cl_info;
 	std::stringstream ss_1(cl_info.rqst);
 	cout << RED "DANS HEADER READER" RESET "\n" << endl; //cl_info.rqst << endl;
 	// LECTURE DE LA START_LINE
@@ -80,7 +81,7 @@ void request_handler::reader(client_info& cl_info)
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { 
-			// 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _C_INFO_PTR (on utilise celle la pour le moment)
+			// 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _c (on utilise celle la pour le moment)
 			break ;
 			// 2eme SOLUTION :
 		// C'EST ICI QU'ON DOIT UTILISER extract_post_rqst_body peut être utiliser slmt des position poour ne pas faire de copie ou
@@ -120,18 +121,18 @@ void request_handler::writer(void) {
 
 // EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION -> 403 (FORBIDDEN)
 	if (resolve_path())
-		return ;
-	// else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].cgi_file_types) != -1)) // POur le moment pas adapte de Arthur
-		// redir_mode = handle_cgi();
+		/* Do nothing */;
+	else if (is_cgi(_hrx["A"])) // Pour le moment pas adapte de Arthur
+		handle_cgi();
 	else if (_hrx["A"][0] == "GET")
 		handle_get_rqst();
+	else if (_hrx["A"][0] == "PUT")
+		handle_put_rqst();
 	else if (_hrx["A"][0] == "POST")
 		handle_post_rqst();
-	else if (_hrx["A"][0] == "PUT") {
-		cout << "Facultatif PUT method not implemented yet\n";
-	}
 	else if (_hrx["A"][0] == "HEAD") {
 		cout << "Facultatif HEAD method not implemented yet\n";
+		gen_startLine( _status.find("405") ); // 405 Not allowed - 403 Forbidden
 	}
 	else if (_hrx["A"][0] == "DELETE") {
 		// IF NOT ALLOWED -> 405
@@ -241,7 +242,7 @@ void	request_handler::gen_CLength()
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
 
 	stringstream ss;
-	if (_c_info_ptr->rqst_type == POST_MULTIPART) {
+	if (_c->rqst_type == POST_MULTIPART) {
 		ss << _hrx["Content-Length:"][0];
 		// cout << MAGENTA "la\n" RESET;
 	}
@@ -296,28 +297,73 @@ tiennent pas à un autre serveur) */
 
 
 
-void request_handler::handle_get_rqst(void)
+int request_handler::handle_get_rqst(void)
 {
 	file_type();
 	// gen_CType(string());
 	// gen_CLength();
 	// add_all_field();
 	// add_body();
+	return 0;
+}
+
+int request_handler::handle_put_rqst(void)
+{
+	cout << BLUE "IN HANDLE_PUT_RQST" RESET << endl;
+	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
+	size_t actual_file_size;
+	if ((actual_file_size = check_file_size()) == string::npos)
+		return 1;
+
+	client_info& cl = *_c;
+// PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
+	size_t pos_boundary;
+	if ((pos_boundary = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
+		return 1;
+	pos_boundary += 4;
+	cout << MAGENTA "cl.rqst.size() / pos_boundary : " RESET << cl.rqst.size() << " / " << pos_boundary <<endl;
+	cout << MAGENTA "actual_file_size : " RESET << actual_file_size << endl;
+	cout << MAGENTA "cl.rqst : " RESET << cl.rqst << endl;
+	if ( (cl.rqst.size() - pos_boundary) < actual_file_size )
+		return 1;
+	cout << MAGENTA "LA\n" RESET;
+	
+	_body = cl.rqst.substr(pos_boundary);
+
+	// SI LE FICHIER EXISTE NGINX REPOND : "HTTP/1.1 204 No Content"
+	struct stat sb;
+	cl.post_file_path = _path + "_PUT";
+	if (stat(cl.post_file_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+	{
+		gen_startLine(  _status.find("204") );
+		return 1;
+	}
+
+	// CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
+	ofstream my_file(cl.post_file_path);
+	if (my_file.is_open()) {
+		my_file << _body;
+		cout << "Upload location : " + cl.post_file_path  + "\n\n" + cl.rqst + "\n\n";
+		gen_startLine(  _status.find("201") );
+	}
+	else
+		cout << RED "download path invalid : " RESET << cl.post_file_path << "\n";
+	return 0;
 }
 
 int request_handler::handle_post_rqst(void) 
 {
 	cout << BLUE "IN HANDLE_POST_RQST" RESET << endl;
 	cout << "_hrx['Content-Type:''][1] : " << _hrx["Content-Type:"][0] << endl;
-	cout << GREEN "RQST :\n" RESET << _c_info_ptr->rqst << endl;
+	cout << GREEN "RQST :\n" RESET << _c->rqst << endl;
 // PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
 
 	// SI TOUT S'EST BIEN PASSÉ ON DÉTACHE LE BODY DE LA REQUETE POST (DS _BODY)
-	if (_c_info_ptr->rqst_type == POST_MULTIPART)
+	if (_c->rqst_type == POST_MULTIPART)
 		return extract_postMULTI_rqst_body();
-	else if (_c_info_ptr->rqst_type == POST_URL_ENCODED) // Content-Type: application/x-www-form-urlencoded
+	else if (_c->rqst_type == POST_URL_ENCODED) // Content-Type: application/x-www-form-urlencoded
 		return extract_postXFORM_rqst_body();
-	else if (_c_info_ptr->rqst_type == POST_CHUNCK)
+	else if (_c->rqst_type == POST_CHUNCK)
 		return extract_postCHUNK_rqst_body();
 	return 0;
 }
@@ -327,21 +373,16 @@ int request_handler::handle_post_rqst(void)
 int request_handler::extract_postMULTI_rqst_body(void)
 {
 
-// PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
+// PROBLEM SI C URL_ENCODED C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DS LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
 	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
 	cout << "boundary : " << boundary << endl;
-	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
+	// cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
 
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
-	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
-	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
-		std::cout << "YOLO" << std::endl;
-		gen_startLine( _status.find("413") ); 
+	if (check_file_size() == string::npos)
 		return 1;
-	}
 
-
-	client_info& cl = *_c_info_ptr;
+	client_info& cl = *_c;
 	size_t pos, pos1;
 // PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
 	size_t pos_boundary;
@@ -357,13 +398,13 @@ int request_handler::extract_postMULTI_rqst_body(void)
 	if ( (pos = cl.rqst.find(name, pos_boundary)) != string::npos )
 		if ( (pos1 = cl.rqst.find_first_of('"', pos + name.size())) != string::npos )
 			name = cl.rqst.substr(pos + name.size(), pos1 - (pos + name.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
+	cout << "pos " << pos << " pos1 " << pos1 <<  " name [" << name + "]" << endl;
 
 	// cout << "filename [" << filename + "]" << endl;
 	if ( (pos = cl.rqst.find(filename, pos_boundary)) != string::npos )
 		if ( (pos1 = cl.rqst.find_first_of('"', pos + filename.size())) != string::npos )
 			filename = cl.rqst.substr(pos + filename.size(), pos1 - (pos + filename.size()));
-	// cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
+	cout << "pos " << pos << " pos1 " << pos1 <<  " filename [" << filename + "]" << endl;
 // END GET NAME AND FILENAME INSIDE BOUNDARY
 
 // CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
@@ -376,32 +417,35 @@ int request_handler::extract_postMULTI_rqst_body(void)
 			cout << "Upload location : " + _path + '/' + name + "_transfer\n\n" + cl.rqst + "\n\n";
 		}
 		else
-			cout << RED "download path invalid \n" RESET;
+			cout << RED "download path invalid : " RESET << cl.post_file_path << "\n";
 	}
 	return 0;
 }
 
 int request_handler::extract_postXFORM_rqst_body(void)
 {
-	cout << BLUE "DS EXTRACT_POSTXFORM_RQST_BODY\n" RESET;
-	// PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
-	string boundary = _hrx["Content-Type:"][1].substr( _hrx["Content-Type:"][1].find_last_of('-') + 1, string::npos);
-	cout << "boundary : " << boundary << endl;
-	cout << endl << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
+	cout << BLUE "\nDS EXTRACT_POSTXFORM_RQST_BODY\n" RESET;
+	cout << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
+
+	client_info& cl = *_c;
+	size_t pos_boundary;
 
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
-	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
-	if (!_si[_s_id].max_file_size.empty() && atoi(_hrx["Content-Length:"][0].c_str()) > (int)max_file_size ) {
-		std::cout << "YOLO" << std::endl;
-		gen_startLine( _status.find("413") ); 
+	if (check_file_size() == string::npos)
 		return 1;
-	}
+
+	if ((pos_boundary = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
+		return 1;
+	pos_boundary += 4;
+	size_t pos_last_boundary = cl.rqst.find_last_of("\r\n", cl.rqst.size() - 4);
+	_body = cl.rqst.substr(pos_boundary, pos_last_boundary - pos_boundary - 1);
+	cout << GREEN "POSTXFORM_RQST_BODY : " RESET << _body << "\n";
 	return 0;
 }
 
 int request_handler::extract_postCHUNK_rqst_body(void)
 {
-	client_info& cl = *_c_info_ptr;
+	client_info& cl = *_c;
 	size_t pos, count = 1;
 	cout << cl.rqst << endl;
 	if ((pos = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
@@ -448,31 +492,32 @@ int	request_handler::resolve_path()
 		{
 			// S'IL Y A UNE DIRECTIVE_RETURN À L'INTERIEURE DE LA LOCATION
 			if (!it->retour.empty()) {
-				for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
+				return_directive(it);
+/* 				for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
 					if (it2->location == it->retour.back()) {
 						cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
 						string::const_iterator c_it = it->retour[0].begin();
-						while (c_it != it->retour[0].end() && std::isdigit(*c_it))
+						while (c_it != it->retour[0].end() && std::isdigit(*c_it)) // On verifie qu'il s'agisse ...
 							++c_it;
-						if ( !it->retour[0].empty() && c_it == it->retour[0].end())
+						if ( !it->retour[0].empty() && c_it == it->retour[0].end()) // ... d'un status_code ds it->retour[0]
 							gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
 
 						_path = it2->root + "/";
 						_l_id = it2 - _si[_s_id].location.begin();
 						break ;
-					}
+					} */
 			} // SINON
 			else {
 				_path = it->root + "/";
 			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-				if ((_c_info_ptr->rqst_type == POST_MULTIPART || _c_info_ptr->rqst_type == POST_CHUNCK) && !it->download_path.empty())
-				_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+				if ((_c->rqst_type == POST_MULTIPART || _c->rqst_type == POST_CHUNCK || _c->rqst_type == PUT) && !it->download_path.empty())
+					_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
 			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 			_path += _hrx["A"][1].substr(it->location.size());
 			len = it->location.length();
-			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis ds file_type si necessaire
+			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis dorenavant ds file_type si necessaire
 			// 	_path += _si[_s_id].location[_l_id].index;
 		}
 #ifdef _debug_
@@ -597,7 +642,7 @@ void request_handler::add_body()
 // puis si la méthode ds la location concernée est autorisée (maj gen_stratLine 403 si besoin)
 bool request_handler::is_method_allowed(void)
 {/* PROBLEME (A TESTER) */
-	cout << MAGENTA "is_method_allowed\n" RESET;
+	cout << MAGENTA "is_method_allowed : " RESET;
 	bool allowed = false;
 	const char *array[] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL};
 	for (const char**strs = array; *strs; ++strs){
@@ -616,7 +661,43 @@ bool request_handler::is_method_allowed(void)
 			allowed = true;
 	if (!allowed)
 		gen_startLine( _status.find("403") );
+	cout << MAGENTA << (allowed ? "oui\n" : "non\n") << RESET;
 	return allowed;
+}
+
+// Pour Resolve_path() : s'il y a une directive_return à l'interieure de la location
+void request_handler::return_directive(vector<locati_info>::reverse_iterator& it)
+{
+	for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
+		if (it2->location == it->retour.back()) {
+			cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
+			string::const_iterator c_it = it->retour[0].begin();
+			while (c_it != it->retour[0].end() && std::isdigit(*c_it))  // On verifie qu'il s'agisse slmt de chiffre ...
+				++c_it;
+			if ( !it->retour[0].empty() && c_it == it->retour[0].end()) // ... d'un status_code ds it->retour[0]
+				gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
+
+			_path = it2->root + "/";
+			_l_id = it2 - _si[_s_id].location.begin();
+			break ;
+		}
+}
+
+// Check si le fichier fourni par la rqst est plus long que "max_file_size" defini ds la conf
+// maj de la stratLine au cas où : 413 Request Entity Too Large, ds ce cas return npos
+size_t request_handler::check_file_size(void)
+{
+	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
+	if (_hrx.find("Content-Length:") == _hrx.end() || _hrx["Content-Length:"].empty())
+		return string::npos;
+	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
+	size_t actual_file_size = atoi(_hrx["Content-Length:"][0].c_str());
+	if (!_si[_s_id].max_file_size.empty() && actual_file_size > max_file_size ) {
+		gen_startLine( _status.find("413") ); 
+		return string::npos;
+	}
+	cout << BLUE "DS CHECK_FILE_SIZE, Content-Length: " RESET << actual_file_size << endl;
+	return actual_file_size;
 }
 
 // Remove multiple '/' and the '/' at url's end
@@ -654,7 +735,7 @@ void	request_handler::handle_cgi(void)
 		int		bfd[2];
 
 		//HERE!
-		resolve_path();
+		// resolve_path();
 		_hrx.insert(std::make_pair("query", std::vector<std::string>()));
 		_hrx["query"].push_back(_path);
 		if (_s_id == -1)

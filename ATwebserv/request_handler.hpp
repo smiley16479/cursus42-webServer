@@ -32,7 +32,7 @@ private:
 	std::string							_path; // response_path file
 	std::string							_body; // response_content (body)
 	std::string							_response; // response_content (response_header + body)
-	client_info*						_c_info_ptr;
+	client_info*						_c;
 
 
 	/* COPY DES ATTRIBUTS DE QUING_LY */
@@ -99,12 +99,15 @@ private:
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
 	void set_server_id(void);
-	void handle_get_rqst(void);
+	int handle_get_rqst(void);
+	int handle_put_rqst(void);
 		void	verify_file_openess();
 			int 	resolve_path();
+				void return_directive(vector<locati_info>::reverse_iterator& it);
 				bool is_method_allowed(void);
 				int	file_type();
 					void generate_folder_list();
+	size_t check_file_size(void);
 	void add_all_field();
 	void add_body();
 	void clean_url(string& str);
