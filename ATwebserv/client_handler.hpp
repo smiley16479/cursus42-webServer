@@ -12,24 +12,27 @@ using namespace std;
 class client_handler
 {
 private:
+	struct_epoll &_epoll; // ref sur la structure _epoll contenu par le server
 	map <int, client_info> clients;
 
 public:
-	client_handler(/* args */);
+	client_handler(struct_epoll &);
 	~client_handler();
 	bool is_request_fulfilled(int);
 	bool is_PUT_request_fulfilled(client_info& client);
 	bool is_POST_request_fulfilled(client_info& client);
 		bool is_POST_chunk_fulfilled(client_info& client);
 		bool is_POST_regular_fulfilled(client_info& client);
-	void remove(struct_epoll& _epoll, int i); // REMOVE A CLIENT
-	void add(struct_epoll& _epoll, int time_out, int i); // ADD A CLIENT
-	void check_all_timeout(struct_epoll& _epoll);
+	void remove(int i); // REMOVE A CLIENT
+	void add(int time_out, int i); // ADD A CLIENT
+	void check_all_timeout(void);
+	void send(int id);
+	void recv(int id);
 
 	/* FUNCTION RUBRIQUE : GETTER SETTER */
-	void clear(int client_fd); // CLEAR CLIENT CONTENT
-	void rqst_append(int client_id, char *str, int byte_recved); // APPEND DIFFERENT REQUEST CHUNK
-	client_info& get_rqst(int); // RETURN FINAL REQUEST
+	void clear(int id); // CLEAR CLIENT CONTENT
+	void rqst_append(int id, char *str, int byte_recved); // APPEND DIFFERENT REQUEST CHUNK
+	client_info& get_info(int); // RETURN FINAL REQUEST
 
 	/* FUNCTION RUBRIQUE : UTILITAIRE */
 

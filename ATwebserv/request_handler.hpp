@@ -20,7 +20,7 @@ using namespace std;
 
 class request_handler
 {
-
+	typedef int	(request_handler::*t_func)(void);
 	typedef std::map<string, string> error_it;
 private:
     std::vector<server_info> &			_si; // server_info
@@ -29,9 +29,10 @@ private:
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
 	std::map<string, vector<string> >	_htx; // response_Header
 	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
+	t_func								_tab[5]; // LookUP table av les fonctions relatives aux types de requete
 	std::string							_path; // response_path file
 	std::string							_body; // response_content (body)
-	std::string							_response; // response_content (response_header + body)
+	std::string							_response; // response_content (response_header + body) -> mis ds client_info dorenavant
 	client_info*						_c;
 
 

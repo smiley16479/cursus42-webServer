@@ -44,7 +44,8 @@ struct client_info {
 	std::string	post_file_path;
 	int			time_out;
 	bool		request_fulfilled;
-	size_t		clen;
+	size_t		byte_send;
+	size_t		clen;								// Len du body (pas de la rqst)
 };
 
 struct struct_epoll

@@ -54,7 +54,7 @@ void server::initialize(void) {
 void server::run(void) {
 	initialize();
 	request_handler rqst(_s);
-	client_handler client;
+	client_handler client(_epoll);
 	int byte_recved;
 	int serv_id;
 
@@ -64,8 +64,8 @@ void server::run(void) {
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000); //500
 		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
-			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
-				client.add(_epoll, get_time_out(serv_id), i);
+			if ((serv_id = is_new_client(i)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
+				client.add(get_time_out(serv_id), i);
 				printf("New client added\n");
 			}
 /*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
@@ -87,32 +87,30 @@ void server::run(void) {
 						printf("Written '%s'\n", read_buffer);
 			} 
 */
-			else {
+			else if ( (_epoll._events[i].events & EPOLLIN) == EPOLLIN ) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
-						client.remove(_epoll, i);
+						client.remove(i);
 						printf("server: client just left\n");
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
-					client.rqst_append(_epoll._events[i].data.fd, str, byte_recved);
-					if (client.is_request_fulfilled(_epoll._events[i].data.fd)) {
+					client.rqst_append(i, str, byte_recved);
+					if (client.is_request_fulfilled(i)) {
 						cout << "request_fulfilled !!\n";
-						rqst.reader(client.get_rqst(_epoll._events[i].data.fd)); // PROBLEME NE TRANSMET PLUS LES FAVICON D'INDEX_HTML
+						rqst.reader(client.get_info(i));
 						rqst.writer();
-						send(_epoll._events[i].data.fd, rqst.get_response().c_str(), rqst.get_response().length(), 0);
-
-						client.clear(_epoll._events[i].data.fd); // EFFACE LA PRÉCÉDENTE RQST, REMISE À ZERO DU TIME_OUT
-						// DE FAÇON A FERMER LA CONNEXION MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA :
-						// close(_epoll._events[i].data.fd);
-						// OU VIRER LE CLIENT COMME CI DESOUS :
-						client.remove(_epoll, i);
+						// send(_epoll._events[i].data.fd, rqst.get_response().c_str(), rqst.get_response().length(), 0);
+						client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}
 			}
+			else if ( (_epoll._events[i].events & EPOLLOUT) == EPOLLOUT ) {
+
+			}
 		}
-		client.check_all_timeout(_epoll);
+		client.check_all_timeout();
 		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
 
@@ -124,9 +122,9 @@ void server::run(void) {
 	return;
 }
 
-size_t server::is_new_client(int fd) {
+size_t server::is_new_client(int id) {
 	for (size_t i = 0; i < _s.size(); ++i)
-		if (fd == _s[i].socket)
+		if (_epoll._events[id].data.fd == _s[i].socket)
 			return i;
 	return -1;
 }

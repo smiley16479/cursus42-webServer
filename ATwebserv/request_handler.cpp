@@ -35,6 +35,16 @@ request_handler::request_handler(std::vector<server_info>& server_info) : _si(se
 		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; 
 #endif
 */
+// CREER LA LOOKUP TABLE
+	// _tab = {	
+	_tab[0] = &request_handler::handle_get_rqst;
+	_tab[1]	= &request_handler::handle_put_rqst;
+	_tab[2]	= &request_handler::handle_post_rqst;
+		// &request_handler::extract_postMULTI_rqst_body,
+		// &request_handler::extract_postXFORM_rqst_body,
+		// &request_handler::extract_postCHUNK_rqst_body,
+	// };
+
 
 // REMPLI LA MAP _STATUS POUR LA STATUS LIGNE (TX) HTML
 	ifstream fs("configuration_files/HTML_status_msg.txt");
@@ -445,18 +455,17 @@ int request_handler::extract_postXFORM_rqst_body(void)
 
 int request_handler::extract_postCHUNK_rqst_body(void)
 {
-	client_info& cl = *_c;
 	size_t pos, count = 1;
-	cout << cl.rqst << endl;
-	if ((pos = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
+	cout << _c->rqst << endl;
+	if ((pos = _c->rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
 		return 1;
 	pos += 2;
 	while (count) {
 		pos += 2;
-		count = strtol(&cl.rqst[pos], NULL, 16);
+		_c->clen += count = strtol(&_c->rqst[pos], NULL, 16);
 		cout << "pos : " << pos << ", count : " << count << endl;
-		pos = cl.rqst.find_first_of("\n", pos) + 1;
-		_body.append(cl.rqst, pos, count);
+		pos = _c->rqst.find_first_of("\n", pos) + 1;
+		_body.append(_c->rqst, pos, count);
 		pos += count;
 	}
 	cout << "here is the concatenated string : " << _body.size()  << endl << _body << endl;
@@ -606,12 +615,12 @@ void request_handler::generate_folder_list()
 // Clear la string (response) et y ajoute tous les field
 void request_handler::add_all_field()
 {
-	_response.clear();
+		_c->resp.clear();
 	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
-			_response += it->second[i];
-	_response += "\r\n";
-	cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _response << endl;
+			_c->resp += it->second[i];
+	_c->resp += "\r\n";
+	cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _c->resp << endl;
 }
 
 // Ajout du fichier ou du body À LA SUITE des header dans response
@@ -621,7 +630,7 @@ void request_handler::add_body()
 		return ; */
 	if (!_body.empty()) {
 		cout << RED "Body (folder) written !" RESET  << endl;
-		_response += _body;
+		_c->resp += _body;
 		_body.clear();
 		return ;
 	}
@@ -629,12 +638,12 @@ void request_handler::add_body()
 	if (_hrx["A"][0] == "GET") {
 		cout << RED "File written !" RESET  << endl;
 		ifstream fs(_path);
-		_response.append((istreambuf_iterator<char>(fs)),
+		_c->resp.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
 	else if (_hrx["A"][0] == "POST") {
 		cout << RED "Post body written !" RESET  << endl;
-		_response.append(_body);
+		_c->resp.append(_c->resp);
 	}
 }
 

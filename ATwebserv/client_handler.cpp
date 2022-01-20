@@ -2,7 +2,7 @@
 #include "color.hpp"
 
 
-client_handler::client_handler(/* args */)
+client_handler::client_handler(struct_epoll &epoll) : _epoll(epoll)
 {
 }
 
@@ -10,10 +10,10 @@ client_handler::~client_handler()
 {
 }
 
-bool client_handler::is_request_fulfilled(int client_fd)
+bool client_handler::is_request_fulfilled(int id)
 {
-	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
-	client_info& client = clients[client_fd];
+	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[_epoll._events[id].data.fd].rqst.length() <<"\n" RESET;
+	client_info& client = clients[_epoll._events[id].data.fd];
 	size_t len = client.rqst.size();
 
 	if (client.request_fulfilled)
@@ -124,7 +124,7 @@ bool client_handler::is_PUT_request_fulfilled(client_info& client)
 	return false;
 }
 
-void client_handler::remove(struct_epoll& _epoll,int i)
+void client_handler::remove(int i)
 {	
 	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
 	clients.erase(_epoll._events[i].data.fd);
@@ -132,12 +132,12 @@ void client_handler::remove(struct_epoll& _epoll,int i)
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
 }
 
-void client_handler::clear(int client_fd) {	clients[client_fd].rqst.clear(); }
-void client_handler::rqst_append(int client_fd, char *str, int byte_recved) {/* cout << strlen(str) << endl; */ clients[client_fd].rqst.append(str, byte_recved); }
-client_info& client_handler::get_rqst(int client_fd) { return clients[client_fd]; }
+void client_handler::clear(int id) {	clients[_epoll._events[id].data.fd].rqst.clear(); }
+void client_handler::rqst_append(int id, char *str, int byte_recved) { clients[_epoll._events[id].data.fd].rqst.append(str, byte_recved); }
+client_info& client_handler::get_info(int id) { return clients[_epoll._events[id].data.fd]; }
 
 // si la requete d'un des clients est plus longue a traiter que son time_out (set ds la config) on ferme la connexion ... puis on remove le client
-void client_handler::check_all_timeout(struct_epoll& _epoll) 
+void client_handler::check_all_timeout(void) 
 {	
 	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
 		if (time(NULL) - it->second.rqst_time_start > it->second.time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
@@ -150,7 +150,7 @@ void client_handler::check_all_timeout(struct_epoll& _epoll)
 }
 
 // Ajoute un client à l'intance e_poll, à la structure client_info et initialize son time_out
-void client_handler::add(struct_epoll& _epoll, int time_out, int i)
+void client_handler::add(int time_out, int i)
 {
 	int client_fd;
 	struct sockaddr_in clientaddr;
@@ -158,7 +158,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	if ((client_fd = accept(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	// clientaddr.sin_addr;
-	_epoll._event.events = EPOLLIN;
+	_epoll._event.events = EPOLLIN /* | EPOLLOUT */;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -168,6 +168,21 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	clients[client_fd].time_out = time_out;
 	time(&clients[client_fd].rqst_time_start);
 }
+
+// Envoie la reponse du client et efface le client si tout a été envoyé
+void client_handler::send(int id)
+{
+	client_info& c = clients[_epoll._events[id].data.fd];
+	c.byte_send += ::send(_epoll._events[id].data.fd, c.resp.c_str(), c.resp.length(), 0);
+	if (c.byte_send >= c.resp.length())
+		remove(id);
+}
+
+void client_handler::recv(int id)
+{
+	(void)id;
+}
+
 
 //Return the position of needle found in haystack otherwise return npos
 //Beware that haystack must be bigger than needle and its boundary accurate, otherwise 😕🤮
