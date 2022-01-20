@@ -33,7 +33,7 @@ void	client_info::recv_handler(request_handler& header)	{
 	if (recv_bytes == -1)
 	{
 //		std::cout << "RECV ERROR" << std::endl;
-		remove();
+//		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
@@ -70,8 +70,11 @@ void	client_info::read_handler(request_handler& header)	{
 	{
 		mode = SEND;
 		std::cout << "READ EOF" << std::endl;
-		close(loc_fd[0]);
-		loc_fd[0] = -1;
+		if (loc_fd[0] != -1)
+		{
+			close(loc_fd[0]);
+			loc_fd[0] = -1;
+		}
 	}
  	else if (read_bytes < MAX_LEN)
 	{
@@ -156,8 +159,8 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND ERROR" << std::endl;
 		//tmp.append(resp);
 		//resp = tmp;
-		remove();
-		resp.append(tmp);
+//		remove();
+//		resp.append(tmp);
 		return ;
 	}
 	else if (sent_bytes == 0)
@@ -337,6 +340,21 @@ void	client_info::compute(request_handler& header)	{
 		{
 			mode = ret;
 			header.fill_redir_fd(&loc_fd);
+			if (loc_fd[0] == -1 && loc_fd[1] == -1)
+			{
+				if (loc_fd[0] != -1)
+				{
+					close(loc_fd[0]);
+					loc_fd[0] = -1;
+				}
+				if (loc_fd[1] != -1)
+				{
+					close(loc_fd[1]);
+					loc_fd[1] = -1;
+				}
+				mode = SEND;
+				return ;
+			}
 			if (ret == WRITE)
 			{
 				rqst = header.get_response(); //on sauvegarde des infos de header pour former une nouvelle requete
@@ -629,20 +647,6 @@ void	client_info::time_reset()	{
 }
 
 void	client_info::remove()	{
-	if (com_socket == -1)
-		return ;
-	if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
-	{
-		perror("epoll_ctl");
-		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
-	}
-	std::cout << "closing socket fd : " << com_socket << std::endl;
-	if (close(com_socket))
-	{
-		perror("close fd");
-		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
-	}
-	com_socket = -1;
 	if (loc_fd[0] != -1)
 	{
 		std::cout << "closing loc fd : " << loc_fd[0] << std::endl;
@@ -654,5 +658,20 @@ void	client_info::remove()	{
 		std::cout << "closing loc fd : " << loc_fd[1] << std::endl;
 		close(loc_fd[1]);
 		loc_fd[1] = -1;
+	}
+	if (com_socket != -1)
+	{
+		std::cout << "closing socket fd : " << com_socket << std::endl;
+		if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
+		{
+			perror("epoll_ctl");
+			throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+		}
+		if (close(com_socket))
+		{
+			perror("close fd");
+			throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+		}
+		com_socket = -1;
 	}
 }

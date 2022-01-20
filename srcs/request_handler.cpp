@@ -408,7 +408,11 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			redir_fd[1] = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd[1] == -1)
 			{
-				redir_fd[0] = -1;
+				if (redir_fd[0] != -1)
+				{
+					close(redir_fd[0]);
+					redir_fd[0] = -1;
+				}
 				redir_fd[1] = -1;
 				return (NONE);
 			}
@@ -780,8 +784,12 @@ void request_handler::set_body(const string& str)	{
 }
 
 void	request_handler::fill_redir_fd(int (*loc_fd)[2]) {
-	(*loc_fd)[0] = redir_fd[0];
+	if (redir_fd[0] != -1)
+		(*loc_fd)[0] = redir_fd[0];
+	if (redir_fd[1] != -1)
 	(*loc_fd)[1] = redir_fd[1];
+	redir_fd[0] = -1;
+	redir_fd[1] = -1;
 }
 
 	/* FUNCTION DE DEBUG */
@@ -1001,10 +1009,16 @@ int	request_handler::handle_cgi(void)
 		env = extract_env(_hrx, _si[_s_id]);
 		if (go_cgi(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env) || (redir_fd[0] == -1 || redir_fd[1] == -1))
 		{
-			close(redir_fd[0]);
-			redir_fd[0] = -1;
-			close(redir_fd[1]);
-			redir_fd[1] = -1;
+			if (redir_fd[0] != -1)
+			{
+				close(redir_fd[0]);
+				redir_fd[0] = -1;
+			}
+			if (redir_fd[1] != -1)
+			{
+				close(redir_fd[1]);
+				redir_fd[1] = -1;
+			}
 			return (NONE);
 		}
 		_body = _hrx["BODY"][0];

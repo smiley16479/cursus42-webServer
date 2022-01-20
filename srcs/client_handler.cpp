@@ -29,6 +29,7 @@ void client_handler::check_all_timeout()
 		if (it->com_socket == -1)
 		{
 			tmp = it - clients.begin();
+			it->remove();
 			clients.erase(it);
 			std::cout << "Client erased !" << std::endl;
 			it = clients.begin() + tmp;
@@ -115,6 +116,8 @@ void	client_handler::fill_resp(int fd, std::string& base)	{
 // ^M$
 
 client_info*	client_handler::get_info(int fd) {
+	if (fd == -1)
+		return (NULL);
 	for (std::vector<client_info>::iterator it = clients.begin(); it != clients.end(); it++)
 	{
 		if (it->com_socket == fd)
