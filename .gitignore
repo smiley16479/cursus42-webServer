@@ -6,4 +6,5 @@ personalDir
 a.out.dSYM
 *.o
 exam06
-ATwebserv/files/error_pages/4xx.html
+4xx.html
+test

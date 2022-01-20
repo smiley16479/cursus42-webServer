@@ -104,7 +104,8 @@ bool client_handler::is_POST_request_fulfilled(client_info& client)
 
 bool client_handler::is_PUT_request_fulfilled(client_info& client)
 {
-		cout << BLUE "DANS is_PUT_request_fulfilled, size of current reqst : " << client.rqst.length() << "\n" RESET;
+		cout << BLUE "DANS is_PUT_request_fulfilled, size of current reqst : " << client.rqst.length() << "\n" RESET
+		<< client.rqst << endl;
 
 	size_t pos1, pos2;
 	if ( (pos1 = client.rqst.find("\r\n\r\n")) == string::npos ) // Vérifie qu'on a au moins les headers
@@ -118,7 +119,19 @@ bool client_handler::is_PUT_request_fulfilled(client_info& client)
 		cout << "client.clen : " << client.clen << endl;
 		cout << MAGENTA "ICI\n" RESET << "client.rqst.size() / pos_boundary : " << client.rqst.size() << " / " << pos1 <<endl;
 		cout << MAGENTA "client.rqst : " RESET << client.rqst << endl;
+		client.rqst_type = PUT_MULTIPART;
 		if ( (client.rqst.size() - pos1) >= client.clen )
+			return true;
+	} // ON CHECK LA FIN DES CHUNK ICI
+	else if ( (pos2 = portion_search(client.rqst, "Transfer-Encoding:", 0, pos1)) != string::npos &&
+				(pos2 = portion_search(client.rqst, "chunked", 0, pos1)) != string::npos &&
+					pos2 < pos1 ) 
+	{	
+	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE "0\r\n\r\n" du chunck de fin : on prends la fin de la requete...
+		cout << YELLOW "PUT_CHUNCK :\n" RESET;
+		cout << client.rqst << endl;
+		client.rqst_type = PUT_CHUNCK;
+		if (client.rqst.find("0\r\n\r\n", client.rqst.size() - 5) != string::npos)
 			return true;
 	}
 	return false;

@@ -113,9 +113,9 @@ private:
 	void add_body();
 	void clean_url(string& str);
 	int handle_post_rqst(void);
-		int extract_postMULTI_rqst_body(void);
-		int extract_postXFORM_rqst_body(void);
-		int extract_postCHUNK_rqst_body(void);
+		int extract_multi_rqst_body(void);
+		int extract_xform_rqst_body(void);
+		int extract_chunk_rqst_body(void);
 
 	void	handle_cgi(void);
 
