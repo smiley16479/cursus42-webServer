@@ -38,8 +38,6 @@ ULIMIT = $(shell ulimit -s)
 
 MAX_LEN = $(ULIMIT)
 
-#MAX_LEN = 10000
-
 #Useless test, MAX_LEN should just be set to ulimit -s
 #ifeq ($(shell test $(MAX_LEN) -gt $(ULIMIT); echo $$), 0)
 #MAX_LEN = $(ULIMIT)

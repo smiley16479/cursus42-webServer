@@ -32,13 +32,13 @@ void	client_info::recv_handler(request_handler& header)	{
 	recv_bytes = recv(com_socket, &buf, MAX_LEN, MSG_NOSIGNAL);
 	if (recv_bytes == -1)
 	{
-		std::cout << "RECV ERROR" << std::endl;
+//		std::cout << "RECV ERROR" << std::endl;
 		return ;
 	}
 	else if (recv_bytes == 0)
 	{
 		mode = COMPUTE;
-		std::cout << "RECV EOF" << std::endl;
+//		std::cout << "RECV EOF" << std::endl;
 	}
  	else if (recv_bytes < MAX_LEN)
 	{
@@ -410,9 +410,10 @@ bool client_info::get_rq_type()
 		}
 		rq_mode = CLEN;
 	}
-	else if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 11)) // +9 == "boundary=".length, moins deux des premiers '-' +2
+	else if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 9 < rqst.length())) // +9 == "boundary=".length, moins deux des premiers '-' +2
 	{
-		post_boundary = rqst.substr(boundary_pos, rqst.find_first_of('\r', boundary_pos) - boundary_pos);
+		post_boundary = "--" + rqst.substr(boundary_pos, rqst.find_first_of("\r\n", boundary_pos) - boundary_pos);
+		std::cout << "A boundary was found : " << post_boundary << std::endl;
 		rq_mode = MULTIPART;
 	}
 	else
@@ -440,8 +441,9 @@ bool client_info::is_clen_rqst_fulfilled()	{
 	if (_cLen != 0)
 	{
 		if (_cLen <= rqst.length())
+		if (rqst.substr(rqst.find("\r\n\r\n") + 4).length() >= _cLen)
 		{
-			rqst = rqst.substr(0, _cLen);
+			rqst = rqst.substr(0, _cLen + rqst.substr(rqst.find("\r\n\r\n") + 4).length());
 			rq_mode = NORMAL;
 			return (true);
 		}

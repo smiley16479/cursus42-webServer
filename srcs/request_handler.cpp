@@ -346,6 +346,7 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 
 //	std::cout << boundary << std::endl;
 //	std::cout << msg << std::endl;
+	std::cout << "Parsing multipart Form" << std::endl;
 	pos = msg.find(boundary);
 	if (pos != string::npos)
 	{
@@ -354,6 +355,7 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			msg = msg.substr(2);
 		else if (msg.substr(0, 2) == "--")
 		{
+			std::cout << "Boundary end found" << std::endl;
 			msg = msg.substr(2);
 			return (NONE);
 		}
@@ -371,14 +373,17 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 //		std::cout << "tmp = " << tmp << std::endl;
 		if ((pos = tmp.find("filename=\"")) != string::npos)
 		{
+			std::cout << "Extracting multipart/form filename" << std::endl;
 			buf = tmp.substr(pos + strlen("filename=\""), tmp.find("\r\n"));
 			path = buf.substr(0, buf.find("\""));
+			std::cout << "Path set to : " << path << std::endl;
 		}
 		if (msg.substr(0, 2) == "\r\n")
 			msg = msg.substr(2);
 		buf.clear();
 		if ((pos = msg.find(boundary + "--")) != string::npos)
 		{
+			std::cout << "Found end of multipart body" << std::endl;
 			buf.append(msg.substr(0, pos));
 			std::cout << "searching for trailing character at buffer end: " << (int)buf[buf.length() -2] << " ,"
 				<< (int)buf[buf.length() -1] << std::endl;
@@ -404,6 +409,8 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			else
 				return (WRITE);
 		}
+//		else
+//			std::cout << "No end boundary found, printing remaining unparsed bytes : " << msg << std::endl;
 	}
 	return (NONE);
 }
@@ -428,6 +435,7 @@ int request_handler::handle_post_rqst(void)
 	//JUSQU'ICI !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	redir_mode = NONE;
+	std::cout << "Handling POST request" << std::endl;
 //	if (_hrx.find("Content-Type:") != _hrx.end())
 //		cout << "_hrx['Content-Type:'].size() : " << _hrx["Content-Type:"].size() << " :" << endl;
 //	for (std::vector<std::string>::iterator i = _hrx["Content-Type:"].begin(); i != _hrx["Content-Type:"].end(); i++)
@@ -570,11 +578,11 @@ int	request_handler::resolve_path()
 				}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-//			if (is_regular_file(_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
-//				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
-//				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
-//			}
-//			else
+			if (is_regular_file(_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
+				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+			}
+			else
 				_path += _hrx["A"][1].substr(it->location.size());
 			len = it->location.length();
 			// if (it->location.size() == _hrx["A"][1].size()) // Mnt ajout de l'index.html mis ds file_type si necessaire

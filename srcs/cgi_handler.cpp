@@ -30,17 +30,17 @@ int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	int			fd[2];
 	int			bfd[2];
 	pid_t		pid;
-	char		*e_path[2];
+	char		*e_path[4];
 	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
 //	std::string		out;
 
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
-	e_path[1] = NULL;
-//	e_path[1] = (char*)"-c";
-//	e_path[2] = (char*)"files/scripts/php.ini";
-//	e_path[3] = NULL;
+//	e_path[1] = NULL;
+	e_path[1] = (char*)"-c";
+	e_path[2] = (char*)"files/scripts/php.ini";
+	e_path[3] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
