@@ -33,6 +33,7 @@ void	client_info::recv_handler(request_handler& header)	{
 	if (recv_bytes == -1)
 	{
 //		std::cout << "RECV ERROR" << std::endl;
+		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
@@ -57,8 +58,11 @@ void	client_info::read_handler(request_handler& header)	{
 	if (read_bytes == -1)
 	{
 		std::cout << "READ ERROR" << std::endl;
-		close(loc_fd[0]);
-		close(loc_fd[1]);
+		if (loc_fd[0] != -1)
+		{
+			close(loc_fd[0]);
+			loc_fd[0] = -1;
+		}
 		mode = SEND;
 		return ;
 	}
@@ -67,14 +71,17 @@ void	client_info::read_handler(request_handler& header)	{
 		mode = SEND;
 		std::cout << "READ EOF" << std::endl;
 		close(loc_fd[0]);
-		close(loc_fd[1]);
+		loc_fd[0] = -1;
 	}
  	else if (read_bytes < MAX_LEN)
 	{
 		mode = SEND;
 		std::cout << "READ MSG END" << std::endl;
-		close(loc_fd[0]);
-		close(loc_fd[1]);
+		if (loc_fd[0] != -1)
+		{
+			close(loc_fd[0]);
+			loc_fd[0] = -1;
+		}
 	}
 //	else
 //		std::cout << "A READ HAPPENED" << std::endl;
@@ -107,8 +114,11 @@ void	client_info::write_handler(request_handler& header)	{
 	{
 		std::cout << "WRITE EOF" << std::endl;
 		tmp.clear();
-		close(loc_fd[0]);
-		close(loc_fd[1]);
+		if (loc_fd[1] != -1)
+		{
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
 		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
 		mode = COMPUTE;
 	}
@@ -116,8 +126,11 @@ void	client_info::write_handler(request_handler& header)	{
 	{
 		std::cout << "WRITE MSG END" << std::endl;
 		tmp.clear();
-		close(loc_fd[0]);
-		close(loc_fd[1]);
+		if (loc_fd[1] != -1)
+		{
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
 		mode = COMPUTE;
 	}
 	resp = tmp;
@@ -143,6 +156,7 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND ERROR" << std::endl;
 		//tmp.append(resp);
 		//resp = tmp;
+		remove();
 		resp.append(tmp);
 		return ;
 	}
@@ -151,7 +165,7 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "SEND EOF" << std::endl;
 		tmp.clear();
 		mode = RECV;
-//		remove();
+		remove();
 //		time_reset();
 	}
 	else if (sent_bytes < MAX_LEN)
@@ -159,7 +173,7 @@ void	client_info::send_handler(request_handler& header)	{
 		std::cout << "MSG SENT" << std::endl;
 		tmp.clear();
 		mode = RECV;
-//		remove();
+		remove();
 //		time_reset();
 	}
 	resp = tmp;
@@ -194,7 +208,11 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	{
 		std::cout << "CGI WRITE EOF" << std::endl;
 		tmp.clear();
-		close(loc_fd[1]);
+		if (loc_fd[1] != -1)
+		{
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
 		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
 		mode = CGI_OUT;
 	}
@@ -202,7 +220,11 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	{
 		std::cout << "CGI WRITE MSG END" << std::endl;
 		tmp.clear();
-		close(loc_fd[1]);
+		if (loc_fd[1] != -1)
+		{
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
 		mode = CGI_OUT;
 	}
 	std::cout << "reseting buffer" << std::endl;
@@ -232,7 +254,11 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 			header.cgi_writer();
 			resp = header.get_response();
 			mode = SEND;
-			close(loc_fd[0]);
+			if (loc_fd[0] != -1)
+			{
+				close(loc_fd[0]);
+				loc_fd[0] = -1;
+			}
 		}
 	}
 }
@@ -352,11 +378,15 @@ bool client_info::is_request_fulfilled()
 		return false ;
 	if (rq_mode == NORMAL)
 	{
-		if (get_rq_type())
+		std::cout << "Checking normal request fullfilment" << std::endl;
+		if (rqst.length() >= 4 && rqst.substr(0, 4) != "POST" && rqst.substr(0, 3) != "PUT")
+			return (true);
+		else if (get_rq_type())
 			return (true);
 	}
 	else
 	{
+		std::cout << "Multipart or content-length header detected" << std::endl;
 		if (rq_mode == CLEN && is_clen_rqst_fulfilled())
 			return (true);
 		else if (rq_mode == MULTIPART && is_multipart_rqst_fulfilled())
@@ -372,7 +402,7 @@ bool client_info::get_rq_type()
 	std::stringstream	ss;
 	size_t boundary_pos;
 
-	cout << YELLOW "DANS IS_POST_REQUEST_FULFILLED\n" RESET << std::endl;
+	cout << YELLOW "DANS GET_RQ_TYPE\n" RESET << std::endl;
 	_cLen = 0;
 	if ((pos = rqst.find("Transfer-Encoding: chunked")) != std::string::npos)
 	{
@@ -599,8 +629,30 @@ void	client_info::time_reset()	{
 }
 
 void	client_info::remove()	{
-	epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL);
-	if (close(com_socket))
+	if (com_socket == -1)
+		return ;
+	if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
+	{
+		perror("epoll_ctl");
 		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+	}
+	std::cout << "closing socket fd : " << com_socket << std::endl;
+	if (close(com_socket))
+	{
+		perror("close fd");
+		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+	}
 	com_socket = -1;
+	if (loc_fd[0] != -1)
+	{
+		std::cout << "closing loc fd : " << loc_fd[0] << std::endl;
+		close(loc_fd[0]);
+		loc_fd[0] = -1;
+	}
+	if (loc_fd[1] != -1)
+	{
+		std::cout << "closing loc fd : " << loc_fd[1] << std::endl;
+		close(loc_fd[1]);
+		loc_fd[1] = -1;
+	}
 }

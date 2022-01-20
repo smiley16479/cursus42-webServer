@@ -36,8 +36,8 @@ void client_handler::check_all_timeout()
 		else if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
 			std::cout << "CLIENT TIMED OUT" << std::endl;
 			std::cout << "Client removed from tracked fd !" << std::endl;
-			it->remove();
 			tmp = it - clients.begin();
+			it->remove();
 			clients.erase(it);
 			std::cout << "Client erased !" << std::endl;
 			it = clients.begin() + tmp;
@@ -62,16 +62,12 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	//SET NON BLOCK
 //	int opt = 1;
 //	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
-//	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
-//	{
-//		perror("fcntl F_SETFL, FNDELAY | FASYNC ");
-//		exit(EXIT_FAILURE);
-//	}
 	//END
 	bzero(&ev, sizeof(ev));
 	ev.events = EPOLLIN | EPOLLOUT;
 	ev.data.fd = client_fd;
-	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
+	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
+	if (epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
 		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

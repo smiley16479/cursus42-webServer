@@ -51,6 +51,7 @@ void server::initialize(void) {
 		bzero(&ev, sizeof(ev));
 		ev.events = EPOLLIN;
 		ev.data.fd = _s[i].socket;
+		std::cout << "Adding socket fd_" << _s[i].socket << " to epoll interest list" << std::endl;
 		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &ev))
 		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

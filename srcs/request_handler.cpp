@@ -16,6 +16,8 @@
 
 request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
 {// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
+	redir_fd[0] = -1;
+	redir_fd[1] = -1;
 /* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
 												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
 												"Cache-Control:", "DNT:", "rol:"};
@@ -405,7 +407,11 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 // modif/
 			redir_fd[1] = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
 			if (redir_fd[1] == -1)
+			{
+				redir_fd[0] = -1;
+				redir_fd[1] = -1;
 				return (NONE);
+			}
 			else
 				return (WRITE);
 		}
@@ -743,6 +749,8 @@ int request_handler::add_body()
 		redir_fd[0] = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
 		if (redir_fd[0] == -1)
 		{
+			redir_fd[0] = -1;
+			redir_fd[1] = -1;
 			std::cout << "Open error" << std::endl;
 			return (NONE);
 		}
@@ -994,7 +1002,9 @@ int	request_handler::handle_cgi(void)
 		if (go_cgi(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env) || (redir_fd[0] == -1 || redir_fd[1] == -1))
 		{
 			close(redir_fd[0]);
+			redir_fd[0] = -1;
 			close(redir_fd[1]);
+			redir_fd[1] = -1;
 			return (NONE);
 		}
 		_body = _hrx["BODY"][0];
