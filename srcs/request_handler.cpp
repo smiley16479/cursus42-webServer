@@ -511,6 +511,18 @@ int request_handler::handle_post_rqst(void)
 	return (redir_mode);
 }
 
+bool	request_handler::is_folder(std::string path)	{
+	struct stat sb;
+
+	if (lstat(path.c_str(), &sb) == -1)
+		perror("lstat");
+	if ((sb.st_mode & S_IFMT) == S_IFDIR)	{
+		printf("directory\n");
+		return (true);
+	}
+	return (false);
+}
+
 bool	request_handler::is_regular_file(std::string path)	{
 	struct stat sb;
 
@@ -575,10 +587,10 @@ int	request_handler::resolve_path()
 			else {
 			 	_path = it->root + "/";
 				_l_id = index;
-				}
+			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-			if (is_regular_file(_path + _hrx["A"][1].substr(it->location.size())) && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
 				cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
 				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 			}

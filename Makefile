@@ -38,13 +38,6 @@ ULIMIT = $(shell ulimit -s)
 
 MAX_LEN = $(ULIMIT)
 
-#Useless test, MAX_LEN should just be set to ulimit -s
-#ifeq ($(shell test $(MAX_LEN) -gt $(ULIMIT); echo $$), 0)
-#MAX_LEN = $(ULIMIT)
-#else
-#MAX_LEN = $(ULIMIT)
-#endif
-
 SET_LEN = -D MAX_LEN=$(MAX_LEN)
 
 #Pernet d'activer/ desactiver les flags
@@ -55,7 +48,7 @@ CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 endif
 ifeq ($(d), 1)
-CPP_FLAGS += -D _debug_ # Toggle des sortie standart de debug par le preproccesseur 
+CPP_FLAGS += -D _debug_ # Toggle les sorties de debug par le preproccesseur 
 endif
 
 all:	build

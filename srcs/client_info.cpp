@@ -43,7 +43,7 @@ void	client_info::recv_handler(request_handler& header)	{
  	else if (recv_bytes < MAX_LEN)
 	{
 		mode = COMPUTE;
-		std::cout << "RECV MSG END" << std::endl;
+//		std::cout << "RECV MSG END" << std::endl;
 	}
 	rqst.append(buf, recv_bytes);
 }
