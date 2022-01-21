@@ -33,8 +33,9 @@ const char	*ret_string_300[] = {
 " See Other",						//303 The requested page can be found under a different URL
 " Not Modified",					//304 Indicates the requested page has not been modified since last requested
 " Switch Proxy",					//305 No longer used
-" Temporary Redirect",				//306 The requested page has moved temporarily to a new URL
-" Resume Incomplete"				//307 Used in the resumable requests proposal to resume aborted PUT or POST requests
+" Unused",							//306 No longer used
+" Temporary Redirect",				//307 The requested page has moved temporarily to a new URL
+" Resume Incomplete"				//308 Used in the resumable requests proposal to resume aborted PUT or POST requests
 };
 
 //000 4XX: CLIENT ERROR

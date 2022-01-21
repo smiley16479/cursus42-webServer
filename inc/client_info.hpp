@@ -2,6 +2,7 @@
 # define CLIENT_INFO_HPP
 
 #include <sys/socket.h>	// pour socket()
+#include <arpa/inet.h>
 #include <cstring>
 #include "request_handler.hpp"
 #include "struct_webserv.hpp"
@@ -10,6 +11,7 @@ class client_info {
 	public:
 		int			com_socket;
 		int			loc_fd[2];
+		std::string	loc_path;
 		size_t		mode;
 		std::string	resp;
 		std::string rqst;
@@ -21,6 +23,7 @@ class client_info {
 		time_t		rqst_time_start;
 		size_t		_cLen;
 		int			time_out;
+		std::string	addr;
 		struct struct_epoll* _epoll;
 
 		void	fd_in(request_handler& header);

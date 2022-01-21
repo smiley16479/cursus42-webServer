@@ -12,6 +12,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <stdlib.h>
 #include "struct_webserv.hpp"
 #include "color.hpp"
 #include <dirent.h> // readdir et struct DIR etc.. (plus besoin si on utilise perl pour générer le html)
@@ -47,9 +48,11 @@ public:
 	int cgi_writer(void);
 	int writer(void);
 	void	clean_body();
+	int	create_write_resp(std::string &file_path);
 
 	/* FONCTION ACCESSEUR */
 
+	string &get_path(void);
 	string &get_response(void);
 	string &get_body(void);
 	void set_body(const string &);
@@ -86,6 +89,8 @@ private:
 	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 	void	cgi_var_init();
 	int handle_cgi(void);
+
+	std::string	reverse_resolve_path(std::string &loc_path);
 
 	/* FUNCTION DE DEBUG */
 	

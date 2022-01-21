@@ -50,7 +50,8 @@ void request_handler::reader(std::string& rqst)
 	std::string ss_1(rqst);
 
 //DEBUG RQST OUTPUT
-//	std::cout << rqst << std::endl;
+	std::cout << BLUE "Request Header : " RESET << std::endl;
+	std::cout << rqst.substr(0, rqst.find("\r\n\r\n")) << std::endl;
 
 //	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
@@ -260,21 +261,27 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 	_htx["Content-Type"].clear();
 	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
-		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8");
 	else if ( ext == "css" ) // Default file PROBLEM ?
 	{
-		_htx["Content-Type"].push_back("Content-Type: text/css\r\n");
-//		_htx["Connection"].push_back("Connection: close\r\n");
+		_htx["Content-Type"].push_back("Content-Type: text/css");
+//		_htx["Connection"].push_back("Connection: close");
 	}
 	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
-		_htx["Content-Type"].push_back("Content-Type: image\r\n");
+		_htx["Content-Type"].push_back("Content-Type: image");
 	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: audio\r\n");
+		_htx["Content-Type"].push_back("Content-Type: audio");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: video\r\n");
+		_htx["Content-Type"].push_back("Content-Type: video");
 	else // DEFAULT PAREIL QUE L EPREMIER À ARRANGER :) POUR LE TOI DU FUTUR BISOU
-		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8\r\n");
+		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8");
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
+	if (ext != "css")
+	{
+		_htx["Content-Type"].push_back("/");
+		_htx["Content-Type"].push_back(ext);
+	}
+	_htx["Content-Type"].push_back("\r\n");
 }
 
 // génération du field Content-Length et d'un status d'erreur (413) si length > max_file_size
@@ -405,7 +412,7 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			// cout << MAGENTA "PATH : " RESET << path << endl;
 			std::cout << "Creating file: " << _path << std::endl;
 // modif/
-			redir_fd[1] = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
+			redir_fd[1] = open(_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
 			if (redir_fd[1] == -1)
 			{
 				if (redir_fd[0] != -1)
@@ -430,19 +437,6 @@ int request_handler::handle_post_rqst(void)
 	int			redir_mode;
 	std::string	tmp;
 	std::string	boundary;
-
-	// A SUPPRIMER, SEVAIT UNIQUEMENT A TESTER LES CHUNKS
-	// std::cout << "Here comes a new file" << std::endl;
-	// _body = _hrx["BODY"][0];
-	// redir_fd = open(_path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
-	// if (redir_fd == -1)
-	// 	return (NONE);
-	// else
-	// {
-	// 	std::cout << "File: " << _path << " successfully created" << std::endl;
-	// 	return (WRITE);
-	// }
-	//JUSQU'ICI !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	redir_mode = NONE;
 	std::cout << "Handling POST request" << std::endl;
@@ -485,35 +479,7 @@ int request_handler::handle_post_rqst(void)
 		//Puis ajouter la Location du fichier a ecrire
 		//Ainsi que son type et sa len
 				if (redir_mode != NONE)
-				{
-					for (map<string, vector<string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++)
-					{
-						if (it->first != "BODY")
-						{
-							if (it->first != "A")
-							{
-								_response.append(it->first);
-								_response.append(" ");
-							}
-							for (vector<string>::iterator i = it->second.begin(); i != it->second.end(); i++)
-							{
-								if (it->first == "A" && *i == "POST")
-								{
-									_response.append("GET");
-									_response.append(" ");
-								}
-								else if (it->first != "Content-Length:" && it->first != "Content-Type:")
-								{
-									_response.append(*i);
-									_response.append(" ");
-								}
-							}
-							_response.append("\r\n");
-						}
-					}
-					_response.append("\r\n");
 					return (redir_mode);
-				}
 				resolve_path();
 			}
 		}
@@ -574,17 +540,19 @@ int	request_handler::resolve_path()
 			if (!it->retour.empty()) {
 				for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
 					if (it2->location == it->retour.back()) {
-						cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
+						cout << RED " it->retour[1] : " RESET +  it->retour[1] << endl;
 						string::const_iterator c_it = it->retour[0].begin();
 						while (c_it != it->retour[0].end() && std::isdigit(*c_it))
 							++c_it;
 						if ( !it->retour[0].empty() && c_it == it->retour[0].end())
 						{
-							stringstream	ss;
+							stringstream	ss(it->retour[0]);
 							size_t			ret;
 
-							ss.str() = it->retour[0];
+//							ss.str() = it->retour[0];
+							cout << RED " it->retour[0] : " RESET +  it->retour[0] << endl;
 							ss >> ret;
+							cout << RED " it->retour[0] : " RESET << ret << endl;
 							gen_startLine( ret );
 						}
 
@@ -711,7 +679,7 @@ void request_handler::generate_folder_list()
 		}
 	closedir(dpdf);
 
-	fstream autoindex_file("configuration_files/autoindex.html");
+	fstream autoindex_file("config_files/autoindex.html");
 	if (!autoindex_file.is_open())
 		throw (std::runtime_error("Couldn't open : configuration_files/autoindex.html"));
 // BUFFERISE LE TEMPLATE HTML POUR Y AJOUTER LE CONTENU DU DOSSIER
@@ -744,13 +712,13 @@ int request_handler::add_body()
 	if (!_body.empty()) {
 		_response += _body;
 		_body.clear();
+		std::cout << "body appended" << std::endl;
 		return (NONE);
 	}
-	std::cout << "body appended" << std::endl;
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
-	if (!_hrx["A"].empty() && (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST")) {
-		cout << RED "File written !" RESET  << endl;
+	if ((!_hrx["A"].empty() && (_hrx["A"][0] == "GET" || _hrx["A"][0] == "POST")) || (!_htx["A"].empty() && _htx["A"][1] == "303")) {
 		redir_fd[0] = open(_path.c_str(), O_RDONLY | O_NONBLOCK);
+		cout << RED "File written !" RESET  << endl;
 		if (redir_fd[0] == -1)
 		{
 			redir_fd[0] = -1;
@@ -774,6 +742,8 @@ void request_handler::clean_url(string& str)
 
 
 	/* FUNCTION GETTER / SETTER */
+
+std::string &request_handler::get_path(void) {return _path;}
 
 std::string &request_handler::get_response(void) {return _response;}
 
@@ -1036,4 +1006,80 @@ void	request_handler::clean(void)	{
 	_path.clear();
 	_body.clear();
 	_response.clear();
+}
+
+std::string	request_handler::reverse_resolve_path(std::string &loc_path)	{
+	std::string	ret;
+
+	(void)loc_path;
+	ret = (char*)"http://127.0.0.1:8081/new_test_folder/Dino_arlo.png\r\n";
+	return (ret);
+}
+
+int	request_handler::create_write_resp(std::string &file_path)	{
+	int	redir_mode;
+//	ifstream file( file_path.c_str(), ios::binary | ios::ate);
+//	size_t size = file.tellg();
+//	stringstream	ss;
+
+	gen_startLine( 303 );
+
+	_htx["Status"] = std::vector<std::string>();
+		_htx["Status"].push_back("Status: ");
+		_htx["Status"].push_back("303 ");
+		_htx["Status"].push_back("See Other\r\n");
+
+	gen_date();
+	gen_serv();
+	gen_CLength();
+	gen_CType(file_path.substr(file_path.find_last_of(".") + 1));
+
+	if (_htx["Referer"].empty())
+		_htx["Referer"] = std::vector<std::string>();
+	_htx["Referer"].push_back("Referer: ");
+	_htx["Referer"].push_back("http://127.0.0.1:8081/layout.html\r\n");
+	if (_htx["Location"].empty())
+		_htx["Location"] = std::vector<std::string>();
+	_htx["Location"].push_back("Location: ");
+	_htx["Location"].push_back(reverse_resolve_path(file_path));
+	_htx["Server"][1] += ":8081";
+//	if (_htx["Content-Length"].empty())
+//		_htx["Content-Length"] = std::vector<std::string>();
+//	_htx["Content-Length"].push_back("Content-Length: ");
+//	ss << size;
+//	_htx["Content-Length"].push_back(ss.str());
+//	_htx["Content-Length"].push_back("\r\n");
+	add_all_field(); 
+	_path = file_path;
+	std::cout << "Searching for file at address: " << _path << std::endl;
+	_body.clear();
+	redir_mode = add_body();
+
+	_response.replace(0, _response.find("\r\n"), "GET http://127.0.0.1:8081/new_test_folder/Dino_arlo.png HTTP/1.1", 64);
+	std::cout << BLUE "Formated Response: " RESET << std::endl;
+	std::cout << _response.substr(0, _response.find("\r\n\r\n") + 4) << std::endl;
+
+//	_htx["A"].clear();
+//	_htx["A"] = std::vector<std::string>();
+//		_htx["A"].push_back("GET");
+//		_htx["A"].push_back(" http://127.0.0.1:8081/scripts/layout.html ");
+//		_htx["A"].push_back("HTTP/1.1\r\n");
+
+	if (redir_mode == NONE)
+	{
+		std::cout << "File not found" << std::endl;
+		if (redir_fd[0] == -1)
+		{
+			close(redir_fd[0]);
+			redir_fd[0] = -1;
+		}
+		if (redir_fd[1] == -1)
+		{
+			close(redir_fd[1]);
+			redir_fd[1] = -1;
+		}
+	}
+	_hrx.clear();
+	_htx.clear();
+	return (redir_mode);
 }

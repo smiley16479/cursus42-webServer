@@ -93,6 +93,7 @@ void	client_info::read_handler(request_handler& header)	{
 
 void	client_info::write_handler(request_handler& header)	{
 	(void)header;
+	int		ret;
 	int	wrote_bytes;
 	std::string	tmp;
 
@@ -123,7 +124,16 @@ void	client_info::write_handler(request_handler& header)	{
 			loc_fd[1] = -1;
 		}
 		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
-		mode = COMPUTE;
+		ret = header.create_write_resp(loc_path);
+		rqst.clear();
+		resp = header.get_response();
+		if (ret != NONE)
+		{
+			mode = ret;
+			header.fill_redir_fd(&loc_fd);
+		}
+		else
+			mode = SEND;
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
@@ -134,7 +144,16 @@ void	client_info::write_handler(request_handler& header)	{
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
-		mode = COMPUTE;
+		ret = header.create_write_resp(loc_path);
+		rqst.clear();
+		resp = header.get_response();
+		if (ret != NONE)
+		{
+			mode = ret;
+			header.fill_redir_fd(&loc_fd);
+		}
+		else
+			mode = SEND;
 	}
 	resp = tmp;
 //	time_reset();
@@ -357,7 +376,7 @@ void	client_info::compute(request_handler& header)	{
 			}
 			if (ret == WRITE)
 			{
-				rqst = header.get_response(); //on sauvegarde des infos de header pour former une nouvelle requete
+				loc_path = header.get_path();
 				resp = header.get_body();//on sauvegard le body de la requete precedente pour l'ecrire dans le fichier
 			}
 			else if (ret == CGI_IN)
