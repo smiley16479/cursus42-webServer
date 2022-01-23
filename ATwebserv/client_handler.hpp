@@ -19,10 +19,9 @@ public:
 	client_handler(struct_epoll &);
 	~client_handler();
 	bool is_request_fulfilled(int);
-	bool is_PUT_request_fulfilled(client_info& client);
-	bool is_POST_request_fulfilled(client_info& client);
-		bool is_POST_chunk_fulfilled(client_info& client);
-		bool is_POST_regular_fulfilled(client_info& client);
+	bool request_type(client_info& client);
+	bool request_transfer_type(client_info& client);
+	bool is_fulfilled(client_info& client);
 	void remove(int i); // REMOVE A CLIENT
 	void add(int time_out, int i); // ADD A CLIENT
 	void check_all_timeout(void);

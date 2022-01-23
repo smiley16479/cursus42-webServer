@@ -7,6 +7,7 @@
 #include <unistd.h> // Pour close, À ENLEVER
 
 using namespace std;
+bool _run = true;      // Initialisé à true tant qu'il n'y a pas de SIGINT
 
 server::server(std::string av)
 {
@@ -20,9 +21,21 @@ server::~server()
 	cout << RED "server destructeur..." RESET << endl;
 }
 
+// PROBLEM POUR SIGNAL HANDLER PAS ENCORE FAIT PMARCHER
+void	signal_handler(int signal)
+{
+	if (signal == SIGINT)
+	{
+		std::cout << CYAN << " Stopping server..." << RESET << std::endl;
+		_run = false;
+		// exit(0);
+	}
+}
+
 void server::initialize(void) {
 	struct sockaddr_in servaddr;
 
+	signal(SIGINT, signal_handler);
 	if ((_epoll._epoll_fd = epoll_create(1)) == -1) /* INITIALISATION DE L'INSTANCE EPOLL */
 		throw std::runtime_error("ERROR IN EPOLL INSTANCE CREATION");
 /* INITIALISATION DES SOCKET DES SERVER(S) VIRTUEL(S) */
@@ -58,7 +71,7 @@ void server::run(void) {
 	int byte_recved;
 	int serv_id;
 
-	while(1)
+	while(_run)
 	{
 		printf("\nPolling for input...\n");
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000); //500
@@ -113,7 +126,6 @@ void server::run(void) {
 		client.check_all_timeout();
 		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 	}
-
 	if(close(_epoll._epoll_fd))
 	{
 		fprintf(stderr, "Failed to close epoll file descriptor\n");

@@ -129,9 +129,12 @@ void request_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
-// EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION -> 403 (FORBIDDEN)
-	if (resolve_path())
-		/* Do nothing */;
+// EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION
+	if (resolve_path()) {
+		file_type();
+		add_all_field();
+		add_body(false);
+	}
 	else if (is_cgi(_hrx["A"])) // Pour le moment pas adapte de Arthur
 		handle_cgi();
 	else if (_hrx["A"][0] == "GET")
@@ -142,6 +145,10 @@ void request_handler::writer(void) {
 		handle_post_rqst();
 	else if (_hrx["A"][0] == "HEAD") {
 		cout << "Facultatif HEAD method not implemented yet\n";
+		file_type();
+		gen_CType();
+		gen_CLength(2);
+		add_all_field();
 		// gen_startLine( _status.find("405") ); // 405 Not allowed - 403 Forbidden
 	}
 	else if (_hrx["A"][0] == "DELETE") {
@@ -156,10 +163,10 @@ void request_handler::writer(void) {
 		else
 			puts( "File successfully deleted" );
 	}
-	gen_CType(string());
-	gen_CLength();
-	add_all_field(); 
-	add_body();
+	// gen_CType(string());
+	// gen_CLength();
+	// add_all_field(); 
+	// add_body();
 	_hrx.clear();
 	_htx.clear();
 }
@@ -216,11 +223,12 @@ void	request_handler::gen_serv()
 	_htx["Server"][2] = "\r\n";
 }
 
-void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
+void	request_handler::gen_CType(/* string ext */) /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
 {
 // Capture file.ext(ension)
-	if (ext.empty())
-		ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
+	// if (ext.empty())
+		// ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
+	string ext = _path.substr(_path.find_last_of(".") + 1);
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
 #endif
@@ -244,36 +252,40 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
 }
 
-// génération du header Content-Length
-void	request_handler::gen_CLength()
+// génération du header Content-Length (1 = clen, 2 = file_path, 3 = _body.size())
+void	request_handler::gen_CLength(int x)
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
 /* PROBLEM */ // http://127.0.0.1:8080/downloads/ n'affiche pas le poulpe -> les autre requetes sont faites sur le folder alors que le path du html est neutre, mais ça ça marche : http://127.0.0.1:8080/downloads 
+	cout << BLUE "IN GEN_CLENGTH()" RESET << endl;
 	_htx["Content-Length"].clear();
-	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL
 
 	stringstream ss;
-	if (_c->rqst_type == POST_MULTIPART) {
+/* 	if (_c->rqst_transfer_t == MULTIPART) {
 		ss << _hrx["Content-Length:"][0];
-		cout << MAGENTA "la\n" RESET;
+		cout << MAGENTA "1\n" RESET;
 	}
-	else if (_c->rqst_type == POST_CHUNCK) {
+	else if (_c->rqst_t != GET && _c->rqst_transfer_t == NO_BODY) {
+		cout << MAGENTA "2\n" RESET;
+		return ; // PAS  BESOIN DE CONTENT-LEN ON RETURN
+	}
+	else */if (x == 1) {
 		ss << _c->clen;
-		cout << MAGENTA "laa\n" RESET;
+		cout << MAGENTA "3\n" RESET;
 	}
-	else if (_body.empty()) {
-		cout << MAGENTA "ici\n" RESET;
+	else if (x == 2) {
+		cout << MAGENTA "4\n" RESET;
 		ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate);
 		ss << fs.tellg();
 		fs.close();
 	}
 	else {
-		cout << MAGENTA "là\n" RESET;
-		ss << _body.size();
+		cout << MAGENTA "5\n" RESET;
+		if (_body.size())
+			ss << _body.size();
+		else return ;
 	}
-	if (ss.str() == "-1")	// VIRER CES TROIS LIGNES GROS SPARADRAP DEGEUX POUR TESTER
-		_htx["Content-Length"].push_back( "0");	// VIRER CES TROIS LIGNES GROS SPARADRAP DEGEUX POUR TESTER
-	else	// VIRER CES TROIS LIGNES GROS SPARADRAP DEGEUX POUR TESTER
-		_htx["Content-Length"].push_back( ss.str());
+	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL -> IL APPARAITTRA ALORS DS LES HEADER _HTX
+	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
 // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT (A DECOMMENTER -AV SON HOMOLOGUE DS gen_CLength()- SI CHANGEMENT D'AVIS)
 /* 	if (!_si[_s_id].location[_l_id].max_file_size.empty() // POUR LES REQUEST ENTITY TOO LARGE SUREMENT A VIRER D'ICI
@@ -317,10 +329,10 @@ tiennent pas à un autre serveur) */
 int request_handler::handle_get_rqst(void)
 {
 	file_type();
-	// gen_CType(string());
-	// gen_CLength();
-	// add_all_field();
-	// add_body();
+	gen_CType();
+	gen_CLength(2);
+	add_all_field();
+	add_body(false); // add file content
 	return 0;
 }
 
@@ -336,7 +348,7 @@ int request_handler::handle_put_rqst(void)
 	cout << BLUE "1" RESET << endl;
 
 // PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
-	if (_c->rqst_type == PUT_MULTIPART) {
+	if (_c->rqst_transfer_t == MULTIPART) {
 		size_t actual_file_size;
 		if ((actual_file_size = check_file_size()) == string::npos)
 			return 1;
@@ -353,7 +365,9 @@ int request_handler::handle_put_rqst(void)
 
 		_body = _c->rqst.substr(pos_boundary);
 	}
-	else if (_c->rqst_type == PUT_CHUNCK) {
+	else if (_c->rqst_transfer_t == URL_ENCODED)
+		extract_xform_rqst_body();
+	else if (_c->rqst_transfer_t == CHUNCK) {
 		cout << BLUE "2" RESET << endl;
 		if (extract_chunk_rqst_body())
 			cout << RED << "ERROR PUT CHUNK\n" RESET;
@@ -367,34 +381,63 @@ int request_handler::handle_put_rqst(void)
 		gen_startLine(  _status.find("201") );
 
 	// CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
-	// ofstream my_file(_c->post_file_path, std::ofstream::out | std::ofstream::trunc);
-	int fd;
-	if ((fd = open(_c->post_file_path.c_str(), O_TRUNC)) != -1/* my_file.is_open() */) {
-		write(fd, _body.c_str(), _body.length());
-		close(fd);
+	// int fd;
+	// if ((fd = open(_c->post_file_path.c_str(), O_TRUNC | O_CREAT)) != -1/* my_file.is_open() */) {
+	// 	write(fd, _body.c_str(), _body.length());
+	// 	close(fd);
+	ofstream my_file;
+	my_file.open(_c->post_file_path, std::ofstream::out | std::ofstream::trunc);
+	my_file.seekp(0);
+	if (my_file.is_open()) {
 		// my_file << _body;
-		// my_file.close();
-		cout << "Upload location : " + _c->post_file_path  + "\n\n" + _c->rqst + "\n\n";
+		my_file.write(_body.c_str(), _body.size());
+		my_file.close();
+		cout << GREEN "FILE WRITTEN !! Upload location : " + _c->post_file_path  + RESET "\n\n" + _c->rqst + "\n\n" ;
 	}
 	else
 		cout << RED "download path invalid : " RESET << _c->post_file_path << "\n";
+	// gen_CType();
+	// gen_CLength(3);
+	add_all_field(); 
+	// add_body();
 	return 0;
 }
 
 int request_handler::handle_post_rqst(void) 
 {
 	cout << BLUE "IN HANDLE_POST_RQST" RESET << endl;
-	cout << "_hrx['Content-Type:''][1] : " << _hrx["Content-Type:"][0] << endl;
-	cout << GREEN "RQST :\n" RESET << _c->rqst << endl;
+	// cout << "_hrx['Content-Type:''][1] : " << _hrx["Content-Type:"][0] << endl;
+	cout << GREEN "RQST :\n" RESET << "[" + _c->rqst + "]" << endl;
 // PROBLEM SI C URL_ENCODE C DS LE FIELD  _hrx["Content-Type:"][0] SINON LA BOUNDARY EST DE LE FIELD _hrx["Content-Type:"][1] D'OU LE SEGV plsu bas si pas de boundary
 
 	// SI TOUT S'EST BIEN PASSÉ ON DÉTACHE LE BODY DE LA REQUETE POST (DS _BODY)
-	if (_c->rqst_type == POST_MULTIPART)
-		return extract_multi_rqst_body();
-	else if (_c->rqst_type == POST_URL_ENCODED) // Content-Type: application/x-www-form-urlencoded
-		return extract_xform_rqst_body();
-	else if (_c->rqst_type == POST_CHUNCK)
-		return extract_chunk_rqst_body();
+	if (_c->rqst_transfer_t == MULTIPART)
+		extract_multi_rqst_body();
+	else if (_c->rqst_transfer_t == URL_ENCODED) // Content-Type: application/x-www-form-urlencoded
+		extract_xform_rqst_body();
+	else if (_c->rqst_transfer_t == CHUNCK)
+		extract_chunk_rqst_body();
+
+	struct stat sb;
+	_c->post_file_path = _path + "_POST";
+	if (stat(_c->post_file_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+		gen_startLine(  _status.find("204") );
+	else
+		gen_startLine(  _status.find("201") );
+
+	ofstream my_file(_c->post_file_path, std::ofstream::out | std::ofstream::trunc);
+	// my_file.open(_c->post_file_path, std::ofstream::out | std::ofstream::trunc);
+	// my_file.seekp(0);
+	if (my_file.is_open()) {
+		// my_file << _body;
+		my_file.write(_body.c_str(), _body.size());
+		my_file.close();
+		cout << GREEN "FILE WRITTEN !! Upload location : " + _c->post_file_path  + RESET "\n\n" + _c->rqst + "\n\n" ;
+	}
+	else
+		cout << RED "download path invalid : " RESET << _c->post_file_path << "\n";
+
+	add_all_field();
 	return 0;
 }
 
@@ -439,9 +482,9 @@ int request_handler::extract_multi_rqst_body(void)
 
 // CREER ET ECRIT DS LE FICHIER, AINSI QUE DS _BODY POUR LA REPONSE
 	cl.post_file_path = _path + '/' + name + "_transfer";
-	ofstream my_file(cl.post_file_path, std::ofstream::out | std::ofstream::trunc);
 	if ((pos = cl.rqst.find("\r\n\r\n", pos1)) != string::npos && (pos += 4)) {// +=4 == "\r\n\r\n"
 		_body = cl.rqst.substr(pos, pos_last_boundary - pos - 1);
+		ofstream my_file(cl.post_file_path, std::ofstream::out | std::ofstream::trunc);
 		if (my_file.is_open()) {
 			my_file << _body;
 			my_file.close();
@@ -456,7 +499,7 @@ int request_handler::extract_multi_rqst_body(void)
 int request_handler::extract_xform_rqst_body(void)
 {
 	cout << BLUE "\nDS extract_xform_rqst_body\n" RESET;
-	cout << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
+	// cout << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
 
 	client_info& cl = *_c;
 	size_t pos_boundary;
@@ -470,14 +513,19 @@ int request_handler::extract_xform_rqst_body(void)
 	pos_boundary += 4;
 	size_t pos_last_boundary = cl.rqst.find_last_of("\r\n", cl.rqst.size() - 4);
 	_body = cl.rqst.substr(pos_boundary, pos_last_boundary - pos_boundary - 1);
-	cout << GREEN "POSTXFORM_RQST_BODY : " RESET << _body << "\n";
+#ifdef _debug_
+	if (_body.size() <= 1000)
+		cout << "[" << _body << "]" << endl;
+	else 
+		cout << RED "Body too long to be displayed\n" RESET << endl;
+#endif
 	return 0;
 }
 
 int request_handler::extract_chunk_rqst_body(void)
 { cout << BLUE "DS EXTRACT_CHUNK_RQST_BODY\n" RESET;
+	_body.clear();
 	size_t pos, count = 1;
-	cout << _c->rqst << endl;
 	if ((pos = _c->rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
 		return 1;
 	pos += 2;
@@ -489,7 +537,13 @@ int request_handler::extract_chunk_rqst_body(void)
 		_body.append(_c->rqst, pos, count);
 		pos += count;
 	}
-	cout << "here is the concatenated string : " << _body.size()  << endl << "[" << _body << "]" << endl;
+	cout << "here is the concatenated string : " << _body.size()  << endl;
+#ifdef _debug_
+	if (_body.size() <= 1000)
+		cout << "[" << _body << "]" << endl;
+	else 
+		cout << RED "Body too long to be displayed\n" RESET << endl;
+#endif
 	return 0;
 }
 
@@ -521,26 +575,13 @@ int	request_handler::resolve_path()
 		if ((_hrx["A"][1].find( it->location.c_str(), 0 , it->location.size()) == 0 && it->location.size() > len) || (!len && !index)) // || si on a rien trouvé la location[0] est le default
 		{
 			// S'IL Y A UNE DIRECTIVE_RETURN À L'INTERIEURE DE LA LOCATION
-			if (!it->retour.empty()) {
+			if (!it->retour.empty())
 				return_directive(it);
-/* 				for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
-					if (it2->location == it->retour.back()) {
-						cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
-						string::const_iterator c_it = it->retour[0].begin();
-						while (c_it != it->retour[0].end() && std::isdigit(*c_it)) // On verifie qu'il s'agisse ...
-							++c_it;
-						if ( !it->retour[0].empty() && c_it == it->retour[0].end()) // ... d'un status_code ds it->retour[0]
-							gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
-
-						_path = it2->root + "/";
-						_l_id = it2 - _si[_s_id].location.begin();
-						break ;
-					} */
-			} // SINON
+			// SINON
 			else {
 				_path = it->root + "/";
-			// SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-				if ((_c->rqst_type == POST_MULTIPART || _c->rqst_type == POST_CHUNCK || _c->rqst_type == PUT) && !it->download_path.empty())
+			// SI POST || PUT ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
+				if ((_c->rqst_t == POST || _c->rqst_t == PUT) && !it->download_path.empty())
 					_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
 			}
@@ -570,7 +611,7 @@ int	request_handler::resolve_path()
 // Si erreur lors de l'ouverture du fichier renvoie le _path sur les pages d'erreurs
 int request_handler::file_type()
 {
-	cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
+	cout << BLUE "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
 	// struct stat sb = {0}; // à la place de : bzero(&sb, sizeof(sb));
 	struct stat sb;
 	bzero(&sb, sizeof(sb));
@@ -578,7 +619,7 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		case S_IFDIR:  printf("directory\n");
+		case S_IFDIR:  printf(RED "directory\n" RESET);
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 				generate_folder_list();
 				return 1;
@@ -589,7 +630,7 @@ int request_handler::file_type()
 				file_type();
 			}
 			break;
-		case S_IFREG:  printf("regular file\n");
+		case S_IFREG:  printf(RED "regular file\n" RESET);
 			break;
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
@@ -641,48 +682,65 @@ void request_handler::add_all_field()
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_c->resp += it->second[i];
 	_c->resp += "\r\n";
-	cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _c->resp << endl;
+	cout << BLUE "DS ADD_ALL_FIELD() all_response_header :\n" RESET << _c->resp << endl;
+
+#ifdef _debug_
+	ofstream _LOGfile;
+	_LOGfile.open("log.txt", std::ofstream::app);
+	if (_LOGfile.is_open()) {
+		_LOGfile << "Response :\n";
+		string str;
+		std::stringstream ss(_c->resp);
+		while (getline(ss, str))
+			_LOGfile << "> " + str + "\n";
+		_LOGfile.close();
+	}
+#endif
 }
 
-// Ajout du fichier ou du body À LA SUITE des header dans response
-void request_handler::add_body()
+// Ajout du fichier ou du body À LA SUITE des header dans response (src == 0 ->use _path, src == value -> use _body)
+void request_handler::add_body(int slt_src)
 {
+	cout << BLUE "DS ADD_BODY()\n" RESET;
+	cout << (slt_src ? ("reqst_t :" + _c->rqst_t) : ("_path :" + _path ) ) << endl;
 /* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
 		return ; */
-	if (_c->rqst_type != PUT_CHUNCK && !_body.empty()) {
+	if (/* _c->rqst_t != PUT_CHUNCK &&  !_body.empty()*/slt_src) {
 		cout << RED "Body (folder) written !" RESET  << endl;
 		_c->resp += _body;
 		_body.clear();
 		return ;
 	}
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
-	if (_hrx["A"][0] == "GET") {
+	else {
 		cout << RED "File written !" RESET  << endl;
 		ifstream fs(_path);
 		_c->resp.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
-	else if (_hrx["A"][0] == "POST") {
-		cout << RED "Post body written !" RESET  << endl;
-		_c->resp.append(_c->resp);
-	}
+	// else if (_hrx["A"][0] == "POST") {
+	// 	cout << RED "Post body written !" RESET  << endl;
+	// 	_c->resp.append(_c->resp);
+	// }
 }
 
 // Verifie si elle est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
 // puis si la méthode ds la location concernée est autorisée (maj gen_stratLine 403 si besoin)
 bool request_handler::is_method_allowed(void)
 {/* PROBLEME (A TESTER) */
+	if (_hrx["A"][1] == "/directory/youpi.bla")  // A VIRER SPARADRAP POUR TESTER PROBLEM !!
+		return true;  // A VIRER SPARADRAP POUR TESTER PROBLEM !!
 	cout << MAGENTA "is_method_allowed : " RESET;
 	bool allowed = false;
-	const char *array[] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL};
+	const char *array[] = {"GET", "PUT", "HEAD", "POST", "DELETE", "PATCH", NULL};
 	for (const char**strs = array; *strs; ++strs){
 		// cout << MAGENTA << *strs << RESET << endl;
 		if (*strs == _hrx["A"][0])
 			allowed = true;
 	}
 	if (!allowed){
-		gen_startLine( _status.find("405") );
-		cout << MAGENTA << "not allowed 405" << RESET << endl;
+		gen_startLine( _status.find("400") );
+		cout << MAGENTA << "400 Bad Request" << RESET << endl;
 		return allowed;
 	}
 	allowed = false;

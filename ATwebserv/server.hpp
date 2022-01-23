@@ -1,9 +1,10 @@
 #ifndef _SERVER_HPP_ 
 #define _SERVER_HPP_
-#include <sys/socket.h>	// pour socket()
+#include "color.hpp"
+# include <signal.h>    // pour le signal Ctrl-C
 #include <sys/types.h>	// 
 #include <sys/epoll.h>	// for epoll_create1(), epoll_ctl(), struct epoll_event 
-#include "color.hpp"
+#include <sys/socket.h>	// pour socket()
 #include "struct_webserv.hpp"
 
 class server
@@ -17,7 +18,6 @@ private:
     struct_epoll _epoll;
  
     char str[BUF_LEN];
-    char msg[BUF_LEN];
 
 public:
     server(std::string);

@@ -93,8 +93,8 @@ private:
 	void gen_date(void);
 	void gen_startLine(std::map<string, string>::iterator);
 	void gen_serv(void);
-	void gen_CType(string ext);
-	void gen_CLength(void);
+	void gen_CType(void);
+	void gen_CLength(int);
 	// void gen_response(void);
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
@@ -110,7 +110,7 @@ private:
 					void generate_folder_list();
 	size_t check_file_size(void);
 	void add_all_field();
-	void add_body();
+	void add_body(int i = 0);
 	void clean_url(string& str);
 	int handle_post_rqst(void);
 		int extract_multi_rqst_body(void);

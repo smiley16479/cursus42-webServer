@@ -3,10 +3,11 @@ SRC += config_checker.cpp
 SRC += server.cpp
 SRC += request_handler.cpp
 SRC += client_handler.cpp
+SRC += cgi_handler.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
-CC = clang++
+CC = g++
 
 RM = rm -f
 
@@ -18,9 +19,9 @@ CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 endif
 
-CPP_FLAGS += -std=c++98
-CPP_FLAGS += -g3
-CPP_FLAGS += -fsanitize=address
+# CPP_FLAGS += -std=c++98
+# CPP_FLAGS += -g3
+# CPP_FLAGS += -fsanitize=address
 
 all:	build run
 

@@ -7,7 +7,8 @@
 #define MAX_EVENTS 1000
 
 // POST_MULTIPART = rqst post regulière (avec boundary=), POST_CHUNCK = rqst post chunked (no boundary=)
-enum e_rqst_type{NONE, GET, PUT, PUT_CHUNCK, PUT_MULTIPART, HEAD, POST_MULTIPART, POST_URL_ENCODED, POST_CHUNCK, DELETE, INVALID};
+enum e_rqst_type		{NONE, GET, PUT, HEAD, POST, DELETE, INVALID};
+enum e_rqst_tranfer_type{N0NE, MULTIPART, CHUNCK, URL_ENCODED, NO_BODY};
 
 struct locati_info {
 	std::string	location;
@@ -40,18 +41,20 @@ struct client_info {
 	std::string rqst;
 	std::string post_boundary;						// boundary=([)------------------------f3a140510ee62d32(])
 	time_t		rqst_time_start;
-	e_rqst_type rqst_type;
 	std::string	post_file_path;
 	int			time_out;
-	bool		request_fulfilled;
+	char		rqst_t;								// type de requete (GET, POST, etc.)
+	char		rqst_transfer_t;					// type de transfert de la requete (Chunk, multipart, etc.)
+	char		request_fulfilled;					// Etape de traitement de la requete
+	size_t		header_end;							// position de la fin des headers
 	size_t		byte_send;
 	size_t		clen;								// Len du body (pas de la rqst)
 };
 
 struct struct_epoll
 {
-    int _epoll_fd;
-    int _event_count;
+	int _epoll_fd;
+	int _event_count;
 	epoll_event _event;
 	epoll_event _events[MAX_EVENTS];
 };
