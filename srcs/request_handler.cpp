@@ -273,6 +273,8 @@ void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire
 		_htx["Content-Type"].push_back("Content-Type: audio");
 	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
 		_htx["Content-Type"].push_back("Content-Type: video");
+	else if( ext == "pdf")
+		_htx["Content-Type"].push_back("Content-Type: application/pdf");
 	else // DEFAULT PAREIL QUE L EPREMIER À ARRANGER :) POUR LE TOI DU FUTUR BISOU
 		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8");
 		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");

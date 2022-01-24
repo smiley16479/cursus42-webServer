@@ -488,7 +488,7 @@ bool client_info::get_rq_type()
 		rq_mode = NORMAL;
 		return (true);
 	}
-	return false;
+	return (false);
 }
 
 bool client_info::is_multipart_rqst_fulfilled()	{

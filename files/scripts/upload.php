@@ -54,26 +54,16 @@
 					echo "/>";
 					echo "</video>";
 				}
-				else if (substr($filetype, 0, strpos($filetype, "/"))  == "application"
-						&& substr($filetype, strpos($filetype, "/") + 1) == "pdf")
+				else
 				{
-					echo "Pdf detecte !";
-
-//					echo "<embed src=\"http://docs.google.com/gview?url=";
-//					echo "http://";
-//					echo $_SERVER["REMOTE_HOST"];
-//					echo substr($uploadfile, strpos($uploadfile, "/"));
-//					echo "&embedded=true\" width=\"600\" height=\"500\"/>";
-
-					echo "<object data=";
+					echo "No previsualisation is available for this MIME format";
+					echo "<br>";
+					echo "Your ressource has been added at this address :";
+					echo "<a href=";
 					echo substr($uploadfile, strpos($uploadfile, "/"));
-					echo "?#zoom=85&scrollbar=0&toolbar=0&navpanes=0";
-					echo " type=\"application/pdf\" \>";
-					echo "/>";
-
-//					echo "<iframe src=\"";
-//					echo "</object>";
-//					echo "\" width=\"100%\" height=\"100%\"></iframe>";
+					echo ">";
+					echo basename($_FILES['doodad']['name']);
+					echo "</a>";
 				}
 
 				echo "<br>";

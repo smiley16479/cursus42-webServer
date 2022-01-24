@@ -5,7 +5,7 @@
 //MESSAGE:	DESCRIPTION:
 
 
-const char	*ret_string_100[] = {
+static const char	*ret_string_100[] = {
 "Continue",						//100 The server has received the request headers, and the client should proceed to send the request body
 "Switching Protocols",				//101 The requester has asked the server to switch protocols
 "Checkpoint",						//102 Used in the resumable requests proposal to resume aborted PUT or POST requests
@@ -13,7 +13,7 @@ const char	*ret_string_100[] = {
 //2XX: SUCCESSFUL
 //MESSAGE:	DESCRIPTION:
 
-const char	*ret_string_200[] = {
+static const char	*ret_string_200[] = {
 " OK",								//200 The request is OK (this is the standard response for successful HTTP requests)
 " Created",							//201 The request has been fulfilled, and a new resource is created 
 " Accepted",						//202 The request has been accepted for processing, but the processing has not been completed
@@ -26,7 +26,7 @@ const char	*ret_string_200[] = {
 // 3XX: REDIRECTION
 // MESSAGE:	DESCRIPTION:
 
-const char	*ret_string_300[] = {
+static const char	*ret_string_300[] = {
 " Multiple Choices",				//300 A link list. The user can select a link and go to that location. Maximum five addresses  
 " Moved Permanently",				//301 The requested page has moved to a new URL 
 " Found",							//302 The requested page has moved temporarily to a new URL 
@@ -41,7 +41,7 @@ const char	*ret_string_300[] = {
 //000 4XX: CLIENT ERROR
 //000 MESSAGE:	DESCRIPTION:
 
-const char	*ret_string_400[] = {
+static const char	*ret_string_400[] = {
 " Bad Request",						//400 The request cannot be fulfilled due to bad syntax
 " Unauthorized",					//401 The request was a legal request, but the server is refusing to respond to it. For use when authentication is possible but has failed or not yet been provided
 " Payment Required",				//402 Reserved for future use
@@ -65,7 +65,7 @@ const char	*ret_string_400[] = {
 //000 5XX: SERVER ERROR
 //000 MESSAGE:	DESCRIPTION:
 
-const char	*ret_string_500[] = {
+static const char	*ret_string_500[] = {
 " Internal Server Error",			//500 A generic error message, given when no more specific message is suitable
 " Not Implemented",					//501 The server either does not recognize the request method, or it lacks the ability to fulfill the request
 " Bad Gateway",						//502 The server was acting as a gateway or proxy and received an invalid response from the upstream server
