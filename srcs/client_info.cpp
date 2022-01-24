@@ -600,7 +600,7 @@ void client_info::is_chunked_rqst_fulfilled()	{
 		if (size == 0)
 		{
 			std::cout << "Read a zero, checking for end symbol" << std::endl;
-			if (chunk_buffer.substr(pos, 4) == "\r\n\r\n")
+			if (chunk_buffer.substr(pos, 4) == "\r\n\r\n" || chunk_buffer.substr(pos, 4) == "\0\0\0\0")
 			{
 				std::cout << "Chunked transmission complete !" << std::endl;
 				chunk_buffer.clear();

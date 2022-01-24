@@ -13,6 +13,7 @@
 #include "cgi_handler.hpp"
 #include "request_handler.hpp"
 #include "status_lines.hpp"
+#include "MIME_headers.hpp"
 
 request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
 {// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
@@ -158,7 +159,7 @@ int request_handler::choose_method(void)
 	if (redir_mode == NONE)
 	{
 		file_type();
-		gen_CType(string());
+		gen_CType(_path.substr(_path.find_last_of(".") + 1));
 		gen_CLength();
 		redir_mode = writer();
 	}
@@ -253,36 +254,30 @@ void	request_handler::gen_serv() /* PROBLEM : S'IL N'Y A PAS DE CHAMP Server DS 
 void	request_handler::gen_CType(string ext) /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
 {
 // Capture file.ext(ension)
+	size_t	pos;
+
 	if (ext.empty())
-		ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
+	{
+		pos = _hrx["A"][1].find_last_of(".") + 1;
+		if (pos != std::string::npos)
+			ext = _hrx["A"][1].substr(pos);
+	}
+	else if (_path == "/" && (pos = _si[_s_id].location[_l_id].root.find_last_of(".") + 1) != std::string::npos)
+		ext = _si[_s_id].location[_l_id].root.substr(pos);
+	else if (is_folder(_path))
+	{
+		ext = "html";
+	}
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
 #endif
+	cout << "file ext asked : " << ext << endl;
+	std::string type = mime_string(ext.c_str());
+	std::cout << "Hello, my MIME type is : " << type << std::endl;
 // Content type : https://developer.mozilla.org/fr/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 	_htx["Content-Type"].clear();
-	if ( ext == "/" || ext == "html" ) // Default file PROBLEM ?
-		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8");
-	else if ( ext == "css" ) // Default file PROBLEM ?
-	{
-		_htx["Content-Type"].push_back("Content-Type: text/css");
-//		_htx["Connection"].push_back("Connection: close");
-	}
-	else if( ext == "ico" || ext == "png" || ext == "jpeg" || ext == "webp" || ext == "gif" || ext == "bmp" )
-		_htx["Content-Type"].push_back("Content-Type: image");
-	else if( ext == "ogg" || ext == "wav" || ext == "midi" || ext == "mpeg" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: audio");
-	else if( ext == "ogg" || ext == "mp4" || ext == "webm" )
-		_htx["Content-Type"].push_back("Content-Type: video");
-	else if( ext == "pdf")
-		_htx["Content-Type"].push_back("Content-Type: application/pdf");
-	else // DEFAULT PAREIL QUE L EPREMIER À ARRANGER :) POUR LE TOI DU FUTUR BISOU
-		_htx["Content-Type"].push_back("Content-Type: text/html; charset=utf-8");
-		// _htx["Content-Type"].push_back("Content-Type: application/octet-stream\r\n");
-	if (ext != "css")
-	{
-		_htx["Content-Type"].push_back("/");
-		_htx["Content-Type"].push_back(ext);
-	}
+	_htx["Content-Type"].push_back("Content-Type: ");
+	_htx["Content-Type"].push_back(type);
 	_htx["Content-Type"].push_back("\r\n");
 }
 
@@ -608,8 +603,8 @@ bool request_handler::is_method_allowed(void)
 			allowed = true;
 	}
 	if (!allowed){
-		gen_startLine( 405 );
-		cout << MAGENTA << "not allowed 405" << RESET << endl;
+		gen_startLine( 400 );
+		cout << MAGENTA << "Bad Request (400)" << RESET << endl;
 		return allowed;
 	}
 	allowed = false;
@@ -617,7 +612,7 @@ bool request_handler::is_method_allowed(void)
 		if (_si[_s_id].location[_l_id].allowed_method[i] == _hrx["A"][0])
 			allowed = true;
 	if (!allowed)
-		gen_startLine( 403 );
+		gen_startLine( 405 );
 	return allowed;
 }
 
