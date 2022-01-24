@@ -124,7 +124,7 @@ int request_handler::choose_method(void)
 	redir_mode = NONE;
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
-		;
+		gen_allowed();
 	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1))
 		redir_mode = handle_cgi();
 	else if (_hrx["A"][0] == "POST")
@@ -193,6 +193,19 @@ int	request_handler::cgi_writer()
 	_hrx.clear();
 	_htx.clear();
 	return (redir_mode);
+}
+
+void	request_handler::gen_allowed()	{
+	if (_htx["Allowed"].empty())
+		_htx["Allowed"] = std::vector<std::string>();
+	_htx["Allowed"].push_back("Allow: ");
+	for (std::vector<std::string>::iterator it = _si[_s_id].location[_l_id].allowed_method.begin(); it != _si[_s_id].location[_l_id].allowed_method.end(); it++)
+	{
+		_htx["Allowed"].push_back(*it);
+		if (it + 1 != _si[_s_id].location[_l_id].allowed_method.end())
+		_htx["Allowed"].push_back(", ");
+	}
+	_htx["Allowed"].push_back("\r\n");
 }
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
@@ -594,9 +607,9 @@ int	request_handler::resolve_path()
 // puis si la méthode ds la location concernée est autorisée ou non (maj gen_stratLine 403 si besoin)
 bool request_handler::is_method_allowed(void)
 {/* PROBLEME (A TESTER) */
-	cout << MAGENTA "is_method_allowed\n" RESET;
+	cout << MAGENTA "is_method_allowed : " RESET;
 	bool allowed = false;
-	const char *array[] = {"GET", "POST", "PUT", "DELETE", "PATCH", NULL};
+	const char *array[] = {"GET", "PUT", "HEAD", "POST", "DELETE", "PATCH", NULL};
 	for (const char**strs = array; *strs; ++strs){
 		// cout << MAGENTA << *strs << RESET << endl;
 		if (*strs == _hrx["A"][0])
@@ -604,7 +617,7 @@ bool request_handler::is_method_allowed(void)
 	}
 	if (!allowed){
 		gen_startLine( 400 );
-		cout << MAGENTA << "Bad Request (400)" << RESET << endl;
+		cout << MAGENTA << "400 Bad Request" << RESET << endl;
 		return allowed;
 	}
 	allowed = false;
@@ -613,6 +626,7 @@ bool request_handler::is_method_allowed(void)
 			allowed = true;
 	if (!allowed)
 		gen_startLine( 405 );
+	cout << MAGENTA << (allowed ? "oui\n" : "non\n") << RESET;
 	return allowed;
 }
 
@@ -778,6 +792,9 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	std::string			buf(mp["A"][1]);
 	std::string			var;
 
+	tmp =  "REQUEST_METHOD=";
+	tmp += _hrx["A"][0];
+	env.push_back(tmp);
 	tmp =  "REDIRECT_STATUS=CGI";
 	env.push_back(tmp);
 	tmp = "SERVER_SOFTWARE=";

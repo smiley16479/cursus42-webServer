@@ -63,6 +63,7 @@ public:
 
 private:
 	void gen_date(void);
+	void gen_allowed();
 	void gen_startLine(size_t ret_code);
 	void gen_serv(void);
 	void gen_CType(string ext);

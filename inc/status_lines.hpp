@@ -46,20 +46,20 @@ static const char	*ret_string_400[] = {
 " Unauthorized",					//401 The request was a legal request, but the server is refusing to respond to it. For use when authentication is possible but has failed or not yet been provided
 " Payment Required",				//402 Reserved for future use
 " Forbidden",						//403 The request was a legal request, but the server is refusing to respond to it
-" Not Found",						//405 The requested page could not be found but may be available again in the future
-" Method Not Allowed",				//406 A request was made of a page using a request method not supported by that page. An origin server MUST generate an Allow field in a 405 (Method Not Allowed)
-" Not Acceptable",					//407 The server can only generate a response that is not accepted by the client
-" Proxy Authentication Required",	//408 The client must first authenticate itself with the proxy
-" Request Timeout",					//409 The server timed out waiting for the request
-" Conflict",						//410 The request could not be completed because of a conflict in the request
-" Gone",							//411 The requested page is no longer available
-" Length Required",					//412 The "Content-Length" is not defined. The server will not accept the request without it 
-" Precondition Failed",				//413 The precondition given in the request evaluated to false by the server
-" Request Entity Too Large",		//414 The server will not accept the request, because the request entity is too large
-" Request-URI Too Long",			//415 The server will not accept the request, because the URL is too long. Occurs when you convert a POST request to a GET request with a long query information 
-" Unsupported Media Type",			//416 The server will not accept the request, because the media type is not supported 
-" Requested Range Not Satisfiable",	//417 The client has asked for a portion of the file, but the server cannot supply that portion
-" Expectation Failed",				//418 The server cannot meet the requirements of the Expect request-header field
+" Not Found",						//404 The requested page could not be found but may be available again in the future
+" Method Not Allowed",				//405 A request was made of a page using a request method not supported by that page. An origin server MUST generate an Allow field in a 405 (Method Not Allowed)
+" Not Acceptable",					//406 The server can only generate a response that is not accepted by the client
+" Proxy Authentication Required",	//407 The client must first authenticate itself with the proxy
+" Request Timeout",					//408 The server timed out waiting for the request
+" Conflict",						//409 The request could not be completed because of a conflict in the request
+" Gone",							//410 The requested page is no longer available
+" Length Required",					//411 The "Content-Length" is not defined. The server will not accept the request without it 
+" Precondition Failed",				//412 The precondition given in the request evaluated to false by the server
+" Request Entity Too Large",		//413 The server will not accept the request, because the request entity is too large
+" Request-URI Too Long",			//414 The server will not accept the request, because the URL is too long. Occurs when you convert a POST request to a GET request with a long query information 
+" Unsupported Media Type",			//415 The server will not accept the request, because the media type is not supported 
+" Requested Range Not Satisfiable",	//416 The client has asked for a portion of the file, but the server cannot supply that portion
+" Expectation Failed",				//417 The server cannot meet the requirements of the Expect request-header field
 };
 
 //000 5XX: SERVER ERROR

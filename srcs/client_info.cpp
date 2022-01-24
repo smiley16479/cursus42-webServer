@@ -1,28 +1,35 @@
 #include "client_info.hpp"
 
 void	client_info::fd_in(request_handler& header)	{
-	t_func	func[3] = { &client_info::recv_handler,
+	t_func	func[8] = { &client_info::recv_handler,
 						&client_info::chunked_handler,
-						&client_info::compute };
+						&client_info::compute,
+						&client_info::write_handler,
+						&client_info::read_handler,
+						&client_info::cgi_write_handler,
+						&client_info::cgi_resp_handler,
+						&client_info::send_handler};
 
 	//handles EPOLLIN EVENTS
-	if (mode <= COMPUTE)
+	if (mode <= NONE)
 		return (((*this).*func[mode])(header));
 }
 
+/*
 void	client_info::fd_out(request_handler& header)	{
 	t_func	func[7] = { &client_info::chunked_handler,
 						&client_info::compute,
 						&client_info::write_handler,
 						&client_info::read_handler,
-						&client_info::send_handler,
 						&client_info::cgi_write_handler,
-						&client_info::cgi_resp_handler };
+						&client_info::cgi_resp_handler,
+						&client_info::send_handler};
 
 	//handles EPOLLOUT EVENTS
 	if (mode > RECV && mode < NONE)
 		return (((*this).*func[mode - 1])(header));
 }
+*/
 
 void	client_info::recv_handler(request_handler& header)	{
 	(void)header;
@@ -54,6 +61,7 @@ void	client_info::read_handler(request_handler& header)	{
 	int	read_bytes;
 	char	buf[MAX_LEN];
 
+	std::cout << "reading stuff from file" << std::endl;
 	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 	{
@@ -164,6 +172,7 @@ void	client_info::send_handler(request_handler& header)	{
 	std::string	tmp;
 
 	(void)header;
+	std::cout << "Sending stuff..." << std::endl;
  	if (resp.length() > (unsigned int)MAX_LEN)
 	{
 		std::cout << "MSG TOO LONG" << std::endl;
@@ -357,10 +366,12 @@ void	client_info::compute(request_handler& header)	{
 		resp = header.get_response();
 		if (ret != NONE)
 		{
+			std::cout << "Stuff is happening !" << std::endl;
 			mode = ret;
 			header.fill_redir_fd(&loc_fd);
 			if (loc_fd[0] == -1 && loc_fd[1] == -1)
 			{
+				std::cout << "There is something wrong with these fds" << std::endl;
 				if (loc_fd[0] != -1)
 				{
 					close(loc_fd[0]);

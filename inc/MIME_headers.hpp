@@ -196,6 +196,8 @@ std::string	mime_string(const char *ext)	{
 	ret = (char*)type_str(index[0]).type;
 	ret += (char*)"/";
 	ret += (char*)type_str(index[0]).sub_type(index[1]).second;
+	if (index[0] == 0)
+		ret += (char*)"; charset=utf-8";
 	return (ret);
 }
 
