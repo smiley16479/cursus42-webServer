@@ -173,6 +173,8 @@ void	client_info::send_handler(request_handler& header)	{
 
 	(void)header;
 	std::cout << "Sending stuff..." << std::endl;
+//	ofstream o("lol.txt", ios_base::app);
+//	o << resp;
  	if (resp.length() > (unsigned int)MAX_LEN)
 	{
 		std::cout << "MSG TOO LONG" << std::endl;
@@ -305,7 +307,10 @@ void	client_info::chunked_handler(request_handler& header)	{
 		bytes_exchanged = recv(com_socket, &buf, MAX_LEN, MSG_DONTWAIT);
 		if (bytes_exchanged == -1)
 		{
-//			std::cout << "Error in chunk reception, trying again" << std::endl;
+			is_chunked_rqst_fulfilled();
+			std::cout << "Error in chunk reception, trying again" << std::endl;
+			chunk_mode = TRANSMISSION_OVER;
+			mode = COMPUTE;
 			return ;
 		}
 		else
@@ -319,8 +324,12 @@ void	client_info::chunked_handler(request_handler& header)	{
 	}
 	else if (chunk_mode == CHUNK_COMPLETE)
 	{
-		resp = "HTTP/1.1 100 Continue\r\n"; 
-		bytes_exchanged = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
+		if (mode & EXPECT_100)
+		{
+			mode -= EXPECT_100;
+			resp = "HTTP/1.1 100 Continue\r\n"; 
+			bytes_exchanged = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
+		}
 		if (chunk_buffer.empty())
 		{
 			std::cout << "Chunk header complete, checking for body" << std::endl;
@@ -460,6 +469,8 @@ bool client_info::get_rq_type()
 		chunk_buffer = rqst.substr(pos + 4);
 //		std::cout << "chunk_buffer:" << chunk_buffer << std::endl;
 		mode = CHUNKED;
+		if (chunk_buffer.find("Expect: 100-Continue") != std::string::npos)
+			mode += EXPECT_100;
 		chunk_expected = 0;
 		rqst = rqst.substr(0, pos + 4);
 		if (chunk_buffer.empty())

@@ -28,6 +28,8 @@ enum	e_cmode	{
 	BAD_REQUEST
 };
 
+#define EXPECT_100 0x1000
+
 enum	e_rqmode	{
 	NORMAL,
 	MULTIPART,

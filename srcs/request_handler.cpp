@@ -214,15 +214,12 @@ void	request_handler::gen_startLine(size_t ret_code)
 {
 	std::stringstream	ss;
 
-	if (_htx["A"].empty())
-		_htx["A"] = std::vector<std::string>();
-	if (_htx["A"].size() != 3)
-		_htx["A"].resize(3, string());
-	_htx["A"][0] = "HTTP/1.1 "; // version (static)
+	_htx["A"].clear();
+	_htx["A"].push_back("HTTP/1.1 "); // version (static)
 	ss << ret_code;
-	_htx["A"][1] = ss.str(); // status code (dynamic) -> 200
-	_htx["A"][2] = ret_string(ret_code); // status msg (dynamic) -> OK
-	_htx["A"][2] += "\r\n";
+	_htx["A"].push_back(ss.str()); // status code (dynamic) -> 200
+	_htx["A"].push_back(ret_string(ret_code)); // status msg (dynamic) -> OK
+	_htx["A"].push_back("\r\n");
 // MODIFIE LE PNG DS ERROR_PAGE.HTML SI NECESSAIRE
 	if (ret_code >= 300) {
 		fstream error_file("files/error_pages/4xx.html");
