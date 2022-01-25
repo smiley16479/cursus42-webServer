@@ -25,10 +25,19 @@ enum	e_cmode	{
 	CHUNK_INCOMPLETE,
 	CHUNK_COMPLETE,
 	TRANSMISSION_OVER,
+	TRANSMIT_100,
 	BAD_REQUEST
 };
 
-#define EXPECT_100 0x1000
+enum	e_cflags	{
+	ZERO,
+	EXPECT_NUM_NL,
+	EXPECT_NUM,
+	EXPECT_LEN,
+	EXPECT_LEN_NL,
+	EXPECT_END
+};
+
 
 enum	e_rqmode	{
 	NORMAL,

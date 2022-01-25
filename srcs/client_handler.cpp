@@ -82,6 +82,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	new_client.com_socket = client_fd;
 	new_client.mode = RECV;
 	new_client._epoll = &_epoll;
+	new_client.flag = 0;
 	time(&new_client.rqst_time_start);
 	new_client.rq_mode = NORMAL;
 	new_client.chunk_mode = NO_CHUNK;

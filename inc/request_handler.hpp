@@ -42,7 +42,7 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	void reader(std::string& rqst);
+	int reader(std::string& rqst);
 	int choose_method(void);
 	int	gen_resp(void);
 	int cgi_writer(void);
@@ -52,9 +52,9 @@ public:
 
 	/* FONCTION ACCESSEUR */
 
-	string &get_path(void);
-	string &get_response(void);
-	string &get_body(void);
+	string get_path(void);
+	string get_response(void);
+	string get_body(void);
 	void set_body(const string &);
 	void	fill_redir_fd(int (*loc_fd)[2]);
 	void clean(void);
@@ -85,7 +85,9 @@ private:
 	void add_all_field();
 	int add_body();
 	void clean_url(string& str);
+	int	create_file(std::string& path);
 	int multipart_form(string& boundary, string& msg);
+	int handle_put_rqst(void);
 	int handle_post_rqst(void);
 	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 	void	cgi_var_init();

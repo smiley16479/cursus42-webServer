@@ -13,11 +13,12 @@ class client_info {
 		int			loc_fd[2];
 		std::string	loc_path;
 		size_t		mode;
+		int			flag;
 		std::string	resp;
 		std::string rqst;
 		std::string	chunk_buffer;
 		size_t		chunk_mode;
-		size_t		chunk_expected;
+		int		chunk_expected;
 		size_t		rq_mode;
 		std::string post_boundary;
 		time_t		rqst_time_start;

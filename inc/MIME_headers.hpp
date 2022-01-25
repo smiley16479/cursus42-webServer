@@ -150,7 +150,7 @@ static const t_mtype	type_str(int i)	{
 }
 
 
-int	is_mime_type(const char *ext, pair<const char*, const char*>	(*type)(int))	{
+static int	is_mime_type(const char *ext, pair<const char*, const char*>	(*type)(int))	{
 	for (size_t i = 0; strcmp(type(i).first, "") != 0; i++)
 	{
 	#ifdef _debug_
@@ -163,7 +163,7 @@ int	is_mime_type(const char *ext, pair<const char*, const char*>	(*type)(int))	{
 	return (-1);
 }
 
-void	get_mime_type(const char *ext, int (*index)[2])	{
+static void	get_mime_type(const char *ext, int (*index)[2])	{
 	for (size_t i = 0; i < 6; i++) 
 	{
 	#ifdef _debug_
