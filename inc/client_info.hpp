@@ -18,7 +18,6 @@ class client_info {
 		std::string rqst;
 		std::string	chunk_buffer;
 		size_t		chunk_mode;
-		int		chunk_expected;
 		size_t		rq_mode;
 		std::string post_boundary;
 		time_t		rqst_time_start;
@@ -49,7 +48,10 @@ class client_info {
 		bool	is_request_fulfilled();
 		bool	is_multipart_rqst_fulfilled();
 		bool	is_clen_rqst_fulfilled();
-		void	is_chunked_rqst_fulfilled();
+		bool	is_chunked_rqst_fulfilled();
+
+		void	set_recv_mode();
+		void	set_send_mode();
 
 		void 	time_reset();
 		void 	remove();

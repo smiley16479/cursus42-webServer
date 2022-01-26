@@ -55,18 +55,21 @@ int request_handler::reader(std::string& rqst)
 //	std::cout << rqst.substr(0, rqst.find("\r\n\r\n")) << std::endl;
 //	std::cout << RED "Request Body : " RESET << std::endl;
 //	std::cout << rqst.substr(rqst.find("\r\n\r\n")) << std::endl;
+	std::cout << "Parsing request !" << std::endl;
 	pos = rqst.find("\r\n\r\n");
 	if (pos != std::string::npos)
 	{
+	std::cout << "Extracting header" << std::endl;
 		_hrx["BODY"].clear();
-		_hrx["BODY"].push_back(rqst.substr(rqst.find("\r\n\r\n") + 4));
-		rqst = rqst.substr(0, rqst.find("\r\n\r\n"));
+		_hrx["BODY"].push_back(rqst.substr(pos + 4));
+		rqst = rqst.substr(0, pos);
 	}
 
 //	cout << RED "DANS HEADER READER" RESET "\n" << str << endl;
 	// LECTURE DE LA START_LINE
 	if (!ss_1.empty() && (pos = ss_1.find("\r\n")) != string::npos)
 	{
+	std::cout << "Processing" << std::endl;
 		buf_1 = ss_1.substr(0, pos + 2);
 		ss_1 = ss_1.substr(pos + 2);
 		std::stringstream ss_2(buf_1);
@@ -78,6 +81,9 @@ int request_handler::reader(std::string& rqst)
 
 	// LECTURE DU RESTE DE LA REQUETE
 	while ((pos = ss_1.find("\r\n")) != string::npos) {
+	std::cout << "Processing header" << std::endl;
+		if (ss_1.substr(0, 2) == "\r\n")
+			break;
 		buf_1 = ss_1.substr(0, pos + 2);
 		ss_1 = ss_1.substr(pos + 2);
 		std::stringstream ss_2(buf_1);
@@ -99,10 +105,10 @@ int request_handler::reader(std::string& rqst)
 //	std::cout << RED "Extracted Body : " RESET << std::endl;
 //	if (!_hrx["BODY"].empty())
 //		std::cout << _hrx["BODY"][0] << std::endl;
-
 	set_server_id();
 	if (_s_id == -1)
 		return (1);
+
 //	client.rqst.clear();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
 	// this->display();
@@ -133,38 +139,50 @@ int request_handler::choose_method(void)
 	gen_serv();
 
 	redir_mode = NONE;
+	std::cout << "Choosing adequate method" << std::endl;
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
 		gen_allowed();
-	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1))
+	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
+	{
+		std::cout << "CGI mode detected" << std::endl;
 		redir_mode = handle_cgi();
-	else if (_hrx["A"][0] == "POST")
-		redir_mode = handle_post_rqst();
-	else if (_hrx["A"][0] == "GET")
-		handle_get_rqst();
-	else if (_hrx["A"][0] == "PUT") {
-		redir_mode = handle_put_rqst();
 	}
-	else if (_hrx["A"][0] == "HEAD") {
-		cout << "Facultatif HEAD method not implemented yet\n";
-	}
-	else if (_hrx["A"][0] == "DELETE") {
-		// IF NOT ALLOWED -> 405
-
-		if (_hrx["A"][1][0] == '/')
-			_hrx["A"][1].insert(0, ".");
-		if( remove( _hrx["A"][1].c_str() ) != 0 ) {
-			perror( _hrx["A"][1].c_str() );
-			gen_startLine( 404 ); //  IF NOT FOUND -> 404
+	else
+	{
+		std::cout << "No cgi" << std::endl;
+		if (!_hrx["BODY"].empty()
+			&& !_hrx["Transfer-Encoding:"].empty()
+			&& _hrx["Transfer-Encoding:"][0] == "chunked")
+			_hrx["BODY"][0] = clean_chunk(_hrx["BODY"][0]);
+		if (_hrx["A"][0] == "POST")
+			redir_mode = handle_post_rqst();
+		else if (_hrx["A"][0] == "GET")
+			handle_get_rqst();
+		else if (_hrx["A"][0] == "PUT") {
+			redir_mode = handle_put_rqst();
 		}
-		else
-		{
-			puts( "File successfully deleted" );
-			gen_startLine( 204 );
-			redir_mode = writer();
-			_hrx.clear();
-			_htx.clear();
-			return (NONE);
+		else if (_hrx["A"][0] == "HEAD") {
+			cout << "Facultatif HEAD method not implemented yet\n";
+		}
+		else if (_hrx["A"][0] == "DELETE") {
+			// IF NOT ALLOWED -> 405
+
+			if (_hrx["A"][1][0] == '/')
+				_hrx["A"][1].insert(0, ".");
+			if( remove( _hrx["A"][1].c_str() ) != 0 ) {
+				perror( _hrx["A"][1].c_str() );
+				gen_startLine( 404 ); //  IF NOT FOUND -> 404
+			}
+			else
+			{
+				puts( "File successfully deleted" );
+				gen_startLine( 204 );
+				redir_mode = writer();
+				_hrx.clear();
+				_htx.clear();
+				return (NONE);
+			}
 		}
 	}
 	if (redir_mode == NONE)
@@ -209,6 +227,7 @@ int	request_handler::cgi_writer()
 }
 
 void	request_handler::gen_allowed()	{
+	std::cout << "Generating Allow header for response" << std::endl;
 	if (_htx["Allowed"].empty())
 		_htx["Allowed"] = std::vector<std::string>();
 	_htx["Allowed"].push_back("Allow: ");
@@ -332,14 +351,14 @@ void	request_handler::gen_CLength()
 // reconnait quel server_virtuel va traiter la requete et initialise _s_id
 void request_handler::set_server_id(void)
 {
-///!!!!!!!!!!!!! SEGFAULT !!!!!!!!!!!!!!!!!!!!!!!
-	if (_hrx["Host"].empty())
-	{
-		gen_startLine(400);
-		_s_id = -1;
-		return ;
-	}
-///!!!!!!!!!!!!! SEGFAULT !!!!!!!!!!!!!!!!!!!!!!!
+//!!!!!!!!!!!!! SEGFAULT !!!!!!!!!!!!!!!!!!!!!!!
+//	if (_hrx["Host"].empty())
+//	{
+//		gen_startLine(400);
+//		_s_id = -1;
+//		return ;
+//	}
+//!!!!!!!!!!!!! SEGFAULT !!!!!!!!!!!!!!!!!!!!!!!
 	size_t colon_pos = _hrx["Host:"][0].find_first_of(":");
 	string host(_hrx["Host:"][0].substr(0,colon_pos));
 	// PROBLEM : SPARADRAP
@@ -690,7 +709,11 @@ int	request_handler::resolve_path()
 	cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
-	return !is_method_allowed();  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+	if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1)
+		&& !_si[_s_id].location[_l_id].cgi_path.empty())
+		return (false);
+	else
+		return !is_method_allowed();  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
 }
 
 // Verifie si elle est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
@@ -701,8 +724,6 @@ bool request_handler::is_method_allowed(void)
 	bool allowed = false;
 	const char *array[] = {"GET", "PUT", "HEAD", "POST", "DELETE", "PATCH", NULL};
 
-	if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1))
-		return (false);
 	for (const char**strs = array; *strs; ++strs){
 		// cout << MAGENTA << *strs << RESET << endl;
 		if (*strs == _hrx["A"][0])
@@ -1238,4 +1259,91 @@ int	request_handler::create_write_resp(std::string &file_path)	{
 	_hrx.clear();
 	_htx.clear();
 	return (redir_mode);
+}
+
+int	get_hex_len(std::string& msg)	{
+	int		size;
+	size_t	pos;
+	std::string	buf;
+
+	buf.clear();
+	pos = 0;
+	while (msg[pos] && isxdigit(msg[pos]))
+	{
+//		std::cout << "found an hex digit, incrementing buf: " << buf << std::endl;
+		buf += msg[pos];
+		pos++;
+	}
+	if (buf.empty())
+		return (-1);
+	else
+		size = std::strtoul(buf.c_str(), NULL, 16);
+	return (size);
+}
+
+
+std::string	request_handler::clean_chunk(std::string& buf)
+{
+	size_t	pos;
+	int	chunk_mode;
+	int	size;
+	std::string	ret;
+
+	chunk_mode = CHUNK_PARSING_REQ;
+
+	std::cout << "Clearing buffer" << std::endl;
+	if (buf.empty())
+		return (buf);
+	while (chunk_mode != CHUNK_COMPLETE
+			&& chunk_mode != BAD_REQUEST)
+	{
+		size = get_hex_len(buf);
+		if (buf.substr(0, 5) == "0\r\n\r\n")
+		{
+			chunk_mode = CHUNK_COMPLETE;
+			break ;
+		}
+		if (size == -1)
+		{
+			std::cout << "Bad Request !" << std::endl;
+			chunk_mode = BAD_REQUEST;
+			return (std::string());
+		}
+		else if (size == 0)
+		{
+			if (buf.substr(0, 4) == "\r\n\r\n")
+				chunk_mode = CHUNK_COMPLETE;
+			else if (buf.length() == 0)
+				chunk_mode = CHUNK_COMPLETE;
+		}
+//		std::cout << "Size extracted : " << size << std::endl;
+		if ((pos = buf.find("\r\n")) == std::string::npos)
+		{
+			std::cout << "Bad Request !" << std::endl;
+			chunk_mode = BAD_REQUEST;
+			return (std::string());
+		}
+		buf = buf.substr(pos + 2);
+		if (buf.length() <= (size_t)size)
+		{
+			std::cout << "Bad Request !" << std::endl;
+			chunk_mode = BAD_REQUEST;
+			return (std::string());
+		}
+		ret.append(buf.substr(0, size));
+		buf = buf.substr(size);
+		std::cout << "Size remaining : " << buf.length() << std::endl;
+
+		if (buf.substr(0, 2) != "\r\n")
+		{
+			std::cout << "Bad Request !" << std::endl;
+			chunk_mode = BAD_REQUEST;
+			return (std::string());
+		}
+		buf = buf.substr(2);
+	}
+	if (chunk_mode == CHUNK_COMPLETE)
+		chunk_mode = TRANSMISSION_OVER;
+	buf.clear();
+	return (ret);
 }

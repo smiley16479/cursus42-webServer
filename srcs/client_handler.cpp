@@ -44,6 +44,12 @@ void client_handler::check_all_timeout()
 			it = clients.begin() + tmp;
 			return ;
 		}
+		else if (it->mode == RECV || it->mode == CHUNKED)
+		{
+			it->set_recv_mode();
+		}
+		else
+			it->set_send_mode();
 	}
 }
 
@@ -66,7 +72,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 //	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 	//END
 	bzero(&ev, sizeof(ev));
-	ev.events = EPOLLIN | EPOLLOUT;
+	ev.events = EPOLLIN;
 	ev.data.fd = client_fd;
 	inet_ntop(AF_INET, &clientaddr, addr_str, INET_ADDRSTRLEN);
 	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;

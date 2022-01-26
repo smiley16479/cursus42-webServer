@@ -16,6 +16,8 @@ enum	e_mode	{
 	CGI_IN,//reads on cgi pipe end
 	CGI_OUT,//reads on cgi pipe end
 	SEND,//sends on communication socket
+	H_CHUNK,
+	P_CHUNK,
 	NONE//indicates that current action doesn't necessitate a state change
 };
 
@@ -31,10 +33,12 @@ enum	e_cmode	{
 
 enum	e_cflags	{
 	ZERO,
-	EXPECT_NUM_NL,
+	EXPECT_CHUNKS,
+	EXPECT_LINE_NUM,
 	EXPECT_NUM,
+	EXPECT_NL_NUM,
 	EXPECT_LEN,
-	EXPECT_LEN_NL,
+	EXPECT_NL_LEN,
 	EXPECT_END
 };
 

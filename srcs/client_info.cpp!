@@ -4,7 +4,7 @@ void	client_info::fd_in(request_handler& header)	{
 	t_func	func[2] = { &client_info::recv_handler,
 						&client_info::chunked_handler };
 
-	//std::cout << " Epollin detected!" << std::endl;
+	std::cout << " Epollin detected!" << std::endl;
 	//handles EPOLLIN EVENTS
 	if (mode < COMPUTE)
 		return (((*this).*func[mode])(header));
@@ -18,7 +18,7 @@ void	client_info::fd_out(request_handler& header)	{
 						&client_info::cgi_resp_handler,
 						&client_info::send_handler};
 
-//	std::cout << " Epollout detected!" << std::endl;
+	std::cout << " Epollout detected!" << std::endl;
 	//handles EPOLLOUT EVENTS
 	if (mode > CHUNKED && mode < NONE)
 		return (((*this).*func[mode - 2])(header));
@@ -158,7 +158,6 @@ void	client_info::write_handler(request_handler& header)	{
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
-		resp.clear();
 		ret = header.create_write_resp(loc_path);
 		rqst.clear();
 		resp = header.get_response();
@@ -188,30 +187,18 @@ void	client_info::send_handler(request_handler& header)	{
 //	std::cout << resp << std::endl;
 //	ofstream o("lol.txt", ios_base::app);
 //	o << resp;
-	if (resp.empty())
-	{
-		mode = RECV;
-//		send(com_socket, "0\r\n\r\n", 5, MSG_NOSIGNAL);
-		remove();
-		return ;
-	}
  	if (resp.length() > (unsigned int)MAX_LEN)
 	{
 		std::cout << "MSG TOO LONG" << std::endl;
 		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
 		resp = resp.substr(0, MAX_LEN);
-		std::cout << "(len kept is " << tmp.length() << ")" << std::endl;
-		std::cout << "(len sent is " << resp.length() << ")" << std::endl;
 		std::cout << "MSG RECUT" << std::endl;
 	}
 	sent_bytes = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
-	std::cout << "bytes sent : " << sent_bytes << std::endl;
 	if (sent_bytes == -1)
 	{
-		resp = tmp;
-		tmp.clear();
-//		std::cout << "SEND ERROR" << std::endl;
+		std::cout << "SEND ERROR" << std::endl;
 		//tmp.append(resp);
 		//resp = tmp;
 //		remove();
@@ -228,17 +215,14 @@ void	client_info::send_handler(request_handler& header)	{
 	}
 	else if (sent_bytes < MAX_LEN)
 	{
-		std::cout << "MSG PARTIALLY SENT" << std::endl;
-		resp = resp.substr(sent_bytes);
-		resp.append(tmp);
-//		tmp.clear();
-//		tmp.clear();
-//		mode = RECV;
-//		remove();
+		std::cout << "MSG SENT" << std::endl;
+		tmp.clear();
+		mode = RECV;
+		remove();
 //		time_reset();
 	}
-	else
-		resp = tmp;
+	resp = tmp;
+	tmp.clear();
 }
 
 void	client_info::cgi_write_handler(request_handler& header)	{
@@ -298,7 +282,6 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	int	read_bytes;
 	char	buf[MAX_LEN];
 
-	bzero(&buf, MAX_LEN);
 	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 		return ;
@@ -325,6 +308,32 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	}
 }
 
+int	get_hex_len(std::string& msg)	{
+	int		size;
+	size_t	pos;
+	std::string	buf;
+
+	buf.clear();
+	pos = 0;
+	while (msg[pos] && isxdigit(msg[pos]))
+	{
+//		std::cout << "found an hex digit, incrementing buf: " << buf << std::endl;
+		buf += msg[pos];
+		pos++;
+	}
+	if (buf.empty())
+		return (-1);
+	else
+		size = std::strtoul(buf.c_str(), NULL, 16);
+	return (size);
+}
+
+
+void	clean_chunk(std::string& buf)
+{
+	
+}
+
 void	client_info::chunked_handler(request_handler& header)	{
 	(void)header;
 	int		recv_bytes;
@@ -332,17 +341,15 @@ void	client_info::chunked_handler(request_handler& header)	{
 
 	bzero(&buf, MAX_LEN);
 	recv_bytes = recv(com_socket, &buf, MAX_LEN, MSG_NOSIGNAL);
-	if (recv_bytes != -1)
-		chunk_buffer.append(buf, recv_bytes);
+	chunk_buffer.append(buf, recv_bytes);
 //	std::cout << "Data received ! Printing : " << std::endl;
 //	std::cout << buf << std::endl;
 	if (recv_bytes == -1)
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK RECV ERROR" << std::endl;
+			clean_chunk(chunk_buffer);
 			rqst.append(chunk_buffer);
-			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
 			mode = COMPUTE;
 		}
@@ -354,9 +361,8 @@ void	client_info::chunked_handler(request_handler& header)	{
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK EOF" << std::endl;
+			clean_chunk(chunk_buffer);
 			rqst.append(chunk_buffer);
-			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
 			mode = COMPUTE;
 		}
@@ -366,9 +372,8 @@ void	client_info::chunked_handler(request_handler& header)	{
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK MSG RECV" << std::endl;
+			clean_chunk(chunk_buffer);
 			rqst.append(chunk_buffer);
-			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
 			mode = COMPUTE;
 		}
@@ -445,7 +450,6 @@ bool client_info::is_request_fulfilled()
 		return (false);
 	if (chunk_mode == TRANSMISSION_OVER || chunk_mode == BAD_REQUEST)
 	{
-		std::cout << "Told you, it's done !" << std::endl;
 		chunk_mode = NO_CHUNK;
 		return (true);
 	}
@@ -567,8 +571,6 @@ bool client_info::is_clen_rqst_fulfilled()	{
 
 bool client_info::is_chunked_rqst_fulfilled()	{
 	std::cout << "Checking chunked request fulfillment" << std::endl;
-	if (chunk_buffer.empty())
-		return (true);
 	if (chunk_buffer.find("0\r\n\r\n") != std::string::npos)
 		return (true);
 	return (false);

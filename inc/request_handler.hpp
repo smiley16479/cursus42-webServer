@@ -93,6 +93,8 @@ private:
 	void	cgi_var_init();
 	int handle_cgi(void);
 
+	std::string	clean_chunk(std::string& buf);
+
 	std::string	reverse_resolve_path(std::string &loc_path);
 
 	/* FUNCTION DE DEBUG */

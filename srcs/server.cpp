@@ -84,7 +84,7 @@ void server::run(void) {
 				}
 				else if (_epoll._events[i].events & EPOLLOUT)	{
 					if (ptr != NULL)
-						ptr->fd_in(header);
+						ptr->fd_out(header);
 				}
 			}
 		}
