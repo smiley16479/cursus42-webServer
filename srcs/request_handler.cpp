@@ -146,6 +146,10 @@ int request_handler::choose_method(void)
 	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
 	{
 		std::cout << "CGI mode detected" << std::endl;
+		if (!_hrx["BODY"].empty()
+			&& !_hrx["Transfer-Encoding:"].empty()
+			&& _hrx["Transfer-Encoding:"][0] == "chunked")
+			_hrx["BODY"][0] = clean_chunk(_hrx["BODY"][0]);
 		redir_mode = handle_cgi();
 	}
 	else
@@ -254,7 +258,7 @@ int	request_handler::cgi_writer()
 	_response += _body;
 	std::cout << "Body added" << std::endl;
 	std::cout << "Cgi response formated : " << std::endl;
-	std::cout << _response << std::endl;
+//	std::cout << _response << std::endl;
 	_hrx.clear();
 	_htx.clear();
 //	return (redir_mode);
@@ -947,8 +951,8 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	tmp =  "REQUEST_METHOD=";
 	tmp += _hrx["A"][0];
 	env.push_back(tmp);
-//	tmp =  "REDIRECT_STATUS=CGI";
-//	env.push_back(tmp);
+	tmp =  "REDIRECT_STATUS=200";
+	env.push_back(tmp);
 	tmp = "SERVER_SOFTWARE=";
 	tmp += "HTTP/1.1";
 //	for (size_t j = 0; j < _s.server_name.size(); ++j)
@@ -1003,27 +1007,31 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Path-Info"][j];
 	}
 	env.push_back(tmp);
-//	tmp = "QUERY_STRING=";
-//	if (!mp["Query-String"].empty())
-//	{
-//		for (size_t j = 0; j < mp["Query-String"].size(); ++j)
-//			tmp+= mp["Query-String"][j];
-//	}
-//	env.push_back(tmp);
-//	tmp = "REMOTE_HOST=";
-//	if (!mp["Host:"].empty())
-//	{
-//		for (size_t j = 0; j < mp["Host:"].size(); ++j)
-//			tmp+= mp["Host:"][j];
-//	}
-//	env.push_back(tmp);
-//	tmp = "DOCUMENT_ROOT=";
-//	if (!mp["Document-Root"].empty())
-//	{
-//		for (size_t j = 0; j < mp["Document-Root"].size(); ++j)
-//			tmp+= mp["Document-Root"][j];
-//	}
-//	env.push_back(tmp);
+	tmp = "QUERY_STRING=";
+	if (!mp["Query-String"].empty())
+	{
+		for (size_t j = 0; j < mp["Query-String"].size(); ++j)
+			tmp+= mp["Query-String"][j];
+	}
+	env.push_back(tmp);
+	tmp = "REMOTE_HOST=";
+	if (!mp["Host:"].empty())
+	{
+		for (size_t j = 0; j < mp["Host:"].size(); ++j)
+			tmp+= mp["Host:"][j];
+	}
+	env.push_back(tmp);
+	tmp = "DOCUMENT_ROOT=";
+	if (!mp["Document-Root"].empty())
+	{
+		for (size_t j = 0; j < mp["Document-Root"].size(); ++j)
+			tmp+= mp["Document-Root"][j];
+	}
+	env.push_back(tmp);
+	tmp = "HTTP_HOST=";
+	tmp += _si[_s_id].host;
+	tmp += ":" + _si[_s_id].port;
+	env.push_back(tmp);
 	tmp = "CONTENT_TYPE=";
 	if (!mp["Content-Type:"].empty())
 	{
@@ -1054,13 +1062,13 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 //			tmp+= mp["Accept-Language:"][j];
 //	}
 //	env.push_back(tmp);
-//	tmp = "HTTP_USER_AGENT=";
-//	if (!mp["User-Agent:"].empty())
-//	{
-//		for (size_t j = 0; j < mp["User-Agent:"].size(); ++j)
-//			tmp+= mp["User-Agent:"][j];
-//	}
-//	env.push_back(tmp);
+	tmp = "HTTP_USER_AGENT=";
+	if (!mp["User-Agent:"].empty())
+	{
+		for (size_t j = 0; j < mp["User-Agent:"].size(); ++j)
+			tmp+= mp["User-Agent:"][j];
+	}
+	env.push_back(tmp);
 	tmp = "HTTP_REFERER=";
 	if (!mp["Referer"].empty())
 	{
@@ -1068,12 +1076,12 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
-//	tmp = "TMPDIR=";
-//	if (!_si[_s_id].location[_l_id].upload_path.empty())
-//		tmp += _si[_s_id].location[_l_id].upload_path + '/';
-//	else if (!_si[_s_id].location[_l_id].root.empty())
-//		tmp += _si[_s_id].location[_l_id].root;
-//	env.push_back(tmp);
+	tmp = "TMPDIR=";
+	if (!_si[_s_id].location[_l_id].upload_path.empty())
+		tmp += _si[_s_id].location[_l_id].upload_path + '/';
+	else if (!_si[_s_id].location[_l_id].root.empty())
+		tmp += _si[_s_id].location[_l_id].root;
+	env.push_back(tmp);
 	return (env);
 }
 
@@ -1084,7 +1092,7 @@ void	request_handler::clean_body()
 	size_t	pos;
 	
 	std::cout << "Printing cgi return body: " << std::endl;
-	std::cout << _body << std::endl;
+//	std::cout << _body << std::endl;
 	while ((pos = _body.find("\r\n")) != std::string::npos)
 	{
 		tmp = _body.substr(0, pos + 2);
@@ -1142,7 +1150,7 @@ void	request_handler::cgi_var_init()	{
 	var = _path.substr(0, pos);// + 1);
 	if (var.substr(0, 2) == "./")
 		var = var.substr(2);
-//	_hrx["Document-Root"].push_back(var);
+	_hrx["Document-Root"].push_back(var);
 //	var.clear();
 //	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
 
@@ -1163,6 +1171,7 @@ void	request_handler::cgi_var_init()	{
 	*/
 
 	// 42 tester expectations
+	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
 	var = _hrx["A"][1];
 	_hrx["Path-Info"].push_back(var);
 	// 42 tester expectations
@@ -1303,7 +1312,7 @@ int	request_handler::create_write_resp(std::string &file_path)	{
 //		_htx["Referer"] = std::vector<std::string>();
 //	_htx["Referer"].push_back("Referer: ");
 //	_htx["Referer"].push_back("http://127.0.0.1:8081/layout.html\r\n");
-	_htx["Server"][1] += ":8081";
+	_htx["Server"][1] += ":" + _si[_s_id].port;
 	if (_htx["Location"].empty())
 		_htx["Location"] = std::vector<std::string>();
 	_htx["Location"].push_back("Location: ");

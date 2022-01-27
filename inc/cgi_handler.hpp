@@ -13,6 +13,7 @@
 # include <cstring>
 # include <map>
 #include <fcntl.h>
+#include <arpa/inet.h>
 //# include <stringstram>
 
 # include "struct_webserv.hpp"

@@ -278,7 +278,7 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	std::cout << "Trying to write on CGI input" << std::endl;
 	std::cout << "Trying to write " << resp.length() << " bytes on fd " << loc_fd[1] << std::endl;
 
-	wrote_bytes = send(loc_fd[1], resp.c_str(), resp.length(), 0);
+	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
 
 //	perror("write");
 	std::cout << "Done !" << std::endl;
@@ -303,23 +303,34 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	std::cout << wrote_bytes << " bytes written !" << std::endl;
 	if (wrote_bytes == -1)
 	{
-		std::cout << "CGI WRITE ERROR" << std::endl;
-		//si le write echoue, on reecrit le message dans le buffer, ce dernier sera set
-//		tmp.append(resp);
-	//	resp.append(tmp);
-	//	tmp.clear();
+		int status;
+		int	plop;
 
-//OU ALORS, on close ce cote du pipe et on chck le retour
-		resp.clear();
-		tmp.clear();
-		if (loc_fd[1] != -1)
+		plop = waitpid(cgi_pid, &status, WNOHANG);
+		std::cout << "Cgi status in compute is : " << plop << std::endl;
+		if (WIFEXITED(status) || WIFSIGNALED(status))
 		{
-			std::cout << "Closing loc_fd[1]" << std::endl;
-			close(loc_fd[1]);
-			loc_fd[1] = -1;
+			std::cout << "CGI executable was exited before whole body was written" << std::endl;
+			//OU ALORS, on close ce cote du pipe et on chck le retour
+			resp.clear();
+			tmp.clear();
+			if (loc_fd[1] != -1)
+			{
+				std::cout << "Closing loc_fd[1]" << std::endl;
+				close(loc_fd[1]);
+				loc_fd[1] = -1;
+			}
+			mode = CGI_OUT;
 		}
-		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
-		mode = CGI_OUT;
+			
+
+		std::cout << "CGI WRITE ERROR" << std::endl;
+		//si le write echoue, on reecrit le message dans le buffer
+//		tmp.append(resp);
+		resp.append(tmp);
+		tmp.clear();
+		return ;
+
 	}
 	else if (wrote_bytes == 0)
 	{
@@ -357,6 +368,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	if (read_bytes == -1)
 	{
 	//should just return but trying to get cgi errors;
+	/*
 		std::cout << "CGI ERROR, generating response" << std::endl;
 		waitpid(cgi_pid, NULL, 0);
 		cgi_pid =  -1;
@@ -372,6 +384,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
+		*/
 		return ;
 	}
 	else
@@ -381,7 +394,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 		if (read_bytes == 0)
 		{
 			std::cout << "CGI EOF" << std::endl;
-			waitpid(cgi_pid, NULL, 0);
+		//	waitpid(cgi_pid, NULL, 0);
 			cgi_pid =  -1;
 			header.set_body(resp);
 			resp.clear();
@@ -500,6 +513,24 @@ void	client_info::compute(request_handler& header)	{
 				std::cout << "Body extracted in client buffer" << std::endl;
 				resp = header.get_body();
 
+
+/*
+//trying to add pipes to epoll
+				struct epoll_event	ev;
+
+				bzero(&ev, sizeof(ev));
+				ev.events = EPOLLIN;
+				ev.data.fd = loc_fd[1];
+				std::cout << GREEN "Adding pipe fd to epoll" RESET << std::endl;
+				if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_ADD, loc_fd[1], &ev)) {
+					std::cerr << "Failed to add file descriptor to epoll" << std::endl;
+					// close(_epoll_fd);
+					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
+				}
+//trying to add pipes to epoll
+*/
+
+/*
 				int status;
 				int	plop;
 
@@ -513,6 +544,7 @@ void	client_info::compute(request_handler& header)	{
 				std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
 				std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
 				std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
+*/
 
 			}
 			return ;

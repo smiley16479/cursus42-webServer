@@ -92,7 +92,7 @@ void server::run(void) {
 		client.check_all_timeout();
 	}
 
-	if (close(_epoll._epoll_fd))
+	if(close(_epoll._epoll_fd))
 	{
 		fprintf(stderr, "Failed to close epoll file descriptor\n");
 		throw std::runtime_error("ERROR IN FD (CLOSE) MANIPULATION");

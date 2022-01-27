@@ -57,8 +57,12 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 //	int	opt = 1;
 //	setsockopt(fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 //	setsockopt(fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
+//	setsockopt(bfd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
+//	setsockopt(bfd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	fcntl(fd[1], F_SETFL, O_NONBLOCK);
+	fcntl(bfd[0], F_SETFL, O_NONBLOCK);
+	fcntl(bfd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		return (-1);
@@ -69,9 +73,9 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 		close(bfd[1]);
 		dup2(bfd[0], STDIN_FILENO);
 //		close(STDOUT_FILENO);
-//		close(bfd[0]);
+		close(bfd[0]);
 		dup2(fd[1], STDOUT_FILENO);
-//		close(fd[1]);
+		close(fd[1]);
 		execve(tmp.c_str(), e_path, c_env);
 		exit(1);
 	}
@@ -88,6 +92,7 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
 
 
+/*
 	int	status;
 	int	plop;
 
@@ -101,6 +106,7 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
 	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
 	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
+	*/
 
 
 	return (pid);

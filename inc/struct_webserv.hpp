@@ -16,8 +16,6 @@ enum	e_mode	{
 	CGI_IN,//reads on cgi pipe end
 	CGI_OUT,//reads on cgi pipe end
 	SEND,//sends on communication socket
-	H_CHUNK,
-	P_CHUNK,
 	NONE//indicates that current action doesn't necessitate a state change
 };
 
