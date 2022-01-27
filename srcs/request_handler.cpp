@@ -146,11 +146,12 @@ int request_handler::choose_method(void)
 	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
 	{
 		std::cout << "CGI mode detected" << std::endl;
-		if (!_hrx["BODY"].empty()
-			&& !_hrx["Transfer-Encoding:"].empty()
-			&& _hrx["Transfer-Encoding:"][0] == "chunked")
-			_hrx["BODY"][0] = clean_chunk(_hrx["BODY"][0]);
-		redir_mode = handle_cgi();
+//		if (!_hrx["BODY"].empty()
+//			&& !_hrx["Transfer-Encoding:"].empty()
+//			&& _hrx["Transfer-Encoding:"][0] == "chunked")
+//			_hrx["BODY"][0] = clean_chunk(_hrx["BODY"][0]);
+	//	redir_mode = handle_cgi();
+		redir_mode = handle_cgi_fd();
 	}
 	else
 	{
@@ -251,7 +252,8 @@ int	request_handler::cgi_writer()
 		gen_startLine( status );
 	else
 		gen_startLine( 200 );
-//	gen_CLength();
+	if (!_body.empty())
+		gen_CLength();
 	add_all_field(); 
 	std::cout << "All fields added" << std::endl;
 //	redir_mode = add_body();
@@ -1441,4 +1443,65 @@ std::string	request_handler::clean_chunk(std::string& buf)
 		chunk_mode = TRANSMISSION_OVER;
 	buf.clear();
 	return (ret);
+}
+
+void	create_tmp_file(int	*fd, int mode)	{
+	static int n = 0;
+	std::stringstream	ss;
+	std::string path = "files/tmp_file_";
+
+	ss << n;
+	path += ss.str();
+	std::cout << "Creating tmp file : " << path << std::endl;
+	*fd = open(path.c_str(), mode, S_IRWXU);
+	fcntl(*fd, F_SETFL, O_NONBLOCK);
+	n++;
+}
+
+int	request_handler::handle_cgi_fd(void)
+{
+	std::vector<std::string>	env;
+
+	//HERE!
+	if (_s_id == -1)
+	{
+		std::cout << "Invalid server id: " << _s_id << std::endl;
+		return (NONE);
+	}
+	else
+	{
+	//EN CHANTIER !!!
+		if (_si[_s_id].location[_l_id].cgi_path.empty())
+		{
+			gen_startLine( 403 );
+			return (NONE);
+		}
+		std::cout << "Launching cgi" << std::endl;
+		cgi_var_init();
+		env = extract_env(_hrx, _si[_s_id]);
+		create_tmp_file(&redir_fd[0], O_CREAT | O_RDONLY | O_TRUNC);
+		create_tmp_file(&redir_fd[1], O_CREAT | O_WRONLY | O_TRUNC);
+		if ((redir_pid = go_cgi_fd(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env)) == -1 || (redir_fd[0] == -1 || redir_fd[1] == -1))
+		{
+			if (redir_fd[0] != -1)
+			{
+				close(redir_fd[0]);
+				redir_fd[0] = -1;
+			}
+			if (redir_fd[1] != -1)
+			{
+				close(redir_fd[1]);
+				redir_fd[1] = -1;
+			}
+			return (NONE);
+		}
+		std::cout << RED "Pipe status in handle cgi:" RESET << std::endl;
+		std::cout << "redir_fd[0] : " << fcntl(redir_fd[0], F_GETFD) << std::endl;
+		std::cout << "redir_fd[1] : " << fcntl(redir_fd[1], F_GETFD) << std::endl;
+		_body = _hrx["BODY"][0];
+		std::cout << "Buffer copied in body" << std::endl;
+		return (CGI_IN);
+	//EN CHANTIER !!!
+	}
+	return (NONE);
 }

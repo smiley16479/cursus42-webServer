@@ -307,7 +307,6 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 		int	plop;
 
 		plop = waitpid(cgi_pid, &status, WNOHANG);
-		std::cout << "Cgi status in compute is : " << plop << std::endl;
 		if (WIFEXITED(status) || WIFSIGNALED(status))
 		{
 			std::cout << "CGI executable was exited before whole body was written" << std::endl;
@@ -353,7 +352,9 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 		resp.append(tmp);
 	}
 	else
+	{
 		resp = tmp;
+	}
 	std::cout << "reseting buffer" << std::endl;
 //	time_reset();
 }
@@ -694,7 +695,7 @@ bool client_info::is_clen_rqst_fulfilled()	{
 }
 
 bool client_info::is_chunked_rqst_fulfilled()	{
-	std::cout << "Checking chunked request fulfillment" << std::endl;
+//	std::cout << "Checking chunked request fulfillment" << std::endl;
 	if (chunk_buffer.empty())
 		return (true);
 	if (chunk_buffer.find("0\r\n\r\n") != std::string::npos)

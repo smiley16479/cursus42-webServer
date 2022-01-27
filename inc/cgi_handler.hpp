@@ -29,6 +29,7 @@
 int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
 int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env);
 size_t	getcLen(std::vector<std::string>& env);
+int	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env);
 
 
 #endif

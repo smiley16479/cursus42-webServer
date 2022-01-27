@@ -98,6 +98,8 @@ private:
 
 	std::string	reverse_resolve_path(std::string &loc_path);
 
+	int handle_cgi_fd(void);
+
 	/* FUNCTION DE DEBUG */
 	
 	void display(void);
