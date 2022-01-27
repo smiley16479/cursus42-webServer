@@ -85,6 +85,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	new_client.time_out = time_out;
 	new_client.loc_fd[0] = -1;
 	new_client.loc_fd[1] = -1;
+	new_client.cgi_pid = -1;
 	new_client.com_socket = client_fd;
 	new_client.mode = RECV;
 	new_client._epoll = &_epoll;

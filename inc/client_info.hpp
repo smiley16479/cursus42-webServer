@@ -11,6 +11,7 @@ class client_info {
 	public:
 		int			com_socket;
 		int			loc_fd[2];
+		pid_t		cgi_pid;
 		std::string	loc_path;
 		size_t		mode;
 		int			flag;

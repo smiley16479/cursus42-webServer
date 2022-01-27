@@ -24,7 +24,7 @@ int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions
 	return (-1);
 }
 
-int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
+pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 {
 	std::string	tmp;
 	int			fd[2];
@@ -35,6 +35,7 @@ int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	int	i;
 //	std::string		out;
 
+	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
 //	e_path[1] = NULL;
@@ -68,9 +69,10 @@ int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 		close(bfd[1]);
 		dup2(bfd[0], STDIN_FILENO);
 //		close(STDOUT_FILENO);
+//		close(bfd[0]);
 		dup2(fd[1], STDOUT_FILENO);
-		close(fd[1]);
-		execve(tmp.c_str(),e_path, c_env);
+//		close(fd[1]);
+		execve(tmp.c_str(), e_path, c_env);
 		exit(1);
 	}
 	else
@@ -81,7 +83,27 @@ int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
 	(*rfd)[1] = bfd[1];
-	return (0);
+	std::cout << "Pipe status in go cgi:" << std::endl;
+	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
+	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
+
+
+	int	status;
+	int	plop;
+
+	plop = waitpid(pid, &status, WNOHANG);
+	std::cout << "Cgi status in go_cgi is : " << plop << std::endl;
+	std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
+	std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
+	std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
+	std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
+	std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
+	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
+	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
+	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
+
+
+	return (pid);
 }
 
 size_t	getcLen(std::vector<std::string>& env)	{

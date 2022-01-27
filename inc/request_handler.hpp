@@ -31,6 +31,7 @@ private:
     std::vector<server_info> &			_si; // server_info
 	int									_s_id; // server id <- quel server doit répondre à la requete actuelle : '_s_id' est l'index de '_si'
 	int									_l_id; // location id <- quel location doit répondre à la requete actuelle : '_l_id' est l'index de 'location' ds '_si'
+	pid_t								redir_pid;
 	int									redir_fd[2];
 	int									ext_id;
 	std::map<string, vector<string> >	_hrx; // received header_info (requets header info)
@@ -56,7 +57,7 @@ public:
 	string get_response(void);
 	string get_body(void);
 	void set_body(const string &);
-	void	fill_redir_fd(int (*loc_fd)[2]);
+	void	fill_redir_fd(int (*loc_fd)[2], pid_t *cgi_pid);
 	void clean(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */

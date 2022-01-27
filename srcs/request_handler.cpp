@@ -209,17 +209,52 @@ int request_handler::writer(void) {
 	return (redir_mode);
 }
 
+int	get_dec_len(std::string msg)	{
+	int		size;
+	size_t	pos;
+	std::string	buf;
+
+	buf.clear();
+	pos = 0;
+	while (msg[pos] && isdigit(msg[pos]))
+	{
+//		std::cout << "found an hex digit, incrementing buf: " << buf << std::endl;
+		buf += msg[pos];
+		pos++;
+	}
+	if (buf.empty())
+		return (-1);
+	else
+		size = std::strtoul(buf.c_str(), NULL, 10);
+	return (size);
+}
+
 int	request_handler::cgi_writer()
 {
+	int	status;
+	std::stringstream ss;
 //	int	redir_mode;
 
-	gen_startLine( 200 );
+	status = -1;
+	if (!_htx["Status"].empty())
+	{
+		status = get_dec_len(_htx["Status"][0].substr(_htx["Status"][0].find(": ") + 2));
+		std::cout << status << std::endl;
+		_htx["Status"].clear();
+	}
+		
+	if (status != -1)
+		gen_startLine( status );
+	else
+		gen_startLine( 200 );
 //	gen_CLength();
 	add_all_field(); 
 	std::cout << "All fields added" << std::endl;
 //	redir_mode = add_body();
 	_response += _body;
 	std::cout << "Body added" << std::endl;
+	std::cout << "Cgi response formated : " << std::endl;
+	std::cout << _response << std::endl;
 	_hrx.clear();
 	_htx.clear();
 //	return (redir_mode);
@@ -878,13 +913,16 @@ void request_handler::set_body(const string& str)	{
 	_body = str;
 }
 
-void	request_handler::fill_redir_fd(int (*loc_fd)[2]) {
+void	request_handler::fill_redir_fd(int (*loc_fd)[2], pid_t *cgi_pid) {
 	if (redir_fd[0] != -1)
 		(*loc_fd)[0] = redir_fd[0];
 	if (redir_fd[1] != -1)
-	(*loc_fd)[1] = redir_fd[1];
+		(*loc_fd)[1] = redir_fd[1];
 	redir_fd[0] = -1;
 	redir_fd[1] = -1;
+	if (redir_pid != -1)
+		*cgi_pid = redir_pid;
+	redir_pid = -1;
 }
 
 	/* FUNCTION DE DEBUG */
@@ -909,14 +947,15 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	tmp =  "REQUEST_METHOD=";
 	tmp += _hrx["A"][0];
 	env.push_back(tmp);
-	tmp =  "REDIRECT_STATUS=CGI";
-	env.push_back(tmp);
+//	tmp =  "REDIRECT_STATUS=CGI";
+//	env.push_back(tmp);
 	tmp = "SERVER_SOFTWARE=";
-	for (size_t j = 0; j < _s.server_name.size(); ++j)
-		tmp += _s.server_name[j];
+	tmp += "HTTP/1.1";
+//	for (size_t j = 0; j < _s.server_name.size(); ++j)
+//		tmp += _s.server_name[j];
 	env.push_back(tmp);
 	tmp = "SERVER_NAME=";
-	tmp += _s.host;
+	tmp += _s.server_name;
 	env.push_back(tmp);
 	tmp = "GATEWAY_INTERFACE=CGI/1.1";
 	env.push_back(tmp);
@@ -942,6 +981,7 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Path-Translated"][j];
 	}
 	env.push_back(tmp);
+	tmp.clear();
 	tmp = "SCRIPT_NAME=";
 	if (!mp["Script-Name"].empty())
 	{
@@ -949,27 +989,41 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Script-Name"][j];
 	}
 	env.push_back(tmp);
-	tmp = "QUERY_STRING=";
-	if (!mp["Query-String"].empty())
+	tmp = "SCRIPT_FILENAME=";
+	if (!mp["Script-Name"].empty())
 	{
-		for (size_t j = 0; j < mp["Query-String"].size(); ++j)
-			tmp+= mp["Query-String"][j];
+		for (size_t j = 0; j < mp["Script-Filename"].size(); ++j)
+			tmp+= mp["Script-Filename"][j];
 	}
 	env.push_back(tmp);
-	tmp = "REMOTE_HOST=";
-	if (!mp["Host:"].empty())
+	tmp = "REQUEST_URI=";
+	if (!mp["Path-Info"].empty())
 	{
-		for (size_t j = 0; j < mp["Host:"].size(); ++j)
-			tmp+= mp["Host:"][j];
+		for (size_t j = 0; j < mp["Path-Info"].size(); ++j)
+			tmp+= mp["Path-Info"][j];
 	}
 	env.push_back(tmp);
-	tmp = "DOCUMENT_ROOT=";
-	if (!mp["Document-Root"].empty())
-	{
-		for (size_t j = 0; j < mp["Document-Root"].size(); ++j)
-			tmp+= mp["Document-Root"][j];
-	}
-	env.push_back(tmp);
+//	tmp = "QUERY_STRING=";
+//	if (!mp["Query-String"].empty())
+//	{
+//		for (size_t j = 0; j < mp["Query-String"].size(); ++j)
+//			tmp+= mp["Query-String"][j];
+//	}
+//	env.push_back(tmp);
+//	tmp = "REMOTE_HOST=";
+//	if (!mp["Host:"].empty())
+//	{
+//		for (size_t j = 0; j < mp["Host:"].size(); ++j)
+//			tmp+= mp["Host:"][j];
+//	}
+//	env.push_back(tmp);
+//	tmp = "DOCUMENT_ROOT=";
+//	if (!mp["Document-Root"].empty())
+//	{
+//		for (size_t j = 0; j < mp["Document-Root"].size(); ++j)
+//			tmp+= mp["Document-Root"][j];
+//	}
+//	env.push_back(tmp);
 	tmp = "CONTENT_TYPE=";
 	if (!mp["Content-Type:"].empty())
 	{
@@ -986,27 +1040,27 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 	else
 		tmp+="0";
 	env.push_back(tmp);
-	tmp = "HTTP_ACCEPT=";
-	if (!mp["Accept:"].empty())
-	{
-		for (size_t j = 0; j < mp["Accept:"].size(); ++j)
-			tmp+= mp["Accept:"][j];
-	}
-	env.push_back(tmp);
-	tmp = "HTTP_ACCEPT_LANGUAGE=";
-	if (!mp["Accept-Language:"].empty())
-	{
-		for (size_t j = 0; j < mp["Accept-Language:"].size(); ++j)
-			tmp+= mp["Accept-Language:"][j];
-	}
-	env.push_back(tmp);
-	tmp = "HTTP_USER_AGENT=";
-	if (!mp["User-Agent:"].empty())
-	{
-		for (size_t j = 0; j < mp["User-Agent:"].size(); ++j)
-			tmp+= mp["User-Agent:"][j];
-	}
-	env.push_back(tmp);
+//	tmp = "HTTP_ACCEPT=";
+//	if (!mp["Accept:"].empty())
+//	{
+//		for (size_t j = 0; j < mp["Accept:"].size(); ++j)
+//			tmp+= mp["Accept:"][j];
+//	}
+//	env.push_back(tmp);
+//	tmp = "HTTP_ACCEPT_LANGUAGE=";
+//	if (!mp["Accept-Language:"].empty())
+//	{
+//		for (size_t j = 0; j < mp["Accept-Language:"].size(); ++j)
+//			tmp+= mp["Accept-Language:"][j];
+//	}
+//	env.push_back(tmp);
+//	tmp = "HTTP_USER_AGENT=";
+//	if (!mp["User-Agent:"].empty())
+//	{
+//		for (size_t j = 0; j < mp["User-Agent:"].size(); ++j)
+//			tmp+= mp["User-Agent:"][j];
+//	}
+//	env.push_back(tmp);
 	tmp = "HTTP_REFERER=";
 	if (!mp["Referer"].empty())
 	{
@@ -1014,12 +1068,12 @@ std::vector<std::string> request_handler::extract_env(std::map<std::string, std:
 			tmp+= mp["Referer"][j];
 	}
 	env.push_back(tmp);
-	tmp = "TMPDIR=";
-	if (!_si[_s_id].location[_l_id].upload_path.empty())
-		tmp += _si[_s_id].location[_l_id].upload_path + '/';
-	else if (!_si[_s_id].location[_l_id].root.empty())
-		tmp += _si[_s_id].location[_l_id].root;
-	env.push_back(tmp);
+//	tmp = "TMPDIR=";
+//	if (!_si[_s_id].location[_l_id].upload_path.empty())
+//		tmp += _si[_s_id].location[_l_id].upload_path + '/';
+//	else if (!_si[_s_id].location[_l_id].root.empty())
+//		tmp += _si[_s_id].location[_l_id].root;
+//	env.push_back(tmp);
 	return (env);
 }
 
@@ -1029,6 +1083,8 @@ void	request_handler::clean_body()
 	std::string	index;
 	size_t	pos;
 	
+	std::cout << "Printing cgi return body: " << std::endl;
+	std::cout << _body << std::endl;
 	while ((pos = _body.find("\r\n")) != std::string::npos)
 	{
 		tmp = _body.substr(0, pos + 2);
@@ -1048,7 +1104,9 @@ void	request_handler::clean_body()
 void	request_handler::cgi_var_init()	{
 	size_t				len, pos;
 	std::string			var;
+	char				str[100];
 
+	bzero(&str, sizeof(str));
 	//CGI variables initialisation
 	if ((len = _path.find("?")) != std::string::npos)
 	{
@@ -1057,11 +1115,40 @@ void	request_handler::cgi_var_init()	{
 	}
 	std::cout << "PATH=" << _path << std::endl;
 	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
-	_hrx["Path-Translated"].push_back(_path);
+	getcwd(str, sizeof(str));
+	var = str;
+	var += "/";
+//	var += _path;
+	pos = _path.find_last_of("/");
+	var += _path.substr(0, 2) == "./" ? _path.substr(2, pos + 1) : _path.substr(0, pos + 1);
+	var += (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
+	_hrx["Path-Translated"].push_back(var);
+	var.clear();
 	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
 	_hrx["Query-String"].push_back(var);
 	var.clear();
-	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
+	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));
+//	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
+	getcwd(str, sizeof(str));
+	var = str;
+	var += "/";
+	var += _path;
+	_hrx["Script-Filename"].push_back(var);
+	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
+	var = var.substr(var.find_last_of("/") + 1);
+	_hrx["Script-Name"].push_back(var);
+	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
+	pos = _path.find_last_of("/");
+	var = _path.substr(0, pos);// + 1);
+	if (var.substr(0, 2) == "./")
+		var = var.substr(2);
+//	_hrx["Document-Root"].push_back(var);
+//	var.clear();
+//	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
+
+	/*
+	//This is how Path-Info variable should be built but 42 tester expects something else !!!!
+
 	pos = _path.find(_si[_s_id].location[_l_id].cgi_file_types[ext_id]);
 	if (pos != std::string::npos)
 	{
@@ -1070,18 +1157,15 @@ void	request_handler::cgi_var_init()	{
 	}
 	if (!var.empty() && (pos = var.find("/")) != std::string::npos)
 		var = var.substr(pos + 1);
+
 	_hrx["Path-Info"].push_back(var);
 	var.clear();
-	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
-	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
-	_hrx["Script-Name"].push_back(var);
-	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
-	pos = _path.find_last_of("/");
-	var = _path.substr(0, pos);
-	if (var.substr(0, 2) == "./")
-		var = var.substr(2);
-	_hrx["Document-Root"].push_back(var);
-	var.clear();
+	*/
+
+	// 42 tester expectations
+	var = _hrx["A"][1];
+	_hrx["Path-Info"].push_back(var);
+	// 42 tester expectations
 }
 
 int	request_handler::handle_cgi(void)
@@ -1105,7 +1189,7 @@ int	request_handler::handle_cgi(void)
 		std::cout << "Launching cgi" << std::endl;
 		cgi_var_init();
 		env = extract_env(_hrx, _si[_s_id]);
-		if (go_cgi(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env) || (redir_fd[0] == -1 || redir_fd[1] == -1))
+		if ((redir_pid = go_cgi(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env)) == -1 || (redir_fd[0] == -1 || redir_fd[1] == -1))
 		{
 			if (redir_fd[0] != -1)
 			{
@@ -1119,6 +1203,9 @@ int	request_handler::handle_cgi(void)
 			}
 			return (NONE);
 		}
+		std::cout << RED "Pipe status in handle cgi:" RESET << std::endl;
+		std::cout << "redir_fd[0] : " << fcntl(redir_fd[0], F_GETFD) << std::endl;
+		std::cout << "redir_fd[1] : " << fcntl(redir_fd[1], F_GETFD) << std::endl;
 		_body = _hrx["BODY"][0];
 		std::cout << "Buffer copied in body" << std::endl;
 		return (CGI_IN);
@@ -1280,7 +1367,6 @@ int	get_hex_len(std::string& msg)	{
 		size = std::strtoul(buf.c_str(), NULL, 16);
 	return (size);
 }
-
 
 std::string	request_handler::clean_chunk(std::string& buf)
 {

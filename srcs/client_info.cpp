@@ -65,6 +65,7 @@ void	client_info::read_handler(request_handler& header)	{
 		std::cout << "READ ERROR" << std::endl;
 		if (loc_fd[0] != -1)
 		{
+			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
@@ -77,6 +78,7 @@ void	client_info::read_handler(request_handler& header)	{
 		std::cout << "READ EOF" << std::endl;
 		if (loc_fd[0] != -1)
 		{
+			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
@@ -87,6 +89,7 @@ void	client_info::read_handler(request_handler& header)	{
 		std::cout << "READ MSG END" << std::endl;
 		if (loc_fd[0] != -1)
 		{
+			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
@@ -132,6 +135,7 @@ void	client_info::write_handler(request_handler& header)	{
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
+			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -143,7 +147,7 @@ void	client_info::write_handler(request_handler& header)	{
 		{
 			std::cout << "Preparing to add file to write response" << std::endl;
 			mode = ret;
-			header.fill_redir_fd(&loc_fd);
+			header.fill_redir_fd(&loc_fd, &cgi_pid);
 		}
 		else
 			mode = SEND;
@@ -155,6 +159,7 @@ void	client_info::write_handler(request_handler& header)	{
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
+			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -168,7 +173,7 @@ void	client_info::write_handler(request_handler& header)	{
 		{
 			mode = ret;
 			std::cout << "Copying redir_fd" << std::endl;
-			header.fill_redir_fd(&loc_fd);
+			header.fill_redir_fd(&loc_fd, &cgi_pid);
 		}
 		else
 			mode = SEND;
@@ -195,7 +200,7 @@ void	client_info::send_handler(request_handler& header)	{
 		remove();
 		return ;
 	}
- 	if (resp.length() > (unsigned int)MAX_LEN)
+ 	else if (resp.length() > (unsigned int)MAX_LEN)
 	{
 		std::cout << "MSG TOO LONG" << std::endl;
 		std::cout << "(len is " << resp.length() << ")" << std::endl;
@@ -209,18 +214,19 @@ void	client_info::send_handler(request_handler& header)	{
 	std::cout << "bytes sent : " << sent_bytes << std::endl;
 	if (sent_bytes == -1)
 	{
-		resp = tmp;
+//		resp.append(tmp);
+		resp.clear();
 		tmp.clear();
-//		std::cout << "SEND ERROR" << std::endl;
+		std::cout << "SEND ERROR" << std::endl;
 		//tmp.append(resp);
 		//resp = tmp;
-//		remove();
+		remove();
 //		resp.append(tmp);
-		return ;
 	}
 	else if (sent_bytes == 0)
 	{
 		std::cout << "SEND EOF" << std::endl;
+		resp.clear();
 		tmp.clear();
 		mode = RECV;
 		remove();
@@ -246,7 +252,19 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	int	wrote_bytes;
 	std::string	tmp;
 
- 	if (resp.length() > (unsigned int)MAX_LEN)
+	if (resp.empty())
+	{
+		std::cout << "Empty cgi body buffer, exiting" << std::endl;
+		if (loc_fd[1] != -1)
+		{
+			std::cout << "Closing loc_fd[1]" << std::endl;
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
+		mode = CGI_OUT;
+		return ;
+	}
+ 	else if (resp.length() > (unsigned int)MAX_LEN)
 	{
 		std::cout << "CGI BODY TOO BIG" << std::endl;
 		std::cout << "(len is " << resp.length() << ")" << std::endl;
@@ -254,23 +272,63 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 		resp = resp.substr(0, MAX_LEN);
 		std::cout << "CGI BODY RECUT" << std::endl;
 	}
+	std::cout << RED "Pipe status in cgi_write:" RESET << std::endl;
+	std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
+	std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
 	std::cout << "Trying to write on CGI input" << std::endl;
-	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
-	std::cout << resp.length() << " bytes written !" << std::endl;
+	std::cout << "Trying to write " << resp.length() << " bytes on fd " << loc_fd[1] << std::endl;
+
+	wrote_bytes = send(loc_fd[1], resp.c_str(), resp.length(), 0);
+
+//	perror("write");
+	std::cout << "Done !" << std::endl;
+
+/*
+	int status;
+	int	plop;
+
+	plop = waitpid(cgi_pid, &status, WNOHANG);
+	std::cout << "Cgi status is : " << plop << std::endl;
+	std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
+	std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
+	std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
+	std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
+	std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
+	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
+	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
+	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
+	*/
+
+
+	std::cout << wrote_bytes << " bytes written !" << std::endl;
 	if (wrote_bytes == -1)
 	{
 		std::cout << "CGI WRITE ERROR" << std::endl;
 		//si le write echoue, on reecrit le message dans le buffer, ce dernier sera set
 //		tmp.append(resp);
-		resp.append(tmp);
-		return ;
+	//	resp.append(tmp);
+	//	tmp.clear();
+
+//OU ALORS, on close ce cote du pipe et on chck le retour
+		resp.clear();
+		tmp.clear();
+		if (loc_fd[1] != -1)
+		{
+			std::cout << "Closing loc_fd[1]" << std::endl;
+			close(loc_fd[1]);
+			loc_fd[1] = -1;
+		}
+		//ici rqst est deja set, COMPUTE va traiter de nouveu la requete transformee
+		mode = CGI_OUT;
 	}
 	else if (wrote_bytes == 0)
 	{
 		std::cout << "CGI WRITE EOF" << std::endl;
+		resp.clear();
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
+			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -280,16 +338,12 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	else if (wrote_bytes < MAX_LEN)
 	{
 		std::cout << "CGI WRITE MSG END" << std::endl;
-		tmp.clear();
-		if (loc_fd[1] != -1)
-		{
-			close(loc_fd[1]);
-			loc_fd[1] = -1;
-		}
-		mode = CGI_OUT;
+		resp = resp.substr(wrote_bytes);
+		resp.append(tmp);
 	}
+	else
+		resp = tmp;
 	std::cout << "reseting buffer" << std::endl;
-	resp = tmp;
 //	time_reset();
 }
 
@@ -301,7 +355,25 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	bzero(&buf, MAX_LEN);
 	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
+	{
+	//should just return but trying to get cgi errors;
+		std::cout << "CGI ERROR, generating response" << std::endl;
+		waitpid(cgi_pid, NULL, 0);
+		cgi_pid =  -1;
+		header.set_body(resp);
+		resp.clear();
+		header.clean_body();
+		header.cgi_writer();
+		resp = header.get_response();
+		mode = SEND;
+		if (loc_fd[0] != -1)
+		{
+			std::cout << "Closing loc_fd[0]" << std::endl;
+			close(loc_fd[0]);
+			loc_fd[0] = -1;
+		}
 		return ;
+	}
 	else
 	{
 		resp.append(buf, read_bytes);
@@ -309,7 +381,8 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 		if (read_bytes == 0)
 		{
 			std::cout << "CGI EOF" << std::endl;
-			waitpid(-1, NULL, 0);
+			waitpid(cgi_pid, NULL, 0);
+			cgi_pid =  -1;
 			header.set_body(resp);
 			resp.clear();
 			header.clean_body();
@@ -318,6 +391,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 			mode = SEND;
 			if (loc_fd[0] != -1)
 			{
+				std::cout << "Closing loc_fd[0]" << std::endl;
 				close(loc_fd[0]);
 				loc_fd[0] = -1;
 			}
@@ -392,17 +466,24 @@ void	client_info::compute(request_handler& header)	{
 		{
 			std::cout << "Stuff is happening !" << std::endl;
 			mode = ret;
-			header.fill_redir_fd(&loc_fd);
+			header.fill_redir_fd(&loc_fd, &cgi_pid);
+			std::cout << RED "Pipe status in compute:" RESET << std::endl;
+			if (loc_fd[0] != -1)
+				std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
+			if (loc_fd[1] != -1)
+				std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
 			if (loc_fd[0] == -1 && loc_fd[1] == -1)
 			{
 				std::cout << "There is something wrong with these fds" << std::endl;
 				if (loc_fd[0] != -1)
 				{
+					std::cout << "Closing loc_fd[0]" << std::endl;
 					close(loc_fd[0]);
 					loc_fd[0] = -1;
 				}
 				if (loc_fd[1] != -1)
 				{
+					std::cout << "Closing loc_fd[1]" << std::endl;
 					close(loc_fd[1]);
 					loc_fd[1] = -1;
 				}
@@ -418,6 +499,21 @@ void	client_info::compute(request_handler& header)	{
 			{
 				std::cout << "Body extracted in client buffer" << std::endl;
 				resp = header.get_body();
+
+				int status;
+				int	plop;
+
+				plop = waitpid(cgi_pid, &status, WNOHANG);
+				std::cout << "Cgi status in compute is : " << plop << std::endl;
+				std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
+				std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
+				std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
+				std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
+				std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
+				std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
+				std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
+				std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
+
 			}
 			return ;
 		}

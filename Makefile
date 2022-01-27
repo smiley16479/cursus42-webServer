@@ -34,7 +34,7 @@ CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
 CPP_FLAGS += -std=c++98
 
-ULIMIT = $(shell expr $(shell ulimit -s) '*' 100)
+ULIMIT = $(shell expr $(shell ulimit -s) '*' 10)
 
 MAX_LEN = $(ULIMIT)
 
