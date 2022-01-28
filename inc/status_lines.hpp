@@ -1,10 +1,6 @@
 #ifndef	STATUS_LINES_HPP
 # define STATUS_LINES_HPP
 
-//1XX: INFORMATION
-//MESSAGE:	DESCRIPTION:
-
-
 static const char	*ret_string_100[] = {
 "Continue",						//100 The server has received the request headers, and the client should proceed to send the request body
 "Switching Protocols",				//101 The requester has asked the server to switch protocols

@@ -35,8 +35,7 @@ void client_handler::check_all_timeout()
 			it = clients.begin() + tmp;
 		}
 		else if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
-			std::cout << "CLIENT TIMED OUT" << std::endl;
-			std::cout << "Client removed from tracked fd !" << std::endl;
+//			std::cout << "CLIENT TIMED OUT" << std::endl;
 			tmp = it - clients.begin();
 			it->remove();
 			clients.erase(it);
@@ -67,19 +66,14 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 //	clientaddr.sin_addr;
-	//SET NON BLOCK
-//	int opt = 1;
-//	setsockopt(client_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
-	//END
 	bzero(&ev, sizeof(ev));
 	ev.events = EPOLLIN;
 	ev.data.fd = client_fd;
 	inet_ntop(AF_INET, &clientaddr, addr_str, INET_ADDRSTRLEN);
-	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
-	std::cout << "Client address is : " << addr_str << std::endl;
+//	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
+//	std::cout << "Client address is : " << addr_str << std::endl;
 	if (epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
-		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 	new_client.time_out = time_out;
@@ -89,7 +83,6 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	new_client.com_socket = client_fd;
 	new_client.mode = RECV;
 	new_client._epoll = &_epoll;
-	new_client.flag = 0;
 	time(&new_client.rqst_time_start);
 	new_client.rq_mode = NORMAL;
 	new_client.chunk_mode = NO_CHUNK;

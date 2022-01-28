@@ -17,7 +17,7 @@ server::server(std::string av)
 
 server::~server()
 {
-	cout << RED "server destructeur..." RESET << endl;
+	//std::cout << RED "server destructeur..." RESET << endl;
 }
 
 void server::initialize(void) {
@@ -51,7 +51,7 @@ void server::initialize(void) {
 		bzero(&ev, sizeof(ev));
 		ev.events = EPOLLIN;
 		ev.data.fd = _s[i].socket;
-		std::cout << "Adding socket fd_" << _s[i].socket << " to epoll interest list" << std::endl;
+//		std::cout << "Adding socket fd_" << _s[i].socket << " to epoll interest list" << std::endl;
 		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &ev))
 		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
@@ -69,7 +69,7 @@ void server::run(void) {
 
 	while(1)
 	{
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0); //500
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 0);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && _epoll._events[i].events & EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
@@ -88,7 +88,6 @@ void server::run(void) {
 				}
 			}
 		}
-//		std::cout << "Epoll events checked" << std::endl;
 		client.check_all_timeout();
 	}
 
@@ -120,34 +119,34 @@ void server::display_server(void)
 {
 	for (size_t i = 0; i < _s.size(); i++)
 	{
-		cout << GREEN ITALIC UNDERLINE "DISPLAY SERVER INFORMATION" RESET GREEN " :" RESET << endl;
-		cout << "server_name : " << _s[i].server_name << endl;
-		cout << "time_out : " << _s[i].time_out << endl;
-		cout << "port : " << _s[i].port << endl;
-		cout << "host : " << _s[i].host << endl;
-		cout << "error_page : " << _s[i].error_page << endl;
-		cout << "max_file_size : " << _s[i].max_file_size << endl;
+		std::cout << GREEN ITALIC UNDERLINE "DISPLAY SERVER INFORMATION" RESET GREEN " :" RESET << endl;
+		std::cout << "server_name : " << _s[i].server_name << endl;
+		std::cout << "time_out : " << _s[i].time_out << endl;
+		std::cout << "port : " << _s[i].port << endl;
+		std::cout << "host : " << _s[i].host << endl;
+		std::cout << "error_page : " << _s[i].error_page << endl;
+		std::cout << "max_file_size : " << _s[i].max_file_size << endl;
 		for (size_t j = 0; j < _s[i].location.size(); j++) {
-			cout << GREEN "LOCATION : " RESET << endl;
-			cout << "location : " << _s[i].location[j].location << endl;
-			cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
-			cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
-			cout << "autoindex : " << _s[i].location[j].autoindex << endl;
-			cout << "index : " << _s[i].location[j].index << endl;
-			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
-			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
-			cout << "root : " << _s[i].location[j].root << endl;
-			cout << "upload_path : " << _s[i].location[j].upload_path << endl;
-			cout << "cgi_path : " << _s[i].location[j].cgi_path << endl;
+			std::cout << GREEN "LOCATION : " RESET << endl;
+			std::cout << "location : " << _s[i].location[j].location << endl;
+			std::cout << "auth_basic : " << _s[i].location[j].auth_basic << endl;
+			std::cout << "auth_user_file : " << _s[i].location[j].auth_user_file << endl;
+			std::cout << "autoindex : " << _s[i].location[j].autoindex << endl;
+			std::cout << "index : " << _s[i].location[j].index << endl;
+			std::cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
+			std::cout << "return_directive : " << _s[i].location[j].return_directive << endl;
+			std::cout << "root : " << _s[i].location[j].root << endl;
+			std::cout << "upload_path : " << _s[i].location[j].upload_path << endl;
+			std::cout << "cgi_path : " << _s[i].location[j].cgi_path << endl;
 			for (size_t k = 0; k < _s[i].location[j].cgi_file_types.size(); k++)
-				cout << "cgi_file_types : " << _s[i].location[j].cgi_file_types[k] << endl;
-			cout << "allowed_method : ";
+				std::cout << "cgi_file_types : " << _s[i].location[j].cgi_file_types[k] << endl;
+			std::cout << "allowed_method : ";
 			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
-				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
-			cout << endl << "return : ";
+				std::cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
+			std::cout << endl << "return : ";
 			for (size_t k = 0; k < _s[i].location[j].retour.size(); k++)
-				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
-			cout << endl;
+				std::cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
+		std::cout << endl;
 		}
 	}
 }

@@ -31,21 +31,19 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	int			bfd[2];
 	pid_t		pid;
 	char		*e_path[4];
-	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+	char		**c_env = new char*[env.size() + 1];
 	int	i;
-//	std::string		out;
 
-	std::cout << "Launching cgi at : " << cgi_path << std::endl;
+//	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
-//	e_path[1] = NULL;
 	e_path[1] = (char*)"-c";
 	e_path[2] = (char*)"files/scripts/php.ini";
 	e_path[3] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-		std::cout << GREEN << it->c_str() << RESET << std::endl;
+//		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
@@ -53,26 +51,16 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 		return (-1);
 	if (pipe(bfd) == -1)
 		return (-1);
-//		return (CRASH_PIPE);
-//	int	opt = 1;
-//	setsockopt(fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(bfd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(bfd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
-//	fcntl(fd[1], F_SETFL, O_NONBLOCK);
-//	fcntl(bfd[0], F_SETFL, O_NONBLOCK);
 	fcntl(bfd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		return (-1);
-//		return (CRASH_FORK);
 	if (pid == 0)
 	{
 		close(fd[0]);
 		close(bfd[1]);
 		dup2(bfd[0], STDIN_FILENO);
-//		close(STDOUT_FILENO);
 		close(bfd[0]);
 		dup2(fd[1], STDOUT_FILENO);
 		close(fd[1]);
@@ -87,28 +75,9 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
 	(*rfd)[1] = bfd[1];
-	std::cout << "Pipe status in go cgi:" << std::endl;
-	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
-	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
-
-
-/*
-	int	status;
-	int	plop;
-
-	plop = waitpid(pid, &status, WNOHANG);
-	std::cout << "Cgi status in go_cgi is : " << plop << std::endl;
-	std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
-	std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
-	std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
-	std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
-	std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
-	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
-	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
-	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
-	*/
-
-
+//	std::cout << "Pipe status in go cgi:" << std::endl;
+//	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
+//	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
 	return (pid);
 }
 
@@ -134,47 +103,34 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	pid_t		pid;
 	int			fd[2];
 	char		*e_path[4];
-	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
+	char		**c_env = new char*[env.size() + 1];
 	int	i;
-//	std::string		out;
 
-	std::cout << "Launching cgi at : " << cgi_path << std::endl;
+//	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
-//	e_path[1] = NULL;
 	e_path[1] = (char*)"-c";
 	e_path[2] = (char*)"files/scripts/php.ini";
 	e_path[3] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-		std::cout << GREEN << it->c_str() << RESET << std::endl;
+//		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
 	if (pipe(fd) == -1)
 		return (-1);
-//		return (CRASH_PIPE);
-//	int	opt = 1;
-//	setsockopt(fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(bfd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(bfd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		return (-1);
-//		return (CRASH_FORK);
 	if (pid == 0)
 	{
 		write((*rfd)[1], body.c_str(), body.length());
 		lseek((*rfd)[1], 0, SEEK_SET);
 		dup2((*rfd)[1], STDIN_FILENO);
-//		close(STDOUT_FILENO);
-	//	dup2((*rfd)[0], STDOUT_FILENO);
 		dup2(fd[1], STDOUT_FILENO);
-//		close((*rfd)[0]);
-//		lseek(STDOUT_FILENO, 0, SEEK_SET);
 		execve(tmp.c_str(), e_path, c_env);
 		exit(1);
 	}
@@ -182,27 +138,8 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 		close(fd[1]);
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
-	std::cout << "Pipe status in go cgi:" << std::endl;
-	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
-	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
-
-
-/*
-	int	status;
-	int	plop;
-
-	plop = waitpid(pid, &status, WNOHANG);
-	std::cout << "Cgi status in go_cgi is : " << plop << std::endl;
-	std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
-	std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
-	std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
-	std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
-	std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
-	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
-	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
-	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
-	*/
-
-
+//	std::cout << "Pipe status in go cgi:" << std::endl;
+//	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
+//	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
 	return (pid);
 }

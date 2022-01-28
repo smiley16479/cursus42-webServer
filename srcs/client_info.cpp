@@ -5,7 +5,6 @@ void	client_info::fd_in(request_handler& header)	{
 						&client_info::chunked_handler };
 
 	//std::cout << " Epollin detected!" << std::endl;
-	//handles EPOLLIN EVENTS
 	if (mode < COMPUTE)
 		return (((*this).*func[mode])(header));
 }
@@ -19,7 +18,6 @@ void	client_info::fd_out(request_handler& header)	{
 						&client_info::send_handler};
 
 //	std::cout << " Epollout detected!" << std::endl;
-	//handles EPOLLOUT EVENTS
 	if (mode > CHUNKED && mode < NONE)
 		return (((*this).*func[mode - 2])(header));
 }
@@ -36,7 +34,6 @@ void	client_info::recv_handler(request_handler& header)	{
 	if (recv_bytes == -1)
 	{
 //		std::cout << "RECV ERROR" << std::endl;
-//		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
@@ -58,14 +55,14 @@ void	client_info::read_handler(request_handler& header)	{
 	char	buf[MAX_LEN];
 
 	bzero(&buf, MAX_LEN);
-	std::cout << "reading stuff from file" << std::endl;
+//	std::cout << "reading stuff from file" << std::endl;
 	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 	{
-		std::cout << "READ ERROR" << std::endl;
+//		std::cout << "READ ERROR" << std::endl;
 		if (loc_fd[0] != -1)
 		{
-			std::cout << "Closing loc_fd[0]" << std::endl;
+//			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
@@ -75,10 +72,10 @@ void	client_info::read_handler(request_handler& header)	{
 	else if (read_bytes == 0)
 	{
 		mode = SEND;
-		std::cout << "READ EOF" << std::endl;
+//		std::cout << "READ EOF" << std::endl;
 		if (loc_fd[0] != -1)
 		{
-			std::cout << "Closing loc_fd[0]" << std::endl;
+//			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
@@ -86,17 +83,15 @@ void	client_info::read_handler(request_handler& header)	{
  	else if (read_bytes < MAX_LEN)
 	{
 		mode = SEND;
-		std::cout << "READ MSG END" << std::endl;
+//		std::cout << "READ MSG END" << std::endl;
 		if (loc_fd[0] != -1)
 		{
-			std::cout << "Closing loc_fd[0]" << std::endl;
+//			std::cout << "Closing loc_fd[0]" << std::endl;
 			close(loc_fd[0]);
 			loc_fd[0] = -1;
 		}
 	}
-//	else
-//		std::cout << "A READ HAPPENED" << std::endl;
-	std::cout << "appending resp" << std::endl;
+//	std::cout << "appending resp" << std::endl;
 //	std::cout << "resp before = " << std::endl;
 //	std::cout << resp << std::endl;
 	resp.append(buf, read_bytes);
@@ -114,28 +109,27 @@ void	client_info::write_handler(request_handler& header)	{
 //	std::cout << resp << std::endl;
  	if (resp.length() > (unsigned int)MAX_LEN)
 	{
-		std::cout << "FILE TOO BIG" << std::endl;
-		std::cout << "(len is " << resp.length() << ")" << std::endl;
+//		std::cout << "FILE TOO BIG" << std::endl;
+//		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
 		resp = resp.substr(0, MAX_LEN);
-		std::cout << "FILE RECUT" << std::endl;
+//		std::cout << "FILE RECUT" << std::endl;
 	}
 	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
 	if (wrote_bytes == -1)
 	{
-		std::cout << "WRITE ERROR" << std::endl;
+//		std::cout << "WRITE ERROR" << std::endl;
 		//si le write echoue, on reecrit le message dans le buffer, ce dernier sera set
-//		tmp.append(resp);
 		resp.append(tmp);
 		return ;
 	}
 	else if (wrote_bytes == 0)
 	{
-		std::cout << "WRITE EOF" << std::endl;
+//		std::cout << "WRITE EOF" << std::endl;
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
-			std::cout << "Closing loc_fd[1]" << std::endl;
+//			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -145,7 +139,7 @@ void	client_info::write_handler(request_handler& header)	{
 		resp = header.get_response();
 		if (ret != NONE)
 		{
-			std::cout << "Preparing to add file to write response" << std::endl;
+//			std::cout << "Preparing to add file to write response" << std::endl;
 			mode = ret;
 			header.fill_redir_fd(&loc_fd, &cgi_pid);
 		}
@@ -155,11 +149,11 @@ void	client_info::write_handler(request_handler& header)	{
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
-		std::cout << "WRITE MSG END" << std::endl;
+//		std::cout << "WRITE MSG END" << std::endl;
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
-			std::cout << "Closing loc_fd[1]" << std::endl;
+//			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -172,7 +166,7 @@ void	client_info::write_handler(request_handler& header)	{
 		if (ret != NONE)
 		{
 			mode = ret;
-			std::cout << "Copying redir_fd" << std::endl;
+//			std::cout << "Copying redir_fd" << std::endl;
 			header.fill_redir_fd(&loc_fd, &cgi_pid);
 		}
 		else
@@ -180,7 +174,6 @@ void	client_info::write_handler(request_handler& header)	{
 		return ;
 	}
 	resp = tmp;
-//	time_reset();
 }
 
 void	client_info::send_handler(request_handler& header)	{
@@ -191,57 +184,44 @@ void	client_info::send_handler(request_handler& header)	{
 //	std::cout << "Sending stuff..." << std::endl;
 //	std::cout << "Stuff to send is : " << std::endl;
 //	std::cout << resp << std::endl;
-//	ofstream o("lol.txt", ios_base::app);
-//	o << resp;
 	if (resp.empty())
 	{
 		mode = RECV;
-//		send(com_socket, "0\r\n\r\n", 5, MSG_NOSIGNAL);
 		remove();
 		return ;
 	}
  	else if (resp.length() > (unsigned int)MAX_LEN)
 	{
-		std::cout << "MSG TOO LONG" << std::endl;
-		std::cout << "(len is " << resp.length() << ")" << std::endl;
+//		std::cout << "MSG TOO LONG" << std::endl;
+//		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
 		resp = resp.substr(0, MAX_LEN);
-		std::cout << "(len kept is " << tmp.length() << ")" << std::endl;
-		std::cout << "(len sent is " << resp.length() << ")" << std::endl;
-		std::cout << "MSG RECUT" << std::endl;
+//		std::cout << "(len kept is " << tmp.length() << ")" << std::endl;
+//		std::cout << "(len sent is " << resp.length() << ")" << std::endl;
+//		std::cout << "MSG RECUT" << std::endl;
 	}
 	sent_bytes = send(com_socket, resp.c_str(), resp.length(), MSG_NOSIGNAL);
-	std::cout << "bytes sent : " << sent_bytes << std::endl;
+//	std::cout << "bytes sent : " << sent_bytes << std::endl;
 	if (sent_bytes == -1)
 	{
-//		resp.append(tmp);
 		resp.clear();
 		tmp.clear();
-		std::cout << "SEND ERROR" << std::endl;
-		//tmp.append(resp);
-		//resp = tmp;
+//		std::cout << "SEND ERROR" << std::endl;
 		remove();
-//		resp.append(tmp);
 	}
 	else if (sent_bytes == 0)
 	{
-		std::cout << "SEND EOF" << std::endl;
+//		std::cout << "SEND EOF" << std::endl;
 		resp.clear();
 		tmp.clear();
 		mode = RECV;
 		remove();
-//		time_reset();
 	}
 	else if (sent_bytes < MAX_LEN)
 	{
-		std::cout << "MSG PARTIALLY SENT" << std::endl;
+//		std::cout << "MSG PARTIALLY SENT" << std::endl;
 		resp = resp.substr(sent_bytes);
 		resp.append(tmp);
-//		tmp.clear();
-//		tmp.clear();
-//		mode = RECV;
-//		remove();
-//		time_reset();
 	}
 	else
 		resp = tmp;
@@ -254,10 +234,10 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 
 	if (resp.empty())
 	{
-		std::cout << "Empty cgi body buffer, exiting" << std::endl;
+//		std::cout << "Empty cgi body buffer, exiting" << std::endl;
 		if (loc_fd[1] != -1)
 		{
-			std::cout << "Closing loc_fd[1]" << std::endl;
+//			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -266,41 +246,23 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	}
  	else if (resp.length() > (unsigned int)MAX_LEN)
 	{
-		std::cout << "CGI BODY TOO BIG" << std::endl;
-		std::cout << "(len is " << resp.length() << ")" << std::endl;
+//		std::cout << "CGI BODY TOO BIG" << std::endl;
+//		std::cout << "(len is " << resp.length() << ")" << std::endl;
 		tmp = resp.substr(MAX_LEN);
 		resp = resp.substr(0, MAX_LEN);
-		std::cout << "CGI BODY RECUT" << std::endl;
+//		std::cout << "CGI BODY RECUT" << std::endl;
 	}
-	std::cout << RED "Pipe status in cgi_write:" RESET << std::endl;
-	std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
-	std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
-	std::cout << "Trying to write on CGI input" << std::endl;
-	std::cout << "Trying to write " << resp.length() << " bytes on fd " << loc_fd[1] << std::endl;
+//	std::cout << RED "Pipe status in cgi_write:" RESET << std::endl;
+//	std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
+//	std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
+//	std::cout << "Trying to write on CGI input" << std::endl;
+//	std::cout << "Trying to write " << resp.length() << " bytes on fd " << loc_fd[1] << std::endl;
 
 	wrote_bytes = write(loc_fd[1], resp.c_str(), resp.length());
 
-//	perror("write");
-	std::cout << "Done !" << std::endl;
+//	std::cout << "Done !" << std::endl;
 
-/*
-	int status;
-	int	plop;
-
-	plop = waitpid(cgi_pid, &status, WNOHANG);
-	std::cout << "Cgi status is : " << plop << std::endl;
-	std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
-	std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
-	std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
-	std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
-	std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
-	std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
-	std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
-	std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
-	*/
-
-
-	std::cout << wrote_bytes << " bytes written !" << std::endl;
+//	std::cout << wrote_bytes << " bytes written !" << std::endl;
 	if (wrote_bytes == -1)
 	{
 		int status;
@@ -309,13 +271,13 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 		plop = waitpid(cgi_pid, &status, WNOHANG);
 		if (WIFEXITED(status) || WIFSIGNALED(status))
 		{
-			std::cout << "CGI executable was exited before whole body was written" << std::endl;
+//			std::cout << "CGI executable was exited before whole body was written" << std::endl;
 			//OU ALORS, on close ce cote du pipe et on chck le retour
 			resp.clear();
 			tmp.clear();
 			if (loc_fd[1] != -1)
 			{
-				std::cout << "Closing loc_fd[1]" << std::endl;
+//				std::cout << "Closing loc_fd[1]" << std::endl;
 				close(loc_fd[1]);
 				loc_fd[1] = -1;
 			}
@@ -323,7 +285,7 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 		}
 			
 
-		std::cout << "CGI WRITE ERROR" << std::endl;
+//		std::cout << "CGI WRITE ERROR" << std::endl;
 		//si le write echoue, on reecrit le message dans le buffer
 //		tmp.append(resp);
 		resp.append(tmp);
@@ -333,12 +295,12 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	}
 	else if (wrote_bytes == 0)
 	{
-		std::cout << "CGI WRITE EOF" << std::endl;
+//		std::cout << "CGI WRITE EOF" << std::endl;
 		resp.clear();
 		tmp.clear();
 		if (loc_fd[1] != -1)
 		{
-			std::cout << "Closing loc_fd[1]" << std::endl;
+//			std::cout << "Closing loc_fd[1]" << std::endl;
 			close(loc_fd[1]);
 			loc_fd[1] = -1;
 		}
@@ -347,7 +309,7 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	}
 	else if (wrote_bytes < MAX_LEN)
 	{
-		std::cout << "CGI WRITE MSG END" << std::endl;
+//		std::cout << "CGI WRITE MSG END" << std::endl;
 		resp = resp.substr(wrote_bytes);
 		resp.append(tmp);
 	}
@@ -355,8 +317,7 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 	{
 		resp = tmp;
 	}
-	std::cout << "reseting buffer" << std::endl;
-//	time_reset();
+//	std::cout << "reseting buffer" << std::endl;
 }
 
 void	client_info::cgi_resp_handler(request_handler& header)	{
@@ -368,34 +329,27 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	read_bytes = read(loc_fd[0], &buf, MAX_LEN);
 	if (read_bytes == -1)
 	{
-	//should just return but trying to get cgi errors;
-	/*
-		std::cout << "CGI ERROR, generating response" << std::endl;
-		waitpid(cgi_pid, NULL, 0);
-		cgi_pid =  -1;
-		header.set_body(resp);
-		resp.clear();
-		header.clean_body();
-		header.cgi_writer();
-		resp = header.get_response();
-		mode = SEND;
-		if (loc_fd[0] != -1)
-		{
-			std::cout << "Closing loc_fd[0]" << std::endl;
-			close(loc_fd[0]);
-			loc_fd[0] = -1;
-		}
-		*/
 		return ;
 	}
 	else
 	{
+		if (TEST_MODE == 1)
+		{
+			struct stat	plop;
+
+			if (lstat("/tmp/cgi_buffer",  &plop) != -1)
+			{
+				std::remove("/tmp/cgi_buffer");
+//				std::cout << "Cgi buffer has been erased" << std::endl;
+			}
+		}
+			
 		resp.append(buf, read_bytes);
-		std::cout << "A CGI READ HAPPENED" << std::endl;
+//		std::cout << "A CGI READ HAPPENED" << std::endl;
 		if (read_bytes == 0)
 		{
-			std::cout << "CGI EOF" << std::endl;
-		//	waitpid(cgi_pid, NULL, 0);
+//			std::cout << "CGI EOF" << std::endl;
+			waitpid(cgi_pid, NULL, 0);
 			cgi_pid =  -1;
 			header.set_body(resp);
 			resp.clear();
@@ -405,7 +359,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 			mode = SEND;
 			if (loc_fd[0] != -1)
 			{
-				std::cout << "Closing loc_fd[0]" << std::endl;
+//				std::cout << "Closing loc_fd[0]" << std::endl;
 				close(loc_fd[0]);
 				loc_fd[0] = -1;
 			}
@@ -428,21 +382,20 @@ void	client_info::chunked_handler(request_handler& header)	{
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK RECV ERROR" << std::endl;
+//			std::cout << "CHUNK RECV ERROR" << std::endl;
 			rqst.append(chunk_buffer);
 			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
 			mode = COMPUTE;
 		}
 //		std::cout << "RECV ERROR" << std::endl;
-//		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK EOF" << std::endl;
+//			std::cout << "CHUNK EOF" << std::endl;
 			rqst.append(chunk_buffer);
 			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
@@ -454,7 +407,7 @@ void	client_info::chunked_handler(request_handler& header)	{
 	{
 		if (is_chunked_rqst_fulfilled())
 		{
-			std::cout << "CHUNK MSG RECV" << std::endl;
+//			std::cout << "CHUNK MSG RECV" << std::endl;
 			rqst.append(chunk_buffer);
 			chunk_buffer.clear();
 			chunk_mode = TRANSMISSION_OVER;
@@ -478,26 +431,26 @@ void	client_info::compute(request_handler& header)	{
 		resp = header.get_response();
 		if (ret != NONE)
 		{
-			std::cout << "Stuff is happening !" << std::endl;
+//			std::cout << "Stuff is happening !" << std::endl;
 			mode = ret;
 			header.fill_redir_fd(&loc_fd, &cgi_pid);
-			std::cout << RED "Pipe status in compute:" RESET << std::endl;
-			if (loc_fd[0] != -1)
-				std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
-			if (loc_fd[1] != -1)
-				std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
+//			std::cout << RED "Pipe status in compute:" RESET << std::endl;
+//			if (loc_fd[0] != -1)
+//				std::cout << "loc_fd[0] : " << fcntl(loc_fd[0], F_GETFD) << std::endl;
+//			if (loc_fd[1] != -1)
+//				std::cout << "loc_fd[1] : " << fcntl(loc_fd[1], F_GETFD) << std::endl;
 			if (loc_fd[0] == -1 && loc_fd[1] == -1)
 			{
-				std::cout << "There is something wrong with these fds" << std::endl;
+//				std::cout << "There is something wrong with these fds" << std::endl;
 				if (loc_fd[0] != -1)
 				{
-					std::cout << "Closing loc_fd[0]" << std::endl;
+//					std::cout << "Closing loc_fd[0]" << std::endl;
 					close(loc_fd[0]);
 					loc_fd[0] = -1;
 				}
 				if (loc_fd[1] != -1)
 				{
-					std::cout << "Closing loc_fd[1]" << std::endl;
+//					std::cout << "Closing loc_fd[1]" << std::endl;
 					close(loc_fd[1]);
 					loc_fd[1] = -1;
 				}
@@ -511,42 +464,8 @@ void	client_info::compute(request_handler& header)	{
 			}
 			else if (ret == CGI_IN)
 			{
-				std::cout << "Body extracted in client buffer" << std::endl;
+//				std::cout << "Body extracted in client buffer" << std::endl;
 				resp = header.get_body();
-
-
-/*
-//trying to add pipes to epoll
-				struct epoll_event	ev;
-
-				bzero(&ev, sizeof(ev));
-				ev.events = EPOLLIN;
-				ev.data.fd = loc_fd[1];
-				std::cout << GREEN "Adding pipe fd to epoll" RESET << std::endl;
-				if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_ADD, loc_fd[1], &ev)) {
-					std::cerr << "Failed to add file descriptor to epoll" << std::endl;
-					// close(_epoll_fd);
-					throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
-				}
-//trying to add pipes to epoll
-*/
-
-/*
-				int status;
-				int	plop;
-
-				plop = waitpid(cgi_pid, &status, WNOHANG);
-				std::cout << "Cgi status in compute is : " << plop << std::endl;
-				std::cout << "WIFEXITED(status)" << (WIFEXITED(status) ? "true" : "false") << std::endl;
-				std::cout << "WEXITSTATUS(status)" << WEXITSTATUS(status) << std::endl;
-				std::cout << "WIFSIGNALED(status)" << WIFSIGNALED(status) << std::endl;
-				std::cout << "WTERMSIG(status)" << WTERMSIG(status) << std::endl;
-				std::cout << "WCOREDUMP(status)" << WCOREDUMP(status) << std::endl;
-				std::cout << "WIFSTOPPED(status)" << WIFSTOPPED(status) << std::endl;
-				std::cout << "WSTOPSIG(status)" << WSTOPSIG(status) << std::endl;
-				std::cout << "WIFCONTINUED(status)" << WIFCONTINUED(status) << std::endl;
-*/
-
 			}
 			return ;
 		}
@@ -554,10 +473,6 @@ void	client_info::compute(request_handler& header)	{
 	}
 	else if (!(mode == CHUNKED))
 	{
-//		if (rq_mode == NORMAL)
-//			remove();
-//		else
-//			time_reset();
 		mode = RECV;
 	}
 	//SHOULD SEND A BAD REQUEST RESP
@@ -566,15 +481,11 @@ void	client_info::compute(request_handler& header)	{
 
 bool client_info::is_request_fulfilled()
 {
-	// cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[client_fd].rqst.length() <<"\n" RESET;
-
-	// for (size_t i = clients[client_fd].rqst.length() - 4; i < clients[client_fd].rqst.length(); ++i)
-	// 	cout << "clients[client_fd][i] :[" << clients[client_fd].rqst[i] << "]\n";
 	if (rqst.empty())
 		return (false);
 	if (chunk_mode == TRANSMISSION_OVER || chunk_mode == BAD_REQUEST)
 	{
-		std::cout << "Told you, it's done !" << std::endl;
+//		std::cout << "Told you, it's done !" << std::endl;
 		chunk_mode = NO_CHUNK;
 		return (true);
 	}
@@ -582,7 +493,7 @@ bool client_info::is_request_fulfilled()
 		return false ;
 	if (rq_mode == NORMAL)
 	{
-		std::cout << "Checking normal request fullfilment" << std::endl;
+//		std::cout << "Checking normal request fullfilment" << std::endl;
 		if (rqst.length() >= 4 && rqst.substr(0, 4) != "POST" && rqst.substr(0, 3) != "PUT")
 			return (true);
 		else if (get_rq_type())
@@ -590,7 +501,7 @@ bool client_info::is_request_fulfilled()
 	}
 	else
 	{
-		std::cout << "Multipart or content-length header detected" << std::endl;
+//		std::cout << "Multipart or content-length header detected" << std::endl;
 		if (rq_mode == CLEN && is_clen_rqst_fulfilled())
 			return (true);
 		else if (rq_mode == MULTIPART && is_multipart_rqst_fulfilled())
@@ -606,35 +517,33 @@ bool client_info::get_rq_type()
 	std::stringstream	ss;
 	size_t boundary_pos;
 
-	cout << YELLOW "DANS GET_RQ_TYPE\n" RESET << std::endl;
+//	std::cout << YELLOW "DANS GET_RQ_TYPE\n" RESET << std::endl;
 	_cLen = 0;
 	if ((pos = rqst.find("Transfer-Encoding: chunked")) != std::string::npos)
 	{
-		std::cout << "Chunk header detected at pos: " << pos << std::endl;
+//		std::cout << "Chunk header detected at pos: " << pos << std::endl;
 		pos = rqst.find("\r\n\r\n");
-//		std::cout << "rqst:" << rqst << std::endl;
 		chunk_buffer = rqst.substr(pos + 4);
-//		std::cout << "chunk_buffer:" << chunk_buffer << std::endl;
 		mode = CHUNKED;
 		rqst = rqst.substr(0, pos + 4);
 		if (chunk_buffer.empty())
 		{
-			std::cout << "Chunk header complete, checking for body" << std::endl;
-			if (rqst.find("Expect: 100-Continue") != std::string::npos)
-			{
-				std::cout << "Sending 100 confirmation header" << std::endl;
-				flag = EXPECT_LINE_NUM;
-				chunk_mode = TRANSMIT_100;
-			}
-			else
-			{
-				std::cout << "Enabling network mode to fetch more data" << std::endl;
+//			std::cout << "Chunk header complete, checking for body" << std::endl;
+//			if (rqst.find("Expect: 100-Continue") != std::string::npos)
+//			{
+//				std::cout << "Sending 100 confirmation header" << std::endl;
+//				resp = "HTTP/1.1 100 Continue";
+//				chunk_mode = TRANSMIT_100;
+//			}
+//			else
+//			{
+//				std::cout << "Enabling network mode to fetch more data" << std::endl;
 				chunk_mode = CHUNK_INCOMPLETE;
-			}
+//			}
 		}
 		else
 		{
-			std::cout << "Chunk body remaining, enabling parsing mode: " << std::endl;
+//			std::cout << "Chunk body remaining, enabling parsing mode: " << std::endl;
 			chunk_mode = CHUNK_PARSING_REQ;
 		}
 	}
@@ -645,7 +554,7 @@ bool client_info::get_rq_type()
 			tmp = tmp.substr(0, pos);
 		ss.str(tmp);
 		ss >> _cLen;
-		std::cout << "Len was set:" << _cLen << std::endl;
+//		std::cout << "Len was set:" << _cLen << std::endl;
 		if (rqst.substr(rqst.find("\r\n\r\n") + 4).length() >= _cLen)
 		{
 			rq_mode = NORMAL;
@@ -656,7 +565,7 @@ bool client_info::get_rq_type()
 	else if ((boundary_pos = rqst.find("boundary=")) != string::npos && (boundary_pos += 9 < rqst.length())) // +9 == "boundary=".length, moins deux des premiers '-' +2
 	{
 		post_boundary = "--" + rqst.substr(boundary_pos, rqst.find_first_of("\r\n", boundary_pos) - boundary_pos);
-		std::cout << "A boundary was found : " << post_boundary << std::endl;
+//		std::cout << "A boundary was found : " << post_boundary << std::endl;
 		rq_mode = MULTIPART;
 	}
 	else
@@ -695,7 +604,6 @@ bool client_info::is_clen_rqst_fulfilled()	{
 }
 
 bool client_info::is_chunked_rqst_fulfilled()	{
-//	std::cout << "Checking chunked request fulfillment" << std::endl;
 	if (chunk_buffer.empty())
 		return (true);
 	if (chunk_buffer.find("0\r\n\r\n") != std::string::npos)
@@ -712,7 +620,6 @@ void	client_info::set_recv_mode()	{
 	if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_MOD, com_socket, &ev))
 	{
 		std::cerr << "Failed to switch to reception mode" << std::endl;
-		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 }
@@ -726,7 +633,6 @@ void	client_info::set_send_mode()	{
 	if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_MOD, com_socket, &ev))
 	{
 		std::cerr << "Failed to switch to send mode" << std::endl;
-		// close(_epoll_fd);
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
 	}
 }
@@ -738,19 +644,20 @@ void	client_info::time_reset()	{
 void	client_info::remove()	{
 	if (loc_fd[0] != -1)
 	{
-		std::cout << "closing loc fd : " << loc_fd[0] << std::endl;
+//		std::cout << "closing loc fd : " << loc_fd[0] << std::endl;
 		close(loc_fd[0]);
 		loc_fd[0] = -1;
 	}
 	if (loc_fd[1] != -1)
 	{
-		std::cout << "closing loc fd : " << loc_fd[1] << std::endl;
+//		std::cout << "closing loc fd : " << loc_fd[1] << std::endl;
 		close(loc_fd[1]);
 		loc_fd[1] = -1;
 	}
 	if (com_socket != -1)
 	{
-		std::cout << "closing socket fd : " << com_socket << std::endl;
+		std::cout << "Client removed from tracked fd !" << std::endl;
+//		std::cout << "closing socket fd : " << com_socket << std::endl;
 		if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
 		{
 			perror("epoll_ctl");

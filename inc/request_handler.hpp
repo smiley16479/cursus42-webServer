@@ -47,7 +47,7 @@ public:
 	int choose_method(void);
 	int	gen_resp(void);
 	int cgi_writer(void);
-	int writer(void);
+	int writer(int redir_mode);
 	void	clean_body();
 	int	create_write_resp(std::string &file_path);
 
@@ -69,7 +69,6 @@ private:
 	void gen_serv(void);
 	void gen_CType(string ext);
 	void gen_CLength(void);
-	// void gen_response(void);
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 

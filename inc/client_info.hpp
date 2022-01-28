@@ -14,7 +14,6 @@ class client_info {
 		pid_t		cgi_pid;
 		std::string	loc_path;
 		size_t		mode;
-		int			flag;
 		std::string	resp;
 		std::string rqst;
 		std::string	chunk_buffer;

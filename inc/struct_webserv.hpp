@@ -16,6 +16,7 @@ enum	e_mode	{
 	CGI_IN,//reads on cgi pipe end
 	CGI_OUT,//reads on cgi pipe end
 	SEND,//sends on communication socket
+	HEAD,
 	NONE//indicates that current action doesn't necessitate a state change
 };
 
@@ -29,26 +30,11 @@ enum	e_cmode	{
 	BAD_REQUEST
 };
 
-enum	e_cflags	{
-	ZERO,
-	EXPECT_CHUNKS,
-	EXPECT_LINE_NUM,
-	EXPECT_NUM,
-	EXPECT_NL_NUM,
-	EXPECT_LEN,
-	EXPECT_NL_LEN,
-	EXPECT_END
-};
-
-
 enum	e_rqmode	{
 	NORMAL,
 	MULTIPART,
 	CLEN
 };
-
-//# define MAX_LEN 20971520
-//# define MAX_LEN 8192
 
 # define MAX_EVENTS 1000
 
@@ -87,31 +73,5 @@ struct struct_epoll
 	epoll_event _events[MAX_EVENTS];
 };
 
-
-/* 
-#include <algorithm> 
-#include <functional> 
-#include <cctype>
-#include <locale>
-
-// trim from start
-static inline std::string &ltrim(std::string &s) {
-		s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-						std::not1(std::ptr_fun<int, int>(std::isspace))));
-		return s;
-}
-
-// trim from end
-static inline std::string &rtrim(std::string &s) {
-		s.erase(std::find_if(s.rbegin(), s.rend(),
-						std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-		return s;
-}
-
-// trim from both ends
-static inline std::string &trim(std::string &s) {
-		return ltrim(rtrim(s));
-}
- */
 
 #endif

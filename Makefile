@@ -40,6 +40,8 @@ MAX_LEN = $(ULIMIT)
 
 SET_LEN = -D MAX_LEN=$(MAX_LEN)
 
+TEST_V = 1
+
 #Pernet d'activer/ desactiver les flags
 #Il faut ajouter -d=$ a la fin de la ligne make pour activer les options voulues
 #ex: "make re d=1" (recompile avec "-D _debug_")
@@ -50,6 +52,13 @@ endif
 ifeq ($(d), 1)
 CPP_FLAGS += -D _debug_ # Toggle les sorties de debug par le preproccesseur 
 endif
+ifeq ($(m), 1)
+TEST_V = 0
+endif
+
+TEST = TEST_MODE=$(TEST_V)
+
+CPP_FLAGS += -D $(TEST)
 
 all:	build
 

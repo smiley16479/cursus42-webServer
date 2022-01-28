@@ -192,7 +192,9 @@ std::string	mime_string(const char *ext)	{
 		ret = "application/octet-stream";
 		return (ret);
 	}
+	#ifdef _debug_
 	std::cout << "MIME type identified ! type index = " << index[0] << " sub_type index = " << index[1] << std::endl;
+	#endif
 	ret = (char*)type_str(index[0]).type;
 	ret += (char*)"/";
 	ret += (char*)type_str(index[0]).sub_type(index[1]).second;
