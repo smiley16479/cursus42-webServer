@@ -51,8 +51,8 @@ int request_handler::reader(std::string& rqst)
 	std::string ss_1(rqst);
 
 //DEBUG RQST OUTPUT
-//	std::cout << BLUE "Request Header : " RESET << std::endl;
-//	std::cout << rqst.substr(0, rqst.find("\r\n\r\n")) << std::endl;
+	std::cout << BLUE "Request Header : " RESET << std::endl;
+	std::cout << rqst.substr(0, rqst.find("\r\n\r\n")) << std::endl;
 //	std::cout << RED "Request Body : " RESET << std::endl;
 //	std::cout << rqst.substr(rqst.find("\r\n\r\n")) << std::endl;
 	std::cout << "Parsing request !" << std::endl;
@@ -1445,7 +1445,7 @@ std::string	request_handler::clean_chunk(std::string& buf)
 	return (ret);
 }
 
-void	create_tmp_file(int	*fd, int mode)	{
+void	create_tmp_file(int	*fd)	{
 	static int n = 0;
 	std::stringstream	ss;
 	std::string path = "files/tmp_file_";
@@ -1453,7 +1453,7 @@ void	create_tmp_file(int	*fd, int mode)	{
 	ss << n;
 	path += ss.str();
 	std::cout << "Creating tmp file : " << path << std::endl;
-	*fd = open(path.c_str(), mode, S_IRWXU);
+	*fd = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
 	fcntl(*fd, F_SETFL, O_NONBLOCK);
 	n++;
 }
@@ -1462,7 +1462,6 @@ int	request_handler::handle_cgi_fd(void)
 {
 	std::vector<std::string>	env;
 
-	//HERE!
 	if (_s_id == -1)
 	{
 		std::cout << "Invalid server id: " << _s_id << std::endl;
@@ -1470,7 +1469,6 @@ int	request_handler::handle_cgi_fd(void)
 	}
 	else
 	{
-	//EN CHANTIER !!!
 		if (_si[_s_id].location[_l_id].cgi_path.empty())
 		{
 			gen_startLine( 403 );
@@ -1479,9 +1477,9 @@ int	request_handler::handle_cgi_fd(void)
 		std::cout << "Launching cgi" << std::endl;
 		cgi_var_init();
 		env = extract_env(_hrx, _si[_s_id]);
-		create_tmp_file(&redir_fd[0], O_CREAT | O_RDONLY | O_TRUNC);
-		create_tmp_file(&redir_fd[1], O_CREAT | O_WRONLY | O_TRUNC);
-		if ((redir_pid = go_cgi_fd(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env)) == -1 || (redir_fd[0] == -1 || redir_fd[1] == -1))
+//		create_tmp_file(&redir_fd[0]);
+		create_tmp_file(&redir_fd[1]);
+		if ((redir_pid = go_cgi_fd(&redir_fd, _si[_s_id].location[_l_id].cgi_path, env, _hrx["BODY"][0])) == -1 || (redir_fd[0] == -1 || redir_fd[1] == -1))
 		{
 			if (redir_fd[0] != -1)
 			{
@@ -1501,7 +1499,6 @@ int	request_handler::handle_cgi_fd(void)
 		_body = _hrx["BODY"][0];
 		std::cout << "Buffer copied in body" << std::endl;
 		return (CGI_IN);
-	//EN CHANTIER !!!
 	}
 	return (NONE);
 }

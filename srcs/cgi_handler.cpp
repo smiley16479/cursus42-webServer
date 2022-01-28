@@ -128,10 +128,11 @@ size_t	getcLen(std::vector<std::string>& env)	{
 	return (0);
 }
 
-pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
+pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env, std::string& body)
 {
 	std::string	tmp;
 	pid_t		pid;
+	int			fd[2];
 	char		*e_path[4];
 	char		**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
 	int	i;
@@ -151,25 +152,36 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
+	if (pipe(fd) == -1)
+		return (-1);
 //		return (CRASH_PIPE);
 //	int	opt = 1;
 //	setsockopt(fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 //	setsockopt(fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 //	setsockopt(bfd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
 //	setsockopt(bfd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
+	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		return (-1);
 //		return (CRASH_FORK);
 	if (pid == 0)
 	{
-		dup2((*rfd)[0], STDIN_FILENO);
+		write((*rfd)[1], body.c_str(), body.length());
+		lseek((*rfd)[1], 0, SEEK_SET);
+		dup2((*rfd)[1], STDIN_FILENO);
 //		close(STDOUT_FILENO);
-		dup2((*rfd)[1], STDOUT_FILENO);
+	//	dup2((*rfd)[0], STDOUT_FILENO);
+		dup2(fd[1], STDOUT_FILENO);
+//		close((*rfd)[0]);
+//		lseek(STDOUT_FILENO, 0, SEEK_SET);
 		execve(tmp.c_str(), e_path, c_env);
 		exit(1);
 	}
+	else
+		close(fd[1]);
 	delete [] c_env;
+	(*rfd)[0] = fd[0];
 	std::cout << "Pipe status in go cgi:" << std::endl;
 	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
 	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
