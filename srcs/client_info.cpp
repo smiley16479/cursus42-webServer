@@ -460,6 +460,7 @@ void	client_info::compute(request_handler& header)	{
 			if (ret == WRITE)
 			{
 				loc_path = header.get_path();
+				std::cout << "Location path is : " << loc_path << std::endl;
 				resp = header.get_body();//on sauvegard le body de la requete precedente pour l'ecrire dans le fichier
 			}
 			else if (ret == CGI_IN)

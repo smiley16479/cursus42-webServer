@@ -70,8 +70,8 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	ev.events = EPOLLIN;
 	ev.data.fd = client_fd;
 	inet_ntop(AF_INET, &clientaddr, addr_str, INET_ADDRSTRLEN);
-//	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
-//	std::cout << "Client address is : " << addr_str << std::endl;
+	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
+	std::cout << "Client address is : " << addr_str << std::endl;
 	if (epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

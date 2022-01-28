@@ -541,6 +541,16 @@ int request_handler::handle_post_rqst(void)
 					return (redir_mode);
 				resolve_path();
 			}
+			else
+			{
+				redir_mode = create_file(_path);
+				if (redir_mode != NONE)
+				{
+					_body = _hrx["BODY"][0];
+					return (redir_mode);
+				}
+				resolve_path();
+			}
 		}
 	}
 	return (redir_mode);
