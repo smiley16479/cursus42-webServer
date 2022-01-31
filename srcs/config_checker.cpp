@@ -98,12 +98,16 @@ void config_checker::check_conFile(std::string str)
 	if (ifs.fail())
 		throw (configException(_si, "Unfound"));
 	while (ifs >> word) {
+#ifdef _debug_
 		cout << "check_ConFile : " << word << endl;
+#endif
 		if (word == "server") {
 			_si.push_back(server_info());
 			check_serv_part(ifs, _si[_si.size() - 1]);
 		}
+#ifdef _debug_
 		cout << MAGENTA "check_ConFile : " RESET << _si.size() << endl;
+#endif
 	}
 }
 
@@ -139,7 +143,9 @@ void config_checker::valid_port(std::ifstream& ifs, server_info& si)
 		word.resize(word.size() -1);
 		si.port = word;
 	}
+#ifdef _debug_
 	std::cout << "port : " << si.port << std::endl;
+#endif
 }
 
 /* void config_checker::valid_server_nm(std::ifstream& ifs)

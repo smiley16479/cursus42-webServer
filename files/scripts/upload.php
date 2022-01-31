@@ -14,7 +14,14 @@
 		</div>
 		<div id="Page">
 			<?php
-				ob_end_clean();
+				if (isset($_POST["send_up"]))	{
+					if (isset($FILES['cgi_upload']) && $FILES['cgi_upload']['error'])	{
+						echo $_FILES['cgi_upload']['tmp_name'];
+						echo $_FILES['cgi_upload']['name'];
+						echo $_FILES['cgi_upload']['size'];
+						echo $_FILES['cgi_upload']['type'];
+					}
+				}
 				$uploaddir = "../../" . $_SERVER["TMPDIR"];
 				$uploadfile = $uploaddir . basename($_FILES['cgi_upload']['name']);
 

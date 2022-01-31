@@ -337,9 +337,9 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 		{
 			struct stat	plop;
 
-			if (lstat("/tmp/cgi_buffer",  &plop) != -1)
+			if (lstat("./files/tmp/cgi_buffer",  &plop) != -1)
 			{
-				std::remove("/tmp/cgi_buffer");
+				std::remove("./files/tmp/cgi_buffer");
 //				std::cout << "Cgi buffer has been erased" << std::endl;
 			}
 		}
@@ -460,7 +460,9 @@ void	client_info::compute(request_handler& header)	{
 			if (ret == WRITE)
 			{
 				loc_path = header.get_path();
+#ifdef _debug_
 				std::cout << "Location path is : " << loc_path << std::endl;
+#endif
 				resp = header.get_body();//on sauvegard le body de la requete precedente pour l'ecrire dans le fichier
 			}
 			else if (ret == CGI_IN)
@@ -657,8 +659,10 @@ void	client_info::remove()	{
 	}
 	if (com_socket != -1)
 	{
+#ifdef _debug_
 		std::cout << "Client removed from tracked fd !" << std::endl;
 //		std::cout << "closing socket fd : " << com_socket << std::endl;
+#endif
 		if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
 		{
 			perror("epoll_ctl");

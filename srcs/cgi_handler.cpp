@@ -48,14 +48,17 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	}
 	c_env[i] = NULL;
 	if (pipe(fd) == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
+		// return (-1);
 	if (pipe(bfd) == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
+		// return (-1);
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	fcntl(bfd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN FORK PROCESS");
+		// return (-1);
 	if (pid == 0)
 	{
 		close(fd[0]);
@@ -110,7 +113,7 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
 	e_path[1] = (char*)"-c";
-	e_path[2] = (char*)"files/scripts/php.ini";
+	e_path[2] = (char*)"./files/scripts/php.ini";
 	e_path[3] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
@@ -127,7 +130,12 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 		return (-1);
 	if (pid == 0)
 	{
-		write((*rfd)[1], body.c_str(), body.length());
+		while (!body.empty())
+		{
+			i = 0;
+			i = write((*rfd)[1], body.substr(0, MAX_LEN).c_str(), body.substr(0, MAX_LEN).length());
+			body = body.substr(i);
+		}
 		lseek((*rfd)[1], 0, SEEK_SET);
 		dup2((*rfd)[1], STDIN_FILENO);
 		dup2(fd[1], STDOUT_FILENO);

@@ -16,7 +16,7 @@ OBJ_NAME = $(SRC_NAME:.cpp=.o)
 
 OBJ = $(addprefix $(OBJ_DIR)/,$(OBJ_NAME))
 
-CC = clang++
+CC = c++
 
 RM = rm -f
 
@@ -29,10 +29,10 @@ INC = -I inc
 
 CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"
 
-CPP_FLAGS += -Wall
-CPP_FLAGS += -Werror
-CPP_FLAGS += -Wextra
-CPP_FLAGS += -std=c++98
+# CPP_FLAGS += -Wall
+# CPP_FLAGS += -Werror
+# CPP_FLAGS += -Wextra
+# CPP_FLAGS += -std=c++98
 
 ULIMIT = $(shell expr $(shell ulimit -s) '*' 100)
 
