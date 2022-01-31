@@ -29,10 +29,10 @@ INC = -I inc
 
 CGI_OUT = "http://127.0.0.1:8081/scripts/layout.html"
 
-# CPP_FLAGS += -Wall
-# CPP_FLAGS += -Werror
-# CPP_FLAGS += -Wextra
-# CPP_FLAGS += -std=c++98
+CPP_FLAGS += -Wall
+CPP_FLAGS += -Werror
+CPP_FLAGS += -Wextra
+CPP_FLAGS += -std=c++98
 
 ULIMIT = $(shell expr $(shell ulimit -s) '*' 100)
 
@@ -40,7 +40,7 @@ MAX_LEN = $(ULIMIT)
 
 SET_LEN = -D MAX_LEN=$(MAX_LEN)
 
-TEST_V = 1
+TEST_V = 0
 
 #Pernet d'activer/ desactiver les flags
 #Il faut ajouter -d=$ a la fin de la ligne make pour activer les options voulues
@@ -52,11 +52,12 @@ endif
 ifeq ($(d), 1)
 CPP_FLAGS += -D _debug_ # Toggle les sorties de debug par le preproccesseur 
 endif
+
 ifeq ($(m), 1)
-TEST_V = 0
+TEST_V = 1
 endif
 
-TEST = TEST_MODE=$(TEST_V)
+TEST = CGI_MODE=$(TEST_V)
 
 CPP_FLAGS += -D $(TEST)
 

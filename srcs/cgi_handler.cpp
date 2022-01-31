@@ -134,7 +134,13 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 		{
 			i = 0;
 			i = write((*rfd)[1], body.substr(0, MAX_LEN).c_str(), body.substr(0, MAX_LEN).length());
-			body = body.substr(i);
+			if (i != -1)
+				body = body.substr(i);
+			else
+			{
+				std::cerr << RED "Cgi write error" RESET << std::endl;
+				break ;
+			}
 		}
 		lseek((*rfd)[1], 0, SEEK_SET);
 		dup2((*rfd)[1], STDIN_FILENO);

@@ -14,8 +14,10 @@
 		</div>
 		<div id="Page">
 			<?php
-				if (isset($_POST["send_up"]))	{
-					if (isset($FILES['cgi_upload']) && $FILES['cgi_upload']['error'])	{
+				if (isset($_POST['send_up']))	{
+					echo "Hello\n";
+					if (isset($_FILES['cgi_upload']) && $_FILES['cgi_upload']['error'] == UPLOAD_ERR_OK)	{
+						echo "Hi\n";
 						echo $_FILES['cgi_upload']['tmp_name'];
 						echo $_FILES['cgi_upload']['name'];
 						echo $_FILES['cgi_upload']['size'];

@@ -6,6 +6,17 @@
 # include <vector>
 # include <map>
 
+
+# ifndef MAX_LEN
+#  ifdef SIZE_DEF
+#   define MAX_LEN = 8192
+#  endif
+
+#  ifdef SIZE_MAX
+#   define MAX_LEN = 20971520
+#  endif
+# endif
+
 enum	e_mode	{
 //describes client status
 	RECV,//reads on communication socket

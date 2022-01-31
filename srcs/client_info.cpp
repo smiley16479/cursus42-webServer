@@ -333,7 +333,7 @@ void	client_info::cgi_resp_handler(request_handler& header)	{
 	}
 	else
 	{
-		if (TEST_MODE == 1)
+		if (CGI_MODE == 1)
 		{
 			struct stat	plop;
 

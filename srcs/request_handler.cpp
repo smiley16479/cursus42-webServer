@@ -96,7 +96,7 @@ int request_handler::choose_method(void)
 	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
 	{
 //		std::cout << "CGI mode detected" << std::endl;
-		if (TEST_MODE == 1)
+		if (CGI_MODE == 1)
 			redir_mode = handle_cgi_fd();
 		else
 			redir_mode = handle_cgi();
@@ -1034,7 +1034,7 @@ void	request_handler::cgi_var_init()	{
 	var += "/";
 	pos = _path.find_last_of("/");
 	var += _path.substr(0, 2) == "./" ? _path.substr(2, pos + 1) : _path.substr(0, pos + 1);
-	var += (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
+	var += (_path[0] == '/' ? _path.substr(1) : _path);
 	_hrx["Path-Translated"].push_back(var);
 	var.clear();
 	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));
@@ -1055,8 +1055,10 @@ void	request_handler::cgi_var_init()	{
 	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
 	var = _hrx["A"][1].substr(0, _hrx["A"][1].find("?"));
 	_hrx["Path-Info"].push_back(var);
+	var.clear();
 	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	var = _hrx["A"][1].substr(_hrx["A"][1].find("?") + 1);
+	if (_hrx["A"][1].find("?") != std::string::npos)
+		var = _hrx["A"][1].substr(_hrx["A"][1].find("?") + 1);
 	_hrx["Query-String"].push_back(var);
 	var.clear();
 }
