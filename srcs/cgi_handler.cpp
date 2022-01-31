@@ -43,7 +43,7 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-//		std::cout << GREEN << it->c_str() << RESET << std::endl;
+		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
@@ -115,7 +115,7 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-//		std::cout << GREEN << it->c_str() << RESET << std::endl;
+		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;

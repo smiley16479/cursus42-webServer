@@ -1013,9 +1013,6 @@ void	request_handler::cgi_var_init()	{
 	var += (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
 	_hrx["Path-Translated"].push_back(var);
 	var.clear();
-	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	_hrx["Query-String"].push_back(var);
-	var.clear();
 	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));
 	getcwd(str, sizeof(str));
 	var = str;
@@ -1032,8 +1029,12 @@ void	request_handler::cgi_var_init()	{
 		var = var.substr(2);
 	_hrx["Document-Root"].push_back(var);
 	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	var = _hrx["A"][1];
+	var = _hrx["A"][1].substr(0, _hrx["A"][1].find("?"));
 	_hrx["Path-Info"].push_back(var);
+	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
+	var = _hrx["A"][1].substr(_hrx["A"][1].find("?") + 1);
+	_hrx["Query-String"].push_back(var);
+	var.clear();
 }
 
 int	request_handler::handle_cgi(void)
