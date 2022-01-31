@@ -48,14 +48,17 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	}
 	c_env[i] = NULL;
 	if (pipe(fd) == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
+		// return (-1);
 	if (pipe(bfd) == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
+		// return (-1);
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	fcntl(bfd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
-		return (-1);
+		throw std::runtime_error("ERROR IN FORK PROCESS");
+		// return (-1);
 	if (pid == 0)
 	{
 		close(fd[0]);

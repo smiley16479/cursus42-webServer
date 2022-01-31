@@ -25,10 +25,10 @@ int request_handler::reader(std::string& rqst)
 	std::string ss_1(rqst);
 
 
+#ifdef _debug_
 	std::cout << BLUE "Request Header : " RESET << std::endl;
 	std::cout << rqst.substr(0, rqst.find("\r\n\r\n") + 2) << std::endl;
 
-#ifdef _debug_
 //DEBUG RQST OUTPUT
 	std::cout << RED "Request Body : " RESET << std::endl;
 	std::cout << rqst.substr(rqst.find("\r\n\r\n")) << std::endl;
@@ -392,7 +392,9 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 	string	tmp, buf, path;
 	ofstream	out;
 
+#ifdef _debug_
 	std::cout << "Parsing multipart Form" << std::endl;
+#endif
 	pos = msg.find(boundary);
 	if (pos != string::npos)
 	{
@@ -401,7 +403,9 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 			msg = msg.substr(2);
 		else if (msg.substr(0, 2) == "--")
 		{
+#ifdef _debug_
 			std::cout << "Boundary end found" << std::endl;
+#endif
 			msg = msg.substr(2);
 			return (NONE);
 		}
@@ -419,20 +423,28 @@ int request_handler::multipart_form(string& boundary, string& msg)	{
 //		std::cout << "tmp = " << tmp << std::endl;
 		if ((pos = tmp.find("filename=\"")) != string::npos)
 		{
+#ifdef _debug_
 			std::cout << "Extracting multipart/form filename" << std::endl;
+#endif
 			buf = tmp.substr(pos + strlen("filename=\""), tmp.find("\r\n"));
 			path = buf.substr(0, buf.find("\""));
+#ifdef _debug_
 			std::cout << "Path set to : " << path << std::endl;
+#endif
 		}
 		if (msg.substr(0, 2) == "\r\n")
 			msg = msg.substr(2);
 		buf.clear();
 		if ((pos = msg.find(boundary + "--")) != string::npos)
 		{
+#ifdef _debug_
 			std::cout << "Found end of multipart body" << std::endl;
+#endif
 			buf.append(msg.substr(0, pos));
+#ifdef _debug_
 			std::cout << "searching for trailing character at buffer end: " << (int)buf[buf.length() -2] << " ,"
 				<< (int)buf[buf.length() -1] << std::endl;
+#endif
 			if (buf.substr(buf.length() - 2, 2) == "\r\n")
 				buf = buf.substr(0, buf.length() - 2);
 			_body = buf;
@@ -466,7 +478,9 @@ int request_handler::handle_put_rqst(void)
 		boundary = "--" + _hrx["Content-Type:"][1].substr(strlen("boundary="));
 	// En cas de body plus long qu'autorisé -> 413 (Request Entity Too Large) 
 	if (!_si[_s_id].max_file_size.empty() && _hrx["BODY"][0].size() > static_cast<size_t>(atoi(_si[_s_id].max_file_size.c_str())) ) {
+#ifdef _debug_
 		std::cout << "Max file size was set" << std::endl;
+#endif
 		gen_startLine( 413 ); 
 		return (NONE);
 	}
@@ -743,7 +757,9 @@ void request_handler::generate_folder_list()
 	if (dpdf != NULL)
 	   	while ((epdf = readdir(dpdf))) {
 			st.insert(epdf->d_name);
+#ifdef _debug_
 	    	std::cout << epdf->d_name << std::endl;
+#endif
 		}
 	closedir(dpdf);
 
@@ -768,7 +784,9 @@ void request_handler::add_all_field()
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_response += it->second[i];
 	_response += "\r\n";
-std::cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _response << endl;
+#ifdef _debug_
+	std::cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _response << endl;
+#endif
 }
 
 // Ajout du fichier ou du body À LA SUITE des header dans response
@@ -779,7 +797,9 @@ int request_handler::add_body()
 	if (!_body.empty()) {
 		_response += _body;
 		_body.clear();
+#ifdef _debug_
 		std::cout << "body appended" << std::endl;
+#endif
 		return (NONE);
 	}
 // S'IL S'AGIT D'UN GET OU D'UN POST ON JOINS LE FICHIER
@@ -789,7 +809,9 @@ int request_handler::add_body()
 		{
 			redir_fd[0] = -1;
 			redir_fd[1] = -1;
+#ifdef _debug_
 			std::cout << "Open error" << std::endl;
+#endif
 			return (NONE);
 		}
 //		std::cout << _body << std::endl;

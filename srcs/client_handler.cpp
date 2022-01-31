@@ -31,7 +31,9 @@ void client_handler::check_all_timeout()
 			tmp = it - clients.begin();
 			it->remove();
 			clients.erase(it);
+#ifdef _debug_
 			std::cout << "Client erased !" << std::endl;
+#endif
 			it = clients.begin() + tmp;
 		}
 		else if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
@@ -39,7 +41,9 @@ void client_handler::check_all_timeout()
 			tmp = it - clients.begin();
 			it->remove();
 			clients.erase(it);
+#ifdef _debug_
 			std::cout << "Client erased !" << std::endl;
+#endif
 			it = clients.begin() + tmp;
 			return ;
 		}
@@ -70,8 +74,10 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	ev.events = EPOLLIN;
 	ev.data.fd = client_fd;
 	inet_ntop(AF_INET, &clientaddr, addr_str, INET_ADDRSTRLEN);
+#ifdef _debug_
 	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
 	std::cout << "Client address is : " << addr_str << std::endl;
+#endif
 	if (epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
 		throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");
