@@ -206,6 +206,7 @@ int	request_handler::cgi_writer()
 //	std::cout << "All fields added" << std::endl;
 	_response += _body;
 //	std::cout << "Body added" << std::endl;
+	_body.clear();
 	_hrx.clear();
 	_htx.clear();
 	return (NONE);
@@ -634,7 +635,7 @@ int	request_handler::resolve_path()
 			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && (_hrx["A"][0] == "POST" || _hrx["A"][0] == "PUT") && !it->upload_path.empty())	{
 	//			std::cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
 				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
-				if (_hrx["Content-Type"].empty() || (_hrx["Content-Type"].empty() && !_hrx["Content-Type"][1].find("boundary")))
+				if (_hrx["Content-Type:"].empty() || (!_hrx["Content-Type:"].empty() && _hrx["Content-Type:"][1].find("boundary") == std::string::npos))
 					_path += _hrx["A"][1].substr(it->location.size());
 			}
 			else

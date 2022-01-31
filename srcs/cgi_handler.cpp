@@ -106,7 +106,7 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	char		**c_env = new char*[env.size() + 1];
 	int	i;
 
-//	std::cout << "Launching cgi at : " << cgi_path << std::endl;
+	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
 	e_path[1] = (char*)"-c";

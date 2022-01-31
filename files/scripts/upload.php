@@ -1,3 +1,4 @@
+#!/bin/php
 
 <!doctype html>
 <html>
@@ -13,13 +14,14 @@
 		</div>
 		<div id="Page">
 			<?php
+				ob_end_clean();
 				$uploaddir = "../../" . $_SERVER["TMPDIR"];
-				$uploadfile = $uploaddir . basename($_FILES['doodad']['name']);
+				$uploadfile = $uploaddir . basename($_FILES['cgi_upload']['name']);
 
-				if (move_uploaded_file($_FILES['doodad']['tmp_name'], $uploadfile))
-					echo "yyyyyyyyeaaaaaaaaaaaaaaaaah !";
+				if (move_uploaded_file($_FILES['cgi_upload']['tmp_name'], $uploadfile))
+					echo "Download Success !";
 				else
-					echo "download failure !";
+					echo "Download Failure !";
 			?>
 			<br>
 			<br>
@@ -32,11 +34,9 @@
 			<br>
 
 			<?php
-				echo "Coucou, l'image va s'afficher en dessous";
+				echo "Uploaded File Preview :";
 				$filetype = mime_content_type($uploadfile);
 				echo "<br>";
-				echo "Son type c'est : ";
-				echo $filetype;
 				echo "<br>";
 				$uploadfile = substr($uploadfile, strlen("../../"));
 
@@ -62,12 +62,11 @@
 					echo "<a href=";
 					echo substr($uploadfile, strpos($uploadfile, "/"));
 					echo ">";
-					echo basename($_FILES['doodad']['name']);
+					echo basename($_FILES['cgi_upload']['name']);
 					echo "</a>";
 				}
 
 				echo "<br>";
-				echo "Ici c'est la fin de la page";
 
 			?>
 
