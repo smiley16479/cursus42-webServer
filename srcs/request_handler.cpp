@@ -8,10 +8,6 @@ request_handler::request_handler(std::vector<server_info>& server_info) : _si(se
 {
 	redir_fd[0] = -1;
 	redir_fd[1] = -1;
-#ifdef _debug_
-	 for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
-//	std::cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
-#endif
 }
 
 request_handler::~request_handler()
@@ -370,8 +366,7 @@ void request_handler::handle_get_rqst(void)
 }
 
 int	request_handler::create_file(std::string& path)	{
-//	std::cout << "Creating file: " << path << std::endl;
-// m
+	std::cout << "Creating file: " << path << std::endl;
 	redir_fd[1] = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
 	if (redir_fd[1] == -1)
 	{
@@ -636,9 +631,11 @@ int	request_handler::resolve_path()
 				_l_id = index;
 			}
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && (_hrx["A"][0] == "POST" || _hrx["A"][0] == "PUT") && !it->upload_path.empty())	{
 	//			std::cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
 				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+				if (_hrx["Content-Type"].empty() || (_hrx["Content-Type"].empty() && !_hrx["Content-Type"][1].find("boundary")))
+					_path += _hrx["A"][1].substr(it->location.size());
 			}
 			else
 				_path += _hrx["A"][1].substr(it->location.size());
@@ -696,7 +693,7 @@ bool request_handler::is_method_allowed(void)
 // Si erreur lors de l'ouverture du fichier renvoie le _path sur les pages d'erreurs
 int request_handler::file_type()
 {
-//	std::cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
+	std::cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
 	struct stat sb;
 
 	bzero(&sb, sizeof(sb));
