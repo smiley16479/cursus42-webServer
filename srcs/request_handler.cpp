@@ -130,7 +130,7 @@ int request_handler::choose_method(void)
 			}
 			else
 			{
-				puts( "File successfully deleted" );
+				std::cout << "File successfully deleted" << std::endl;
 				gen_startLine( 204 );
 				redir_mode = writer(redir_mode);
 				_hrx.clear();
@@ -557,7 +557,7 @@ bool	request_handler::is_folder(std::string path)	{
 	if (lstat(path.c_str(), &sb) == -1)
 		perror("lstat");
 	if ((sb.st_mode & S_IFMT) == S_IFDIR)	{
-//		printf("directory\n");
+//		std::cout << "directory" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -569,7 +569,7 @@ bool	request_handler::is_regular_file(std::string path)	{
 	if (lstat(path.c_str(), &sb) == -1)
 		perror("lstat");
 	if ((sb.st_mode & S_IFMT) == S_IFREG)	{
-//		printf("regular file\n");
+//		std::cout << "regular file" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -693,7 +693,7 @@ bool request_handler::is_method_allowed(void)
 // Si erreur lors de l'ouverture du fichier renvoie le _path sur les pages d'erreurs
 int request_handler::file_type()
 {
-	std::cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
+//	std::cout << GREEN "DS FILE_TYPE()" RESET <<  " _path : " << _path << endl;
 	struct stat sb;
 
 	bzero(&sb, sizeof(sb));
@@ -701,7 +701,7 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		case S_IFDIR:  //printf("directory\n");
+		case S_IFDIR:  //std::cout << "directory" << std::endl;
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 // PROBLEM
 				generate_folder_list();
@@ -714,18 +714,18 @@ int request_handler::file_type()
 			else
 				gen_startLine( 403 );
 			break;
-		case S_IFREG:  //printf("regular file\n");
+		case S_IFREG:  //std::cout << "regular file" << std::endl;
 			break;
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
 				gen_startLine( 404 );
-//			printf(RED "unknown path : %s\n" RESET, _path.c_str());
+//			std::cout << RED "unknown path : " RESET << _path.c_str() << std::endl;
 			break;
 	}
 // AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
 		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
-//	printf("_path : %s\n", _path.c_str());
+//	std::cout << "_path : ", _path.c_str() << std::endl;
 	return 0;
 }
 

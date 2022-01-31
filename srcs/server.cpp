@@ -73,7 +73,7 @@ void server::run(void) {
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(_epoll._events[i].data.fd)) >= 0 && _epoll._events[i].events & EPOLLIN) {
 				client.add(_epoll, get_time_out(serv_id), i);
-				printf("New client added\n");
+				std::cout << "New client added !\n" << std::endl;
 			}
 			else
 			{
@@ -93,7 +93,7 @@ void server::run(void) {
 
 	if(close(_epoll._epoll_fd))
 	{
-		fprintf(stderr, "Failed to close epoll file descriptor\n");
+		std::cerr << "Failed to close epoll file descriptor" << std::endl;
 		throw std::runtime_error("ERROR IN FD (CLOSE) MANIPULATION");
 	}
 	return;

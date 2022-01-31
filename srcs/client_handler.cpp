@@ -31,7 +31,7 @@ void client_handler::check_all_timeout()
 			tmp = it - clients.begin();
 			it->remove();
 			clients.erase(it);
-			std::cout << "Client erased !" << std::endl;
+			std::cout << "Client erased !\n" << std::endl;
 			it = clients.begin() + tmp;
 		}
 		else if (time(NULL) - it->rqst_time_start > it->time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
@@ -39,7 +39,7 @@ void client_handler::check_all_timeout()
 			tmp = it - clients.begin();
 			it->remove();
 			clients.erase(it);
-			std::cout << "Client erased !" << std::endl;
+			std::cout << "Client erased !\n" << std::endl;
 			it = clients.begin() + tmp;
 			return ;
 		}
