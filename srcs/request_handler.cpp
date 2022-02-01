@@ -21,9 +21,9 @@ int request_handler::reader(std::string& rqst)
 	std::string ss_1(rqst);
 
 
-#ifdef _debug_
 	std::cout << BLUE "Request Header : " RESET << std::endl;
 	std::cout << rqst.substr(0, rqst.find("\r\n\r\n") + 2) << std::endl;
+#ifdef _debug_
 
 //DEBUG RQST OUTPUT
 	std::cout << RED "Request Body : " RESET << std::endl;
@@ -783,9 +783,8 @@ void request_handler::add_all_field()
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_response += it->second[i];
 	_response += "\r\n";
-#ifdef _debug_
+
 	std::cout << BLUE "Response Headers (add_all_field()) :\n" RESET << _response << endl;
-#endif
 }
 
 // Ajout du fichier ou du body À LA SUITE des header dans response

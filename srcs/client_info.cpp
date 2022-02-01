@@ -265,26 +265,6 @@ void	client_info::cgi_write_handler(request_handler& header)	{
 //	std::cout << wrote_bytes << " bytes written !" << std::endl;
 	if (wrote_bytes == -1)
 	{
-		int status;
-		int	plop;
-
-		plop = waitpid(cgi_pid, &status, WNOHANG);
-		if (WIFEXITED(status) || WIFSIGNALED(status))
-		{
-//			std::cout << "CGI executable was exited before whole body was written" << std::endl;
-			//OU ALORS, on close ce cote du pipe et on chck le retour
-			resp.clear();
-			tmp.clear();
-			if (loc_fd[1] != -1)
-			{
-//				std::cout << "Closing loc_fd[1]" << std::endl;
-				close(loc_fd[1]);
-				loc_fd[1] = -1;
-			}
-			mode = CGI_OUT;
-		}
-			
-
 //		std::cout << "CGI WRITE ERROR" << std::endl;
 		//si le write echoue, on reecrit le message dans le buffer
 //		tmp.append(resp);
