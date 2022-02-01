@@ -37,13 +37,17 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 //	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
-	e_path[1] = (char*)"-c";
-	e_path[2] = (char*)"files/scripts/php.ini";
-	e_path[3] = NULL;
+	if (cgi_path.find("php-cgi") != std::string::npos)	{
+		e_path[1] = (char*)"-c";
+		e_path[2] = (char*)"files/cgi/php.ini";
+		e_path[3] = NULL;
+	}
+	else
+		e_path[1] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-//		std::cout << GREEN << it->c_str() << RESET << std::endl;
+		std::cout << GREEN << it->c_str() << RESET << std::endl;
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
@@ -112,9 +116,13 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	std::cout << "Launching cgi at : " << cgi_path << std::endl;
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
-	e_path[1] = (char*)"-c";
-	e_path[2] = (char*)"./files/scripts/php.ini";
-	e_path[3] = NULL;
+	if (cgi_path.find("php-cgi") != std::string::npos)	{
+		e_path[1] = (char*)"-c";
+		e_path[2] = (char*)"files/cgi/php.ini";
+		e_path[3] = NULL;
+	}
+	else
+		e_path[1] = NULL;
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{

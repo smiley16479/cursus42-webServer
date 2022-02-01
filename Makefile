@@ -45,12 +45,17 @@ TEST_V = 0
 #Pernet d'activer/ desactiver les flags
 #Il faut ajouter -d=$ a la fin de la ligne make pour activer les options voulues
 #ex: "make re d=1" (recompile avec "-D _debug_")
-ifeq ($(d), 0)
+ifeq ($(s), 1)
 CPP_FLAGS += -g
 CPP_FLAGS += -fsanitize=address
 endif
+
 ifeq ($(d), 1)
 CPP_FLAGS += -D _debug_ # Toggle les sorties de debug par le preproccesseur 
+endif
+
+ifeq ($(d), 1)
+CPP_FLAGS += -D _debug_full_ # Toggle les sorties de debug par le preproccesseur 
 endif
 
 ifeq ($(m), 1)

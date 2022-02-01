@@ -1028,12 +1028,7 @@ void	request_handler::cgi_var_init()	{
 	}
 //	std::cout << "PATH=" << _path << std::endl;
 	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
-	getcwd(str, sizeof(str));
-	var = str;
-	var += "/";
-	pos = _path.find_last_of("/");
-	var += _path.substr(0, 2) == "./" ? _path.substr(2, pos + 1) : _path.substr(0, pos + 1);
-	var += (_path[0] == '/' ? _path.substr(1) : _path);
+	var = _path;
 	_hrx["Path-Translated"].push_back(var);
 	var.clear();
 	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));

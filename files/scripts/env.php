@@ -36,6 +36,9 @@
 		print "PATH_TRANSLATED: ";
 		print $_SERVER["PATH_TRANSLATED"];
 		print "<br>";
+		print "SCRIPT_FILENAME: ";
+		print $_SERVER["SCRIPT_FILENAME"];
+		print "<br>";
 		print "SCRIPT_NAME: ";
 		print $_SERVER["SCRIPT_NAME"];
 		print "<br>";

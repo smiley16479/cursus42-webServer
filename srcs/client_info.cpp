@@ -34,6 +34,7 @@ void	client_info::recv_handler(request_handler& header)	{
 	if (recv_bytes == -1)
 	{
 //		std::cout << "RECV ERROR" << std::endl;
+		remove();
 		return ;
 	}
 	else if (recv_bytes == 0)
@@ -186,7 +187,7 @@ void	client_info::send_handler(request_handler& header)	{
 //	std::cout << resp << std::endl;
 	if (resp.empty())
 	{
-		mode = RECV;
+	//	mode = RECV;
 		remove();
 		return ;
 	}
