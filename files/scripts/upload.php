@@ -13,31 +13,36 @@
 		<div class="header">
 		</div>
 		<div id="Page">
+			<div id="Content">
 			<?php
 				if (isset($_POST['send_up']))	{
-					echo "Hello\n";
 					if (isset($_FILES['cgi_upload']) && $_FILES['cgi_upload']['error'] == UPLOAD_ERR_OK)	{
-						echo "Hi\n";
-						echo $_FILES['cgi_upload']['tmp_name'];
-						echo $_FILES['cgi_upload']['name'];
-						echo $_FILES['cgi_upload']['size'];
-						echo $_FILES['cgi_upload']['type'];
+
+						$uploaddir = "../../" . $_SERVER["TMPDIR"];
+						$uploadfile = $uploaddir . basename($_FILES['cgi_upload']['name']);
+
+						echo	"<h1>";
+						if (move_uploaded_file($_FILES['cgi_upload']['tmp_name'], $uploadfile))
+							echo "Download Success !";
+						else
+							echo "Download Failure !";
+						echo	"</h1>";
+
+						echo	"<br>";
+						echo	"tmp name :	";
+						echo	$_FILES['cgi_upload']['tmp_name'];
+						echo	"<br>";
+						echo	"file name :	";
+						echo	$_FILES['cgi_upload']['name'];
+						echo	"<br>";
+						echo	"file size :	";
+						echo	$_FILES['cgi_upload']['size'];
+						echo	"<br>";
+						echo	"file type :	";
+						echo	$_FILES['cgi_upload']['type'];
+						echo	"<br>";
 					}
 				}
-				$uploaddir = "../../" . $_SERVER["TMPDIR"];
-				$uploadfile = $uploaddir . basename($_FILES['cgi_upload']['name']);
-
-				if (move_uploaded_file($_FILES['cgi_upload']['tmp_name'], $uploadfile))
-					echo "Download Success !";
-				else
-					echo "Download Failure !";
-			?>
-			<br>
-			<br>
-			<?php
-				echo 'Voici quelques informations de débogage :';
-				print_r($_FILES);
-
 			?>
 			<br>
 			<br>
@@ -49,6 +54,10 @@
 				echo "<br>";
 				$uploadfile = substr($uploadfile, strlen("../../"));
 
+				echo "<embed src=";
+				echo substr($uploadfile, strpos($uploadfile, "/"));
+				echo ">";
+				echo "<br>";
 				if (substr($filetype, 0, strpos($filetype, "/"))  == "image")
 				{
 					echo "<img src=";
@@ -57,11 +66,9 @@
 				}
 				else if (substr($filetype, 0, strpos($filetype, "/"))  == "video")
 				{
-					echo "<video>";
-					echo "<source src=";
+					echo "<iframe src=";
 					echo substr($uploadfile, strpos($uploadfile, "/"));
-					echo "/>";
-					echo "</video>";
+					echo "></iframe>";
 				}
 				else
 				{
@@ -79,6 +86,7 @@
 
 			?>
 
+			</div>
 		</div>
 		<div class="footer">
 		</div>

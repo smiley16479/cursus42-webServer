@@ -149,6 +149,7 @@ void server::display_server(void)
 		std::cout << endl;
 		}
 	}
+	std::cout << std::endl;
 }
 
 struct epoll_event*	get_event(struct_epoll& _epoll, int fd)

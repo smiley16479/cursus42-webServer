@@ -68,6 +68,15 @@ a:active
 	margin-bottom:	3%;
 }
 
+#Content
+{
+	position:	relative;
+	border-radius:	25px;
+	margin-right:	15%;
+	margin-left:	15%;
+	margin-bottom:	3%;
+}
+
 h1
 {
 	font-size:	300%;

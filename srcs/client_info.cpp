@@ -639,8 +639,8 @@ void	client_info::remove()	{
 	}
 	if (com_socket != -1)
 	{
-#ifdef _debug_
 		std::cout << "Client removed from tracked fd !" << std::endl;
+#ifdef _debug_
 //		std::cout << "closing socket fd : " << com_socket << std::endl;
 #endif
 		if (epoll_ctl(_epoll->_epoll_fd, EPOLL_CTL_DEL, com_socket, NULL))
