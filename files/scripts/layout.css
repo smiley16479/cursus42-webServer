@@ -82,3 +82,11 @@ h1
 	font-size:	300%;
 	text-align:	center;
 }
+
+iframe
+{
+	display: block;
+	border: none;
+	width: 30vw;
+	height: 30vh;
+}

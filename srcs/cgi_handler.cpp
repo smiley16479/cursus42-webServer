@@ -34,7 +34,9 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	char		**c_env = new char*[env.size() + 1];
 	int	i;
 
-//	std::cout << "Launching cgi at : " << cgi_path << std::endl;
+#ifdef _debug_
+	std::cout << "Launching cgi at : " << cgi_path << std::endl;
+#endif
 	tmp = cgi_path;
 	e_path[0] = (char*)tmp.c_str();
 	if (cgi_path.find("php-cgi") != std::string::npos)	{
@@ -53,16 +55,13 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	c_env[i] = NULL;
 	if (pipe(fd) == -1)
 		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
-		// return (-1);
 	if (pipe(bfd) == -1)
 		throw std::runtime_error("ERROR IN PIPE ATTRIBUTION");
-		// return (-1);
 	fcntl(fd[0], F_SETFL, O_NONBLOCK);
 	fcntl(bfd[1], F_SETFL, O_NONBLOCK);
 	pid = fork();
 	if (pid == -1)
 		throw std::runtime_error("ERROR IN FORK PROCESS");
-		// return (-1);
 	if (pid == 0)
 	{
 		close(fd[0]);
@@ -82,9 +81,6 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
 	(*rfd)[1] = bfd[1];
-//	std::cout << "Pipe status in go cgi:" << std::endl;
-//	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
-//	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
 	return (pid);
 }
 
@@ -126,7 +122,9 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 	i = 0;
 	for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
 	{
-//		std::cout << GREEN << it->c_str() << RESET << std::endl;
+#ifdef _debug_
+		std::cout << GREEN << it->c_str() << RESET << std::endl;
+#endif
 		c_env[i] = (char*)it->c_str();
 	}
 	c_env[i] = NULL;
@@ -160,8 +158,5 @@ pid_t	go_cgi_fd(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& e
 		close(fd[1]);
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
-//	std::cout << "Pipe status in go cgi:" << std::endl;
-//	std::cout << "rfd[0] : " << fcntl((*rfd)[0], F_GETFD) << std::endl;
-//	std::cout << "rfd[1] : " << fcntl((*rfd)[1], F_GETFD) << std::endl;
 	return (pid);
 }

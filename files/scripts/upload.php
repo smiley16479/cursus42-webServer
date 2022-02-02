@@ -54,34 +54,9 @@
 				echo "<br>";
 				$uploadfile = substr($uploadfile, strlen("../../"));
 
-				echo "<embed src=";
+				echo "<iframe src=";
 				echo substr($uploadfile, strpos($uploadfile, "/"));
-				echo ">";
-				echo "<br>";
-				if (substr($filetype, 0, strpos($filetype, "/"))  == "image")
-				{
-					echo "<img src=";
-					echo substr($uploadfile, strpos($uploadfile, "/"));
-					echo "/>";
-				}
-				else if (substr($filetype, 0, strpos($filetype, "/"))  == "video")
-				{
-					echo "<iframe src=";
-					echo substr($uploadfile, strpos($uploadfile, "/"));
-					echo "></iframe>";
-				}
-				else
-				{
-					echo "No previsualisation is available for this MIME format";
-					echo "<br>";
-					echo "Your ressource has been added at this address :";
-					echo "<a href=";
-					echo substr($uploadfile, strpos($uploadfile, "/"));
-					echo ">";
-					echo basename($_FILES['cgi_upload']['name']);
-					echo "</a>";
-				}
-
+				echo "></iframe>";
 				echo "<br>";
 
 			?>

@@ -54,7 +54,7 @@ ifeq ($(d), 1)
 CPP_FLAGS += -D _debug_ # Toggle les sorties de debug par le preproccesseur 
 endif
 
-ifeq ($(d), 1)
+ifeq ($(d), 2)
 CPP_FLAGS += -D _debug_full_ # Toggle les sorties de debug par le preproccesseur 
 endif
 

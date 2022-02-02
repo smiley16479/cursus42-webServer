@@ -17,7 +17,9 @@ server::server(std::string av)
 
 server::~server()
 {
-	//std::cout << RED "server destructeur..." RESET << endl;
+#ifdef _debug_
+	std::cout << RED "server destructeur..." RESET << endl;
+#endif
 }
 
 void server::initialize(void) {
@@ -51,7 +53,9 @@ void server::initialize(void) {
 		bzero(&ev, sizeof(ev));
 		ev.events = EPOLLIN;
 		ev.data.fd = _s[i].socket;
-//		std::cout << "Adding socket fd_" << _s[i].socket << " to epoll interest list" << std::endl;
+#ifdef _debug_
+		std::cout << "Adding socket fd_" << _s[i].socket << " to epoll interest list" << std::endl;
+#endif
 		if(epoll_ctl(_epoll._epoll_fd, opt, _s[i].socket, &ev))
 		{
 			throw std::runtime_error("ERROR IN EPOLL_CTL MANIPULATION");

@@ -153,10 +153,6 @@ static const t_mtype	type_str(int i)	{
 static int	is_mime_type(const char *ext, pair<const char*, const char*>	(*type)(int))	{
 	for (size_t i = 0; strcmp(type(i).first, "") != 0; i++)
 	{
-	#ifdef _debug_
-		std::cout << "Coucou, l'index vaut : " << i << " pour sub_type" << std::endl;
-		std::cout << "Le sous type correspondant c'est : " << type(i).first << std::endl;
-	#endif
 		if (strcmp(ext, type(i).first) == 0)
 			return (i);
 	}
@@ -166,10 +162,6 @@ static int	is_mime_type(const char *ext, pair<const char*, const char*>	(*type)(
 static void	get_mime_type(const char *ext, int (*index)[2])	{
 	for (size_t i = 0; i < 6; i++) 
 	{
-	#ifdef _debug_
-		std::cout << "Coucou, l'index vaut : " << i << " pour le type" << std::endl;
-		std::cout << "Le type correspondant c'est : " << type_str(i).type << std::endl;
-	#endif
 		if (((*index)[1] = is_mime_type(ext, type_str(i).sub_type)) != -1)
 		{
 			(*index)[0] = i;
