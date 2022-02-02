@@ -31,7 +31,7 @@ void	client_info::recv_handler(request_handler& header)	{
 	std::cout << "Data received !";
 #endif
 #ifdef _debug_full_
-	std::cout << Printing : " << std::endl;
+	std::cout << "Printing : " << std::endl;
 	std::cout << buf << std::endl;
 #endif
 	if (recv_bytes == -1)
