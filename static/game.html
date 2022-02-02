@@ -2,18 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>CodePen - The frantic run of the valorous rabbit</title>
+    <title>WebServ Game</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css"
     />
     <link rel="stylesheet" href="./style.css" />
+    <link
+      href="data:image/x-icon;base64,AAABAAEAEBAAAAAAAABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wA1lvMANZbzADqc9QA6nPUAOpz1ADqc9QA2mPQANJbzAAEBAAABAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AGZH0/zqb8wABAQAXAQEAFwEBAA06nPUANpj0ADSW8wABAQAAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////ABaR+f80jfP/Opz0AAEBABcBAQAXAQEAFxZBawI0lvMAAQEAAAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wA5nPQtCIDx/zON8/8BAQAXAQEAFwEBABcBAQAXNJbzAAEBAAABAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AN5j0ABuP+f8Bber/KZT1/wEBABcBAQAXAQEAFwEBABcBAQAAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////ADea9AA4m/TWEIv3/wBr6v9Lm/b/AQEAFwEBABcBAQAXAQEAFwEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wA6nPUALp31AByJ9P8Bdur/AGnq/2mv+v8BAQAXAQEAFwEBABcBAQAXAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AOZv0ADaZ9AA0lfP+BZD0/wB77f8Aaun/UaP3/wEBABcBAQAXAQEAFwAAAAAAAAAAAAAAAAAAAAAAAAAA////ADqd9AA6nfUAOp71AFWr/P8Edu7/AG3q/wWJ8f8zkuvQAQEAFwEBABcAAAAAAAAAAAAAAAAAAAAAAAAAAP///wA3mfQANpn0ADmc9AAzlvT/Eov3/wBq6v8AZ+n/OI/z/yRimVQBAQAWAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AOZv0ADaZ9AA6nfUANpn0AE+h+P8OhfX/AGXo/wBn5/9Infb/AQEADQAAAAAAAAAAAAAAAAAAAAAAAAAA////ADqe9QA5m/QAOp30ADiY9ABYqfn+E4v4/wFu6f8Aaer/FYHw/wEBAA0AAAAAAAAAAAAAAAAAAAAAAAAAAP///wA5nPQAOpz0ADib9AA4nPQAOZz0AB+Z9f8ul/n/AnHr/zOV8/7///8AAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AOp30ADea9AA5mvQAN5n0ADic9AA6nPQAOZz0ojmc9KIQiWv5EIlr+QAAAAAAAAAAAAAAAAAAAAAAAAAA////ADqd9AA1l/QAOZz0ADqd9AA5nPQAN5nzADqd+AAGfGAABHBX5v///wAAAAAAAAAAAAAAAAAAAAAAAAAAAP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8AAAAAAAAAAAAAAAAA//8AAO//AADn/wAA8/8AAPH/AADw/wAA+H8AAPg/AAD8HwAA/B8AAP4PAAD+DwAA/w8AAP+HAAD/7wAA//8AAA=="
+      rel="icon"
+      type="image/x-icon"
+    />
   </head>
   <body>
     <!-- partial:index.partial.html -->
     <div id="world" />
     <div id="gameoverInstructions">Game Over</div>
     <div id="dist">
+      <div class="label-title">WebServ Game</div>
       <div class="label">distance</div>
       <div id="distValue">000</div>
     </div>
@@ -24,12 +30,12 @@
       >
     </div>
 
-    <div id="credits">
+    <!-- <div id="credits">
       <p>
         <a href="https://codepen.io/Yakudoo/" target="blank">other codepens</a>
         | <a href="https://www.epic.net" target="blank">epic.net</a>
       </p>
-    </div>
+    </div> -->
     <!-- partial -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r80/three.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.0/TweenMax.min.js"></script>
@@ -87,6 +93,16 @@
         text-transform: uppercase;
         color: #ffa873;
         font-size: 12px;
+        letter-spacing: 2px;
+        text-align: center;
+        margin-bottom: 5px;
+      }
+      .label-title {
+        position: relative;
+        font-family: "Voltaire", sans-serif;
+        text-transform: uppercase;
+        color: #ffa873;
+        font-size: 50px;
         letter-spacing: 2px;
         text-align: center;
         margin-bottom: 5px;
