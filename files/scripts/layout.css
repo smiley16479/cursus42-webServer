@@ -38,7 +38,26 @@ a:active
     background-color: #18171b;
 	padding:	7%;
 	width:	100%;
-	margin-bottom:	0px;
+}
+
+#Menu
+{
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+.menuElem
+{
+	float: left;
+	bottom: 0;
+}
+
+.menuButton
+{
+	display: block;
+	padding: 8px 10px;
+	text-align: center;
 }
 
 #Page

@@ -723,6 +723,12 @@ void	client_info::time_reset()	{
 }
 
 void	client_info::remove()	{
+	if (cgi_pid != -1)
+	{
+		kill(cgi_pid, SIGKILL);
+		std::cout << "Cgi process killed" << std::endl;
+		cgi_pid = -1;
+	}
 	if (loc_fd[0] != -1)
 	{
 #ifdef _debug_

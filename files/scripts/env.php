@@ -9,6 +9,14 @@
 		<title>Env</title>
 	</head>
 	<body>
+		<div class="header">
+			<ul id="Menu">
+				<li class="menuElem"><a class="menuButton" href="./layout.html">Homepage</a></li>
+				<li class="menuElem"><a class="menuButton" href="./env.php">Environment Variables</a></li>
+				<li class="menuElem"><a class="menuButton" href="./loop.php">Infinite loop</a></li>
+				<li class="menuElem"><a class="menuButton" href="./phpinfo.php">About Php</a></li>
+			</ul>
+		</div>
 		<div id ="Page">
 			<p>
 	<?php
@@ -54,12 +62,6 @@
 		print "CONTENT_LENGTH: ";
 		print $_SERVER["CONTENT_LENGTH"];
 		print "<br>";
-		print "HTTP_ACCEPT: ";
-		print $_SERVER["HTTP_ACCEPT"];
-		print "<br>";
-		print "HTTP_ACCEPT_LANGUAGE: ";
-		print $_SERVER["HTTP_ACCEPT_LANGUAGE"];
-		print "<br>";
 		print "HTTP_USER_AGENT: ";
 		print $_SERVER["HTTP_USER_AGENT"];
 		print "<br>";
@@ -68,6 +70,8 @@
 		print "<br>";
 	?>
 			</p>
+		</div>
+		<div class="footer">
 		</div>
 	</body>
 </html>

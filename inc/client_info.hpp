@@ -23,7 +23,6 @@ class client_info {
 		time_t		rqst_time_start;
 		size_t		_cLen;
 		int			time_out;
-		std::string	addr;
 		struct struct_epoll* _epoll;
 
 		void		fd_in(request_handler& header);

@@ -8,6 +8,7 @@ request_handler::request_handler(std::vector<server_info>& server_info) : _si(se
 {
 	redir_fd[0] = -1;
 	redir_fd[1] = -1;
+	redir_pid = -1;
 }
 
 request_handler::~request_handler()
@@ -1124,6 +1125,7 @@ int	request_handler::handle_cgi(void)
 				close(redir_fd[1]);
 				redir_fd[1] = -1;
 			}
+			redir_pid = -1;
 			return (NONE);
 		}
 		_body = _hrx["BODY"][0];
@@ -1375,6 +1377,7 @@ int	request_handler::handle_cgi_fd(void)
 				close(redir_fd[1]);
 				redir_fd[1] = -1;
 			}
+			redir_pid = -1;
 			return (NONE);
 		}
 		_body = _hrx["BODY"][0];

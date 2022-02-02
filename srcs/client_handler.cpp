@@ -63,18 +63,14 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	struct sockaddr_in clientaddr;
 	socklen_t len = sizeof(clientaddr);
 	struct epoll_event	ev;
-	char	addr_str[INET_ADDRSTRLEN];
 
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
-//	clientaddr.sin_addr;
 	bzero(&ev, sizeof(ev));
 	ev.events = EPOLLIN;
 	ev.data.fd = client_fd;
-	inet_ntop(AF_INET, &clientaddr, addr_str, INET_ADDRSTRLEN);
 #ifdef _debug_
 	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
-	std::cout << "Client address is : " << addr_str << std::endl;
 #endif
 	if (epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &ev)) {
 		std::cerr << "Failed to add file descriptor to epoll" << std::endl;
@@ -90,7 +86,6 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	time(&new_client.rqst_time_start);
 	new_client.rq_mode = NORMAL;
 	new_client.chunk_mode = NO_CHUNK;
-	new_client.addr = (char*)addr_str;
 	clients.push_back(new_client);
 }
 

@@ -81,6 +81,7 @@ pid_t	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env)
 	delete [] c_env;
 	(*rfd)[0] = fd[0];
 	(*rfd)[1] = bfd[1];
+	std::cout << "pid returned" << std::endl;
 	return (pid);
 }
 
