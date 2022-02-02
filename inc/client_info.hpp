@@ -26,35 +26,35 @@ class client_info {
 		std::string	addr;
 		struct struct_epoll* _epoll;
 
-		void	fd_in(request_handler& header);
-		void	fd_out(request_handler& header);
+		void		fd_in(request_handler& header);
+		void		fd_out(request_handler& header);
 
-		void	solve_request(request_handler& header);
+		void		solve_request(request_handler& header);
 
-		void	recv_handler(request_handler& header);
-		void	read_handler(request_handler& header);
+		void		recv_handler(request_handler& header);
+		void		read_handler(request_handler& header);
 
-		void	write_handler(request_handler& header);
-		void	send_handler(request_handler& header);
-		void	cgi_write_handler(request_handler& header);
-		void	cgi_resp_handler(request_handler& header);
+		void		write_handler(request_handler& header);
+		void		send_handler(request_handler& header);
+		void		cgi_write_handler(request_handler& header);
+		void		cgi_resp_handler(request_handler& header);
 
-		void	chunked_handler(request_handler& header);
+		void		chunked_handler(request_handler& header);
 
-		void	compute(request_handler& header);
+		void		compute(request_handler& header);
 
-		bool	get_rq_type();
+		bool		get_rq_type();
 
-		bool	is_request_fulfilled();
-		bool	is_multipart_rqst_fulfilled();
-		bool	is_clen_rqst_fulfilled();
-		bool	is_chunked_rqst_fulfilled();
+		bool		is_request_fulfilled();
+		bool		is_multipart_rqst_fulfilled();
+		bool		is_clen_rqst_fulfilled();
+		bool		is_chunked_rqst_fulfilled();
 
-		void	set_recv_mode();
-		void	set_send_mode();
+		void		set_recv_mode();
+		void		set_send_mode();
 
-		void 	time_reset();
-		void 	remove();
+		void		time_reset();
+		void		remove();
 };
 
 typedef void	(client_info::*t_func)(request_handler&);

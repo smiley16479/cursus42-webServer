@@ -45,7 +45,7 @@ config_checker::~config_checker()
 // 	std::ifstream ifs(str.c_str());
 // 	size_t pos;
 // 	if (ifs.fail()) {
-// 		std::cout << str << "does not exit\n";
+// 		std::cout << str << "does not exit" << std::endl;
 // 		return ;
 // 	}
 // 	string str1, str2;
@@ -62,12 +62,12 @@ config_checker::~config_checker()
 // 			token = strtok_r((char *)strptr1, " \t", &saveptr1);
 // 			if (token == NULL)
 // 				break;
-// 			printf("%d: %s\n", j, token);
+// 			std::cout << "j : " << token << std::endl;
 // 			for (str2 = token; ; str2 = NULL) {
 // 				subtoken = strtok_r(str2, argv[3], &saveptr2);
 // 				if (subtoken == NULL)
 // 					break;
-// 				printf(" --> %s\n", subtoken);
+// 				std::cout << " --> " << subtoken << std::endl;
 // 			}
 // 		} */
 // 		found = false;

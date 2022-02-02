@@ -43,65 +43,65 @@ private:
 public:
 	request_handler(std::vector<server_info>&);
 	~request_handler();
-	int reader(std::string& rqst);
-	int choose_method(void);
-	int	gen_resp(void);
-	int cgi_writer(void);
-	int writer(int redir_mode);
+	int		reader(std::string& rqst);
+	int		choose_method(void);
+	int		gen_resp(void);
+	int		cgi_writer(void);
+	int		writer(int redir_mode);
 	void	clean_body();
-	int	create_write_resp(std::string &file_path);
+	int		create_write_resp(std::string &file_path);
 
 	/* FONCTION ACCESSEUR */
 
-	string get_path(void);
-	string get_response(void);
-	string get_body(void);
-	void set_body(const string &);
+	string	get_path(void);
+	string	get_response(void);
+	string	get_body(void);
+	void	set_body(const string &);
 	void	fill_redir_fd(int (*loc_fd)[2], pid_t *cgi_pid);
-	void clean(void);
+	void	clean(void);
 
 	/* FONCTION UNITAIRES DES METHODES PRINCIPALES */
 
 private:
-	void gen_date(void);
-	void gen_allowed();
-	void gen_startLine(size_t ret_code);
-	void gen_serv(void);
-	void gen_CType(string ext);
-	void gen_CLength(void);
+	void	gen_date(void);
+	void	gen_allowed();
+	void	gen_startLine(size_t ret_code);
+	void	gen_serv(void);
+	void	gen_CType(string ext);
+	void	gen_CLength(void);
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
 
-	void set_server_id(void);
-	void handle_get_rqst(void);
+	void	set_server_id(void);
+	void	handle_get_rqst(void);
 		bool	is_folder(string path);
 		bool	is_regular_file(string path);
 			int 	resolve_path();
 				void	location_lookup();
-				int	location_lookup_2();
-				int	file_type();
-					void generate_folder_list();
-	bool is_method_allowed(void);
-	void add_all_field();
-	int add_body();
-	void clean_url(string& str);
-	int	create_file(std::string& path);
-	int multipart_form(string& boundary, string& msg);
-	int handle_put_rqst(void);
-	int handle_post_rqst(void);
+				int		location_lookup_2();
+				int		file_type();
+					void	generate_folder_list();
+	bool	is_method_allowed(void);
+	void	add_all_field();
+	int		add_body();
+	void	clean_url(string& str);
+	int		create_file(std::string& path);
+	int		multipart_form(string& boundary, string& msg);
+	int		handle_put_rqst(void);
+	int		handle_post_rqst(void);
 	std::vector<std::string> extract_env(std::map<std::string, std::vector<std::string> >& mp, const server_info& serv);
 	void	cgi_var_init();
-	int handle_cgi(void);
+	int		handle_cgi(void);
 
 	std::string	clean_chunk(std::string& buf);
 
 	std::string	reverse_resolve_path(std::string &loc_path);
 
-	int handle_cgi_fd(void);
+	int		handle_cgi_fd(void);
 
 	/* FUNCTION DE DEBUG */
 	
-	void display(void);
+	void	display(void);
 };
 
 #endif

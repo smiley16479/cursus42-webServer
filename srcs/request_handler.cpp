@@ -8,10 +8,6 @@ request_handler::request_handler(std::vector<server_info>& server_info) : _si(se
 {
 	redir_fd[0] = -1;
 	redir_fd[1] = -1;
-#ifdef _debug_
-	 for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
-//	std::cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
-#endif
 }
 
 request_handler::~request_handler()
@@ -134,7 +130,7 @@ int request_handler::choose_method(void)
 			}
 			else
 			{
-				puts( "File successfully deleted" );
+				std::cout << "File successfully deleted" << std::endl;
 				gen_startLine( 204 );
 				redir_mode = writer(redir_mode);
 				_hrx.clear();
@@ -370,8 +366,7 @@ void request_handler::handle_get_rqst(void)
 }
 
 int	request_handler::create_file(std::string& path)	{
-//	std::cout << "Creating file: " << path << std::endl;
-// m
+	std::cout << "Creating file: " << path << std::endl;
 	redir_fd[1] = open(path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
 	if (redir_fd[1] == -1)
 	{
@@ -576,7 +571,7 @@ bool	request_handler::is_folder(std::string path)	{
 	if (lstat(path.c_str(), &sb) == -1)
 		perror("lstat");
 	if ((sb.st_mode & S_IFMT) == S_IFDIR)	{
-//		printf("directory\n");
+//		std::cout << "directory" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -588,7 +583,7 @@ bool	request_handler::is_regular_file(std::string path)	{
 	if (lstat(path.c_str(), &sb) == -1)
 		perror("lstat");
 	if ((sb.st_mode & S_IFMT) == S_IFREG)	{
-//		printf("regular file\n");
+//		std::cout << "regular file" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -650,9 +645,11 @@ int	request_handler::resolve_path()
 				_l_id = index;
 			}
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
-			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && _hrx["A"][0] == "POST" && !it->upload_path.empty())	{
+			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && (_hrx["A"][0] == "POST" || _hrx["A"][0] == "PUT") && !it->upload_path.empty())	{
 	//			std::cout << RED "UPLOAD_PATH : " << it->upload_path << endl;
 				_path = it->upload_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
+				if (_hrx["Content-Type"].empty() || (_hrx["Content-Type"].empty() && !_hrx["Content-Type"][1].find("boundary")))
+					_path += _hrx["A"][1].substr(it->location.size());
 			}
 			else
 				_path += _hrx["A"][1].substr(it->location.size());
@@ -718,7 +715,7 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		case S_IFDIR:  //printf("directory\n");
+		case S_IFDIR:  //std::cout << "directory" << std::endl;
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 // PROBLEM
 				generate_folder_list();
@@ -731,18 +728,18 @@ int request_handler::file_type()
 			else
 				gen_startLine( 403 );
 			break;
-		case S_IFREG:  //printf("regular file\n");
+		case S_IFREG:  //std::cout << "regular file" << std::endl;
 			break;
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
 				gen_startLine( 404 );
-//			printf(RED "unknown path : %s\n" RESET, _path.c_str());
+//			std::cout << RED "unknown path : " RESET << _path.c_str() << std::endl;
 			break;
 	}
 // AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
 		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
-//	printf("_path : %s\n", _path.c_str());
+//	std::cout << "_path : ", _path.c_str() << std::endl;
 	return 0;
 }
 
@@ -1038,9 +1035,6 @@ void	request_handler::cgi_var_init()	{
 	var += (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
 	_hrx["Path-Translated"].push_back(var);
 	var.clear();
-	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	_hrx["Query-String"].push_back(var);
-	var.clear();
 	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));
 	getcwd(str, sizeof(str));
 	var = str;
@@ -1057,8 +1051,12 @@ void	request_handler::cgi_var_init()	{
 		var = var.substr(2);
 	_hrx["Document-Root"].push_back(var);
 	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	var = _hrx["A"][1];
+	var = _hrx["A"][1].substr(0, _hrx["A"][1].find("?"));
 	_hrx["Path-Info"].push_back(var);
+	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
+	var = _hrx["A"][1].substr(_hrx["A"][1].find("?") + 1);
+	_hrx["Query-String"].push_back(var);
+	var.clear();
 }
 
 int	request_handler::handle_cgi(void)
