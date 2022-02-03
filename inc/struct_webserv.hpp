@@ -22,10 +22,10 @@ enum	e_mode	{
 	RECV,//reads on communication socket
 	CHUNKED,
 	COMPUTE,//checks request fulfillment and computes response
-	WRITE,//writes to a local file
-	READ,//reads from a local file
 	CGI_IN,//reads on cgi pipe end
 	CGI_OUT,//reads on cgi pipe end
+	WRITE,//writes to a local file
+	READ,//reads from a local file
 	SEND,//sends on communication socket
 	HEAD,
 	NONE//indicates that current action doesn't necessitate a state change

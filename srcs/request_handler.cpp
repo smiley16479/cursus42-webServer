@@ -96,26 +96,20 @@ int request_handler::choose_method(void)
 // DÉFINI L'INDEX DE LA LOCATION CONCERNÉE (_l_id) & VÉRIFIE QUE LA MÉTHODE INVOQUÉE Y EST PERMISE
 	if (resolve_path())
 		gen_allowed();
-	else if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
-	{
-#ifdef _debug
-		std::cout << "CGI mode detected" << std::endl;
-#endif
-		if (CGI_MODE == 1)
-			redir_mode = handle_cgi_fd();
-		else
-			redir_mode = handle_cgi();
-	}
 	else
 	{
-#ifdef _debug
-		std::cout << "No cgi" << std::endl;
-#endif
 		if (!_hrx["BODY"].empty()
 			&& !_hrx["Transfer-Encoding:"].empty()
 			&& _hrx["Transfer-Encoding:"][0] == "chunked")
 			_hrx["BODY"][0] = clean_chunk(_hrx["BODY"][0]);
-		if (_hrx["A"][0] == "POST")
+		if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types)) != -1)
+		{
+			if (CGI_MODE == 1)
+				redir_mode = handle_cgi_fd();
+			else
+				redir_mode = handle_cgi();
+		}
+		else if (_hrx["A"][0] == "POST")
 			redir_mode = handle_post_rqst();
 		else if (_hrx["A"][0] == "GET")
 			handle_get_rqst();
@@ -498,10 +492,6 @@ int request_handler::handle_put_rqst(void)
 			{
 				_response.clear();
 				redir_mode = multipart_form(boundary, _hrx["BODY"][0]);
-		//Si la redir_mode est set (sur WRITE), on extrait une partie certaines infos pour creer une nouvelle requete
-		//Il faudrait en fait faire une redirect 301
-		//Puis ajouter la Location du fichier a ecrire
-		//Ainsi que son type et sa len
 				if (redir_mode != NONE)
 					return (redir_mode);
 				resolve_path();
@@ -555,10 +545,6 @@ int request_handler::handle_post_rqst(void)
 			{
 				_response.clear();
 				redir_mode = multipart_form(boundary, _hrx["BODY"][0]);
-		//Si la redir_mode est set (sur WRITE), on extrait une partie certaines infos pour creer une nouvelle requete
-		//Il faudrait en fait faire une redirect 301
-		//Puis ajouter la Location du fichier a ecrire
-		//Ainsi que son type et sa len
 				if (redir_mode != NONE)
 					return (redir_mode);
 				resolve_path();
@@ -611,8 +597,10 @@ bool	request_handler::is_regular_file(std::string path)	{
 // identifie l'index de la location correspondante à l'url spcécifiée (_l_id)
 int	request_handler::resolve_path()
 {
-	size_t len;
+	bool	redirect;
+	size_t	len;
 
+	redirect = 0;
 #ifdef _debug_
 	std::cout << GREEN "DS RESOLVE_PATH [" + _hrx["A"][1] + "], _s_id : " << _s_id <<  " _path (cleared afterward): " << _path << endl;
 #endif
@@ -649,12 +637,14 @@ int	request_handler::resolve_path()
 
 						_path = it2->root + "/";
 						_l_id = it2 - _si[_s_id].location.begin();
+						redirect = 1;
 						break ;
 					}
 			}
 			else {
 			 	_path = it->root + "/";
 				_l_id = index;
+				redirect = 0;
 			}
 		//	 SI POST ET PRESENCE DIRECTIVE_DOWNLOAD À L'INTERIEURE DE LA LOCATION
 			if ((is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) == -1) && !_hrx["BODY"].empty() && (_hrx["A"][0] == "POST" || _hrx["A"][0] == "PUT") && !it->upload_path.empty())	{
@@ -681,12 +671,24 @@ int	request_handler::resolve_path()
 	std::cout << BLUE "resolved_path : " RESET << _path << endl;
 	std::cout << "location [" << _l_id << "] : " + _si[_s_id].location[_l_id].location << endl;
 #endif
+	if (redirect == 1)
+	{
+		gen_startLine( 303 );
+		_htx["Location"].clear();
+		_htx["Location"] = std::vector<std::string>();
+		_htx["Location"].push_back("Location: ");
+		reverse_resolve_path(_path);
+		_htx["Location"].push_back(_path);
+		_htx["Location"].push_back("\r\n");
+		return (true);
+	}
+
 // VERIFIE SI LA MÉTHODE DS LA LOCATION CONCERNÉE EST AUTORISÉE
 	if ((ext_id = is_cgi(_hrx["A"], _si[_s_id].location[_l_id].cgi_file_types) != -1)
 		&& !_si[_s_id].location[_l_id].cgi_path.empty())
 		return (false);
 	else
-		return !is_method_allowed();  /*PROBLEM  oN SAIT PAS TROP CE QU'ON FAIT LÀ... (double return) */
+		return !is_method_allowed();
 }
 
 // Verifie si elle est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
@@ -1256,6 +1258,7 @@ int	get_hex_len(std::string& msg)	{
 
 std::string	request_handler::clean_chunk(std::string& buf)
 {
+	size_t	
 	size_t	pos;
 	int	chunk_mode;
 	int	size;

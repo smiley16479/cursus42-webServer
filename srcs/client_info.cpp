@@ -1,20 +1,23 @@
 #include "client_info.hpp"
 
 void	client_info::fd_in(request_handler& header)	{
-	t_func	func[2] = { &client_info::recv_handler,
-						&client_info::chunked_handler };
+	t_func	func[5] = { &client_info::recv_handler,
+						&client_info::chunked_handler,
+						&client_info::compute,
+						&client_info::cgi_write_handler,
+						&client_info::cgi_resp_handler };
 
-	if (mode < COMPUTE)
+	if (mode >=0 && mode < READ)
 		return (((*this).*func[mode])(header));
 }
 
 void	client_info::fd_out(request_handler& header)	{
 	t_func	func[6] = {	&client_info::compute,
-						&client_info::write_handler,
-						&client_info::read_handler,
 						&client_info::cgi_write_handler,
 						&client_info::cgi_resp_handler,
-						&client_info::send_handler};
+						&client_info::write_handler,
+						&client_info::read_handler,
+						&client_info::send_handler };
 
 	if (mode > CHUNKED && mode < NONE)
 		return (((*this).*func[mode - 2])(header));
@@ -229,7 +232,7 @@ void	client_info::send_handler(request_handler& header)	{
 #endif
 	if (resp.empty())
 	{
-		mode = RECV;
+		remove();
 		return ;
 	}
  	else if (resp.length() > (unsigned int)MAX_LEN)
@@ -266,7 +269,6 @@ void	client_info::send_handler(request_handler& header)	{
 #endif
 		resp.clear();
 		tmp.clear();
-		mode = RECV;
 		remove();
 	}
 	else if (sent_bytes < MAX_LEN)

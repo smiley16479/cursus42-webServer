@@ -45,12 +45,14 @@ void client_handler::check_all_timeout()
 			it = clients.begin() + tmp;
 			return ;
 		}
+		/*
 		else if (it->mode == RECV || it->mode == CHUNKED)
 		{
 			it->set_recv_mode();
 		}
 		else
 			it->set_send_mode();
+			*/
 	}
 }
 
@@ -67,7 +69,7 @@ void client_handler::add(struct_epoll& _epoll, int time_out, int i)
 	if ((client_fd = accept4(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len, SOCK_NONBLOCK)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	bzero(&ev, sizeof(ev));
-	ev.events = EPOLLIN;
+	ev.events = EPOLLIN | EPOLLOUT;
 	ev.data.fd = client_fd;
 #ifdef _debug_
 	std::cout << "Adding client fd_" << client_fd << " to epoll interest list" << std::endl;
