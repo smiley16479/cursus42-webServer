@@ -139,12 +139,6 @@ int request_handler::choose_method(void)
 			}
 		}
 	}
-	if (!_htx["A"].empty() && _htx["A"][1] == "303")
-	{
-		gen_CType(_path.substr(_path.find_last_of(".") + 1));
-		writer(redir_mode);
-		return (NONE);
-	}
 	if (redir_mode == NONE || redir_mode == HEAD)
 	{
 		file_type();
@@ -223,8 +217,6 @@ int	request_handler::cgi_writer()
 }
 
 void	request_handler::gen_allowed()	{
-	if (!_htx["A"].empty() && _htx["A"][1] == "303")
-		return ;
 #ifdef _debug
 	std::cout << "Generating Allow header for response" << std::endl;
 #endif
@@ -742,6 +734,8 @@ int request_handler::file_type()
 	#endif
 	struct stat sb;
 
+	if (!_htx["A"].empty() && _htx["A"][1] == "303")
+		return (0);
 	bzero(&sb, sizeof(sb));
 	if (lstat(_path.c_str(), &sb) == -1)
 		perror("lstat");

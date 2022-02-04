@@ -7,7 +7,7 @@ void	client_info::fd_in(request_handler& header)	{
 						&client_info::cgi_write_handler,
 						&client_info::cgi_resp_handler };
 
-	if (mode >=0 && mode < READ)
+	if (mode < READ)
 		return (((*this).*func[mode])(header));
 }
 
