@@ -5,10 +5,10 @@
 # commit: d822b03f -> non le header response 'Content-Disposition : inline' ne permet l'affichage directement ds le navigateur
 # // IF YOU WANT THE BROWSER TO READ WITHOUT ASKING TO DOWNLOAD IT, DON'T ADD THE TRAILING '/' OR DON'T MENTION ITS FILE TYPE
 
-• on ne renvoi pas de status_error adapté ds la startLine si le check de la taille du fichier est mauvaise (409 -411)
+• On ne renvoi pas de status_error adapté ds la startLine si le check de la taille du fichier est mauvaise (409 -411)
 • On ne doit pas renvoyer les fichier POST ou PUT ds la reponse apparement (a modifier) 
-• On doit faire passer les attributs de request_handler correspondant aux clients ds les ... clients DONE (mais tjrs _response a virer des cgi)
-• On doit faire une lookUp table pour les type de request (Arthur l'a fait regarder son exemple) DONE (mais à ajuster avec les enum)
+• On doit faire passer les attributs de request_handler (_body & _resp) correspondant aux clients ds les clients
+• On doit faire une lookUp table pour les type de request (Arthur l'a fait regarder son exemple ... à ajuster avec les enum)
 • On doit finir les system de réponse en plusieurs fois avec EPOLLOUT
 • On doit raccorder les cgi
 • On doit tester le server

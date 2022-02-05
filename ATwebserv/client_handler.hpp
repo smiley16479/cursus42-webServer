@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sys/epoll.h>
 #include "struct_webserv.hpp"
+#include "request_handler.hpp"
 
 using namespace std;
 
@@ -13,10 +14,11 @@ class client_handler
 {
 private:
 	struct_epoll &_epoll; // ref sur la structure _epoll contenu par le server
+	request_handler& _rqst;
 	map <int, client_info> clients;
 
 public:
-	client_handler(struct_epoll &);
+	client_handler(struct_epoll &, request_handler &);
 	~client_handler();
 	bool is_request_fulfilled(int);
 	bool request_type(client_info& client);

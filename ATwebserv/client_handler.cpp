@@ -2,39 +2,41 @@
 #include "color.hpp"
 
 
-client_handler::client_handler(struct_epoll &epoll) : _epoll(epoll)
+client_handler::client_handler(struct_epoll &epoll, request_handler& rqst) : _epoll(epoll), _rqst(rqst)
 {
+#ifdef _debug_
 	ofstream _LOGfile("log.txt", std::ofstream::trunc);
 	if (!_LOGfile.is_open())
 		throw std::runtime_error("OPEN FAILLED (client_handler::client_handler)");
 	_LOGfile.close();
+#endif
 }
 
 client_handler::~client_handler()
 {
 }
 
+// Fonction générique pour déterminer si un requête est fini
 bool client_handler::is_request_fulfilled(int id)
 {
 	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[_epoll._events[id].data.fd].rqst.length() <<"\n" RESET;
-	client_info& client = clients[_epoll._events[id].data.fd];
-	// size_t len = client.rqst.size();
+	// cout << "Client N°" << _epoll._events[id].data.fd << " request : \n[" << clients[_epoll._events[id].data.fd].rqst + "]" << endl;
 
+	client_info& client = clients[_epoll._events[id].data.fd];
 	if (client.request_fulfilled)
 		return true;
-	else if (!client.rqst_t && !request_type(client)) // ON NE TRAITE QUE SI LE client.rqst_t N'EST PAS DÉFINI
-		return false;
+	// else if (client.rqst_t == INVALID && !request_type(client)) // ON NE TRAITE QUE SI LE client.rqst_t N'EST PAS DÉFINI
+	// 	return false;
 	else if (!client.rqst_transfer_t && !request_transfer_type(client)) // ON NE TRAITE QUE SI LE client.rqst_transfer_t N'EST PAS DÉFINI
 		return false;
 	else if (!client.request_fulfilled && !is_fulfilled(client))
 		return false;
-	// else if (len >= 4 && client.rqst.substr(len - 4, len) == "\r\n\r\n") // SUREMENT UNE MAUVAISE FAÇON DE LE FAIRE
-	// 	return (client.request_fulfilled = true) ;
 	
 	cout << RED "return (client.request_fulfilled = true) ;\n" RESET;
 	return (client.request_fulfilled = true) ;
 }
 
+ // Détermine le type de la requête (GET, PUT, etc..) --> INUTILISÉ <--
 bool client_handler::request_type(client_info& client)
 {// PROBLEM : CA VA FOIRRER SI ON ENVOIE UN "curl -X GETTER" car on checker que les 3 1ere lettres...et la méthode getter est un 403
 // -> pour résoudre cela il faudrait transferer l'analyse des header de reqst_handler ds client_handler
@@ -42,16 +44,16 @@ bool client_handler::request_type(client_info& client)
 	cout << BLUE "DANS REQUEST_TYPE()\n";
 
 	if (client.rqst.substr(0, 3) == "GET")
-		return (client.rqst_t = GET);
+		return (client.rqst_t = GET), true;
 	else if (client.rqst.substr(0, 3) == "PUT")
-		return (client.rqst_t = PUT);
+		return (client.rqst_t = PUT), true;
 	else if (client.rqst.substr(0, 4) == "POST")
-		return (client.rqst_t = POST);
+		return (client.rqst_t = POST), true;
 	else if (client.rqst.substr(0, 4) == "HEAD")
-		return (client.rqst_t = HEAD);
+		return (client.rqst_t = HEAD), true;
 	else if (client.rqst.substr(0, 6) == "DELETE")
-		return (client.rqst_t = DELETE);
-	return NONE;
+		return (client.rqst_t = DELETE), true;
+	return false;
 }
 
 // Détermine le type de transfer utilisé par le client ("multipart", "x-www-form-urlencoded", "chunked")
@@ -69,9 +71,9 @@ bool client_handler::request_transfer_type(client_info& client)
 	}
 #endif
 	size_t pos2;
-	if (client.rqst_t == HEAD)
-		return true;
-	else if ( (pos2 = portion_search(client.rqst, "Transfer-Encoding:", 0, client.header_end)) != string::npos && pos2 < client.header_end ) {
+	// if (client.rqst_t == HEAD)
+	// 	return true;
+	if ( (pos2 = portion_search(client.rqst, "Transfer-Encoding:", 0, client.header_end)) != string::npos && pos2 < client.header_end ) {
 		cout << RED "Transfer-Encoding: 1ere ÉTAPE\n" RESET;
 		if ( (pos2 = portion_search(client.rqst, "chunked", pos2, client.header_end)) != string::npos && pos2 < client.header_end )
 			return (client.rqst_transfer_t = CHUNCK);
@@ -111,8 +113,8 @@ bool client_handler::is_fulfilled(client_info& client)
 {//https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.3
 	cout << BLUE "DANS is_fulfilled, size of current reqst : " << client.rqst.length() << "\n" RESET;
 
-	if (client.rqst_t == HEAD)
-		return true;
+	// if (client.rqst_t == HEAD)
+	// 	return true;
 	if (client.rqst_transfer_t == MULTIPART) {
 	// SI ON EST A LA FIN ON DEVRAIT AVOIR LE DELIMITEUR AV "--" EN PREFIXE & SUFIXE : on prends la fin de la requete...
 		cout << YELLOW "MULTIPART : \n" RESET;
@@ -194,7 +196,7 @@ void client_handler::check_all_timeout(void)
 {	
 	for (std::map<int, client_info>::iterator it = clients.begin(); it != clients.end(); it++)
 		if (time(NULL) - it->second.rqst_time_start > it->second.time_out) { // COPY DE REMOVE CERTAINEMENT MIEUX A FAIRE...
-			cout << "elapsed time : " << time(NULL) - it->second.rqst_time_start <<  ", time_out du client : " <<  it->second.time_out << endl;
+			cout << "elapsed time : " << time(NULL) - it->second.rqst_time_start <<  ", time_out du client N°" << it->first << " : " <<  it->second.time_out << endl;
 			epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
 			if (close(it->first)) 
 				throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
@@ -211,7 +213,7 @@ void client_handler::add(int time_out, int i)
 	if ((client_fd = accept(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
 	// clientaddr.sin_addr;
-	_epoll._event.events = EPOLLIN /* | EPOLLOUT */;
+	_epoll._event.events = EPOLLIN | EPOLLOUT;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -226,7 +228,16 @@ void client_handler::add(int time_out, int i)
 void client_handler::send(int id)
 {
 	client_info& c = clients[_epoll._events[id].data.fd];
+
+#ifdef _debug_
+	cout << BLUE "DS SEND byte sent : " RESET << c.byte_send << endl;
+	if (c.resp.length() < 1000)
+		cout << "c.resp : \n[" << c.resp << "]\n";
+#endif
+
+
 	c.byte_send += ::send(_epoll._events[id].data.fd, c.resp.c_str(), c.resp.length(), 0);
+	cout << GREEN "c.byte_send : " RESET << c.byte_send << " to client N°" << _epoll._events[id].data.fd << endl;
 	if (c.byte_send >= c.resp.length())
 		remove(id);
 }

@@ -52,7 +52,9 @@ void server::initialize(void) {
 		if (skip)
 			continue ;
 /* CREATION DU SERVER */
-		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 
+		int	opt = 1;
+		if ((_s[i].socket = socket(AF_INET, SOCK_STREAM, 0)) < 0
+				|| setsockopt(_s[i].socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int))
 				|| bind(_s[i].socket, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 
 				|| listen(_s[i].socket, 0) < 0 )
 			throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
@@ -67,14 +69,14 @@ void server::initialize(void) {
 void server::run(void) {
 	initialize();
 	request_handler rqst(_s);
-	client_handler client(_epoll);
+	client_handler client(_epoll, rqst);
 	int byte_recved;
 	int serv_id;
 
 	while(_run)
 	{
 		printf("\nPolling for input...\n");
-		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 30000); //500
+		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 10000); //500
 		printf("%d ready events\n", _epoll._event_count);
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(i)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
@@ -101,6 +103,7 @@ void server::run(void) {
 			} 
 */
 			else if ( (_epoll._events[i].events & EPOLLIN) == EPOLLIN ) {
+				printf("client N°%d EPOLLIN\n", _epoll._events[i].data.fd);
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
 						client.remove(i);
@@ -114,13 +117,12 @@ void server::run(void) {
 						cout << "request_fulfilled !!\n";
 						rqst.reader(client.get_info(i));
 						rqst.writer();
-						// send(_epoll._events[i].data.fd, rqst.get_response().c_str(), rqst.get_response().length(), 0);
 						client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 					}
 				}
 			}
 			else if ( (_epoll._events[i].events & EPOLLOUT) == EPOLLOUT ) {
-
+				printf("client N°%d EPOLLOUT\n", _epoll._events[i].data.fd);
 			}
 		}
 		client.check_all_timeout();
@@ -161,8 +163,6 @@ void server::display_server(void)
 		cout << "error_page : " << _s[i].error_page << endl;
 		cout << "max_file_size : " << _s[i].max_file_size << endl;
 		cout << "cgi_path : " << _s[i].cgi_path << endl;
-		for (size_t j = 0; j < _s[i].cgi_file_types.size(); j++)
-			cout << "cgi_file_types : " << _s[i].cgi_file_types[j] << endl;
 		for (size_t j = 0; j < _s[i].location.size(); j++) {
 			cout << GREEN "LOCATION : " RESET << endl;
 			cout << "location : " << _s[i].location[j].location << endl;
@@ -173,12 +173,16 @@ void server::display_server(void)
 			cout << "max_file_size : " << _s[i].location[j].max_file_size << endl;
 			cout << "return_directive : " << _s[i].location[j].return_directive << endl;
 			cout << "root : " << _s[i].location[j].root << endl;
-			cout << "allowed_method : ";
+			cout << "cgi_path : " << _s[i].location[j].cgi_path << endl;
+			cout << "cgi_file_types : ";
+			for (size_t k = 0; k < _s[i].location[j].cgi_file_types.size(); k++)
+				cout << _s[i].location[j].cgi_file_types[k] << (_s[i].location[j].cgi_file_types.size() - k + 1 ? ", " : "");
+			cout << endl << "allowed_method : ";
 			for (size_t k = 0; k < _s[i].location[j].allowed_method.size(); k++)
-				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - 1 ? ", " : "");
+				cout << _s[i].location[j].allowed_method[k] << (k < _s[i].location[j].allowed_method.size() - k + 1 ? ", " : "");
 			cout << endl << "return : ";
 			for (size_t k = 0; k < _s[i].location[j].retour.size(); k++)
-				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - 1 ? ", " : "");
+				cout << _s[i].location[j].retour[k] << (k < _s[i].location[j].retour.size() - k + 1 ? ", " : "");
 			cout << endl;
 		}
 	}

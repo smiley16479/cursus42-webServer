@@ -31,8 +31,8 @@ private:
 	std::map<string, string>			_status; // Response_Status_Msg -> "404" "Not found" etc.
 	t_func								_tab[5]; // LookUP table av les fonctions relatives aux types de requete
 	std::string							_path; // response_path file
+	std::string							_URLquery; // query string contenu ds l'url
 	std::string							_body; // response_content (body)
-	std::string							_response; // response_content (response_header + body) -> mis ds client_info dorenavant
 	client_info*						_c;
 
 
@@ -109,6 +109,7 @@ private:
 				int	file_type();
 					void generate_folder_list();
 	size_t check_file_size(void);
+	string get_file_size(string& path);
 	void add_all_field();
 	void add_body(int i = 0);
 	void clean_url(string& str);
@@ -116,14 +117,47 @@ private:
 		int extract_multi_rqst_body(void);
 		int extract_xform_rqst_body(void);
 		int extract_chunk_rqst_body(void);
-
-	void	handle_cgi(void);
-
+		void write_file(void);
+		void does_file_exist(e_rqst_type);
+	int handle_head_rqst(void);
+	int handle_delete_rqst(void);
+	int cgi_input();
+	int cgi_output();
+	char**setCGIEnv();
 	/* FUNCTION DE DEBUG */
 	
 	void display(void);
 
+	/* ARTHUR FUNCTION : */
+// int writer(void);
+// int cgi_writer(); //Écrit la requete réponse final des cgi en réponse au client ds _c->_resp INUTILISÉ
+// bool is_folder(std::string path); //															INUTILISÉ
+// bool is_regular_file(std::string path); //													INUTILISÉ
+// void set_body(const string& str); // set _body avec str										INUTILISÉ
+// void fill_redir_fd(int (*loc_fd)[2]); // semblais faire changer les fd pour les cgi 			INUTILISÉ
+std::vector<std::string> extract_env();
+void clean_body();
+void cgi_var_init();
+int handle_cgi(void);
+// void clean(void); // Clear les attribut de request_handler									INUTILISÉ
+std::string reverse_resolve_path(std::string &loc_path);
+int create_write_resp(std::string &file_path);
+
+// PROVENANT DU FICHIER CLIENT_INFO D'ARTHUR
+// void read_handler(void); // ajoute les bout de rqst venant des cgi à la réponse du client 	INUTILISÉ
+// void write_handler(void);  // ajoute les bout de rqst reçu destiné aux cgi 					INUTILISÉ
+// void send_handler(void); // Envoi une partie du msg puis remet le mode sur RECV 				INUTILISÉ
+// void cgi_write_handler(void); // // Ecrit les bout de rqst du client vers l'executable 		INUTILISÉ
+void cgi_resp_handler(void);
+
+// PROVENANT DU FICHIER CGI_HANDLER D'ARTHUR
+
+bool	is_cgi(); // paramètres enlevés et créés à l'intérieur des fonctions
+int	launch_cgi(); // paramètres enlevés et créés à l'intérieur des fonctions
+// size_t	getcLen(std::vector<std::string>& env); Get la longeur du _body contenu ds le header "CONTENT_LENGTH" des cgi je crois... /* INUTILISÉ */
 
 };
+
+
 
 #endif

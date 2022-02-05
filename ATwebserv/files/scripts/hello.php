@@ -1,4 +1,3 @@
-#!/bin/php
 <?php
 	print "<!doctype html>\n";
 	print "<html>\n";
