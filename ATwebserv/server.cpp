@@ -75,35 +75,22 @@ void server::run(void) {
 
 	while(_run)
 	{
-		printf("\nPolling for input...\n");
 		_epoll._event_count = epoll_wait(_epoll._epoll_fd, _epoll._events, MAX_EVENTS, 10000); //500
+#ifdef _debug_
+		printf("\nPolling for input...\n");
 		printf("%d ready events\n", _epoll._event_count);
+#endif
 		for(int i = 0; i < _epoll._event_count; ++i) {
 			if ((serv_id = is_new_client(i)) >= 0 && (_epoll._events[i].events & EPOLLIN) == EPOLLIN) {
 				client.add(get_time_out(serv_id), i);
+#ifdef _debug_
 				printf("New client added\n");
+#endif
 			}
-/*		else if ((events[i].events & EPOLLIN) == EPOLLIN) {
-					printf("Reading file descriptor '%d' -- ", events[i].data.fd);
-					bytes_read = read(events[i].data.fd, read_buffer, READ_SIZE);
-					printf("%zd bytes read.\n", bytes_read);
-					read_buffer[bytes_read] = '\0';
-					printf("Read '%s'\n", read_buffer);
-	
-					if(!strncmp(read_buffer, "stop\n", 5))
-						running = 0;
-			}
-			else {
-						printf(YELLOW "Writing file descriptor '%d' -- \n" RESET, events[i].data.fd);
-					//   for(i = 0; i < _event_count; i++)
-				bytes_read = write(events[i].data.fd, read_buffer, READ_SIZE);
-						printf("%zd bytes written.\n", bytes_read);
-						read_buffer[bytes_read] = '\0';
-						printf("Written '%s'\n", read_buffer);
-			} 
-*/
 			else if ( (_epoll._events[i].events & EPOLLIN) == EPOLLIN ) {
+#ifdef _debug_
 				printf("client N°%d EPOLLIN\n", _epoll._events[i].data.fd);
+#endif
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
 						client.remove(i);
@@ -114,19 +101,26 @@ void server::run(void) {
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 
 					client.rqst_append(i, str, byte_recved);
 					if (client.is_request_fulfilled(i)) {
+#ifdef _debug_
 						cout << "request_fulfilled !!\n";
+#endif
 						rqst.reader(client.get_info(i));
 						rqst.writer();
-						client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
+						// client.send(i);
 					}
 				}
 			}
 			else if ( (_epoll._events[i].events & EPOLLOUT) == EPOLLOUT ) {
+#ifdef _debug_
 				printf("client N°%d EPOLLOUT\n", _epoll._events[i].data.fd);
+#endif
+				client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 			}
 		}
 		client.check_all_timeout();
+#ifdef _debug_
 		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
+#endif
 	}
 	if(close(_epoll._epoll_fd))
 	{
@@ -187,10 +181,3 @@ void server::display_server(void)
 		}
 	}
 }
-
-
-
-
-
-
-

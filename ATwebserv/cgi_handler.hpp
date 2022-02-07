@@ -16,17 +16,28 @@
 //# include <stringstram>
 
 # include "struct_webserv.hpp"
+# include "request_handler.hpp"
 
-//# define CGI "files/cgi/php-cgi"
-//# define CGI_MODE "-f"
-//# define SCRIPT "files/scripts/hello.php"
-//# define SCRIPT "files/scripts/variables.php"
-//	e_path[0] = cgi_path.c_str();
-//	e_path[1] = (char*)CGI_MODE;
-//	e_path[2] = NULL;
+class request_handler;
 
-int	is_cgi(std::vector<std::string>& query, std::vector<std::string>& extensions);
-int	go_cgi(int (*rfd)[2], std::string cgi_path, std::vector<std::string>& env);
-size_t	getcLen(std::vector<std::string>& env);
+class cgi_handler
+{
+private:
+	/* data */
+	request_handler &obj;
+public:
+	cgi_handler(request_handler &obj);
+	~cgi_handler();
+
+		/* FUNCTION DE CGI */
+
+	int cgi_input();
+	int cgi_output();
+	char**setCGIEnv();
+	void clean_body();
+	int handle_cgi(void);
+	bool	is_cgi(); // paramètres enlevés et créés à l'intérieur des fonctions
+	int	launch_cgi(); // paramètres enlevés et créés à l'intérieur des fonctions
+};
 
 #endif

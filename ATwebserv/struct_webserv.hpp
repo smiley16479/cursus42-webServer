@@ -53,6 +53,10 @@ struct client_info {
 	size_t		byte_send;							// Total byte sent over the body_length
 	size_t		cgi_byte_write;						// Total byte write over the body_length
 	size_t		clen;								// Len du body (pas de la rqst)
+
+	server_info* serv;
+	locati_info* loc;
+	int			c_id;
 };
 
 struct struct_epoll

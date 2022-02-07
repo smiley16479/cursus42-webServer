@@ -22,19 +22,7 @@
 #include "cgi_handler.hpp"
 
 request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
-{// BON EN FAIT IL SEMBLE QUE LA SECU NE SOIT PAS LE POINT IMPORTANT DE WEBSERV...
-/* const char *array[] = {	"GET", "Host:", "User-Agent:", "Accept:", "Accept-Language:",
-												"Accept-Encoding:", "Connection:", "Upgrade-Insecure-Requests:",
-												"Cache-Control:", "DNT:", "rol:"};
-
-	for (size_t i = 0; i < sizeof(array) / sizeof(const char*); ++i)
-		_hrx[array[i]];
-		// _hrx.insert(std::make_pair(array[i], vector<string>()));
-#ifdef _debug_
-	for (map< string, vector<string> >::iterator it = _hrx.begin(), end = _hrx.end(); it != end; ++it)
-		cout <<  YELLOW "map it.first : " RESET << it->first << " size() : " << it->second.size() << endl; 
-#endif
-*/
+{
 // CREER LA LOOKUP TABLE
 	_tab[0] = &request_handler::handle_get_rqst;
 	_tab[1]	= &request_handler::handle_put_rqst;
@@ -56,6 +44,8 @@ request_handler::request_handler(std::vector<server_info>& server_info) : _si(se
 		std::getline(ss_2, buf_2);
 		_status[buf_1].append(buf_2.substr(0, buf_2.find_first_of('\t')));
 	}
+	// cgi_handler							_cgi(*this);
+
 #ifdef _debug_
 	// for (map< string, string>::iterator it = _status.begin(), end = _status.end(); it != end; ++it)
 	// cout <<  YELLOW "map it.first : [" RESET << it->first << "] second : [" << it->second << "]" << endl;
@@ -90,15 +80,8 @@ void request_handler::reader(client_info& cl_info)
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { 
-			// 3eme SOLUTION : SI C'EST UNE REQUESTE POST ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _c (on utilise celle la pour le moment)
+			// 3eme SOLUTION : SI C'EST UNE REQUESTE POST OU PUT ON IGNORE LE BODY POUR USAGE ULTÉRIEUR AV _c
 			break ;
-			// 2eme SOLUTION :
-		// C'EST ICI QU'ON DOIT UTILISER extract_post_rqst_body peut être utiliser slmt des position poour ne pas faire de copie ou
-			// extract_post_rqst_body(cl_info);
-			// 1ere SOLUTION :
-			// while (std::getline(ss_1, buf_1))
-			// 	_hrx["BODY"].push_back(buf_1);
-			// cout << "BODY size : " << _hrx["BODY"].size() << endl;
 		}
 		std::stringstream ss_2(buf_1);
 		while (ss_2 >> buf_2) {
@@ -118,7 +101,7 @@ void request_handler::reader(client_info& cl_info)
 	}
 	set_server_id();
 	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
-	this->display();
+	// this->display();
 }
 
 void request_handler::writer(void) {
@@ -138,7 +121,7 @@ void request_handler::writer(void) {
 		add_all_field();
 		add_body(false);
 	}
-	else if (is_cgi()) { // Pour le moment pas adapte d'Arthur
+	else if (is_cgi()) {
 		if (handle_cgi()) { // SI erreur alors on passe par file_type() , add_al...etc.
 			file_type();
 			gen_CLength(2);
@@ -174,16 +157,16 @@ void	request_handler::gen_startLine(std::map<string, string>::iterator status)
 
 void	request_handler::gen_date()
 {
-    std::string	date = "Date: ";
-    time_t		timer;
-    struct tm	*info;
-    char		timestamp[36];
+	std::string	date = "Date: ";
+	time_t		timer;
+	struct tm	*info;
+	char		timestamp[36];
 
-    timer = time(NULL);
-    info = localtime(&timer);
-    strftime(timestamp, 36, "%a, %d %h %Y %H:%M:%S GMT", info);
-    date.append(timestamp);
-    date.append("\r\n");
+	timer = time(NULL);
+	info = localtime(&timer);
+	strftime(timestamp, 36, "%a, %d %h %Y %H:%M:%S GMT", info);
+	date.append(timestamp);
+	date.append("\r\n");
 
 	if (_htx["Date"].empty())
 		_htx["Date"] = std::vector<std::string>();
@@ -204,9 +187,7 @@ void	request_handler::gen_serv()
 
 void	request_handler::gen_CType(/* string ext */) /* PROBLEM : mieux vaudrait extraire ça d'un fichier et le récup ici (serait plus élégant)*/
 {
-// Capture file.ext(ension)
-	// if (ext.empty())
-		// ext = _hrx["A"][1].substr(_hrx["A"][1].find_last_of(".") + 1);
+
 	string ext = _path.substr(_path.find_last_of(".") + 1);
 #ifdef _debug_
 	cout << "file ext asked : " << ext << endl;
@@ -232,7 +213,7 @@ void	request_handler::gen_CType(/* string ext */) /* PROBLEM : mieux vaudrait ex
 }
 
 // génération du header Content-Length (1 = clen, 2 = file_path, 3 = _body.size())
-void	request_handler::gen_CLength(int x)
+void	request_handler::gen_CLength(int slct_src_len)
 {/* PROBLEME */ // http://127.0.0.1:8080/test les gif 404 s'affiche http://127.0.0.1:8080/test/ <- '/' non
 /* PROBLEM */ // http://127.0.0.1:8080/downloads/ n'affiche pas le poulpe -> les autre requetes sont faites sur le folder alors que le path du html est neutre, mais ça ça marche : http://127.0.0.1:8080/downloads 
 
@@ -242,21 +223,13 @@ void	request_handler::gen_CLength(int x)
 	_htx["Content-Length"].clear();
 
 	stringstream ss;
-/* 	if (_c->rqst_transfer_t == MULTIPART) {
-		ss << _hrx["Content-Length:"][0];
-		cout << MAGENTA "1\n" RESET;
-	}
-	else if (_c->rqst_t != GET && _c->rqst_transfer_t == NO_BODY) {
-		cout << MAGENTA "2\n" RESET;
-		return ; // PAS  BESOIN DE CONTENT-LEN ON RETURN
-	}
-	else */if (x == 1) {
+	if (slct_src_len == 1) {
 		ss << _c->clen;
 #ifdef _debug_
 		cout << MAGENTA "3\n" RESET;
 #endif
 	}
-	else if (x == 2) {
+	else if (slct_src_len == 2) {
 #ifdef _debug_
 		cout << MAGENTA "4\n" RESET;
 #endif
@@ -275,10 +248,6 @@ void	request_handler::gen_CLength(int x)
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL -> IL APPARAITTRA ALORS DS LES HEADER _HTX
 	_htx["Content-Length"].push_back( ss.str());
 	_htx["Content-Length"].push_back( "\r\n"  );
-// PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT (A DECOMMENTER -AV SON HOMOLOGUE DS gen_CLength()- SI CHANGEMENT D'AVIS)
-/* 	if (!_si[_s_id].location[_l_id].max_file_size.empty() // POUR LES REQUEST ENTITY TOO LARGE SUREMENT A VIRER D'ICI
-		&& atoi(ss.str().c_str()) > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))
-		gen_startLine( _status.find("413") ); */
 }
 
 	/* FUNCTION SECONDAIRE : UTILITAIRES */
@@ -294,6 +263,7 @@ void request_handler::set_server_id(void)
 	for (size_t i = 0; i < _si.size(); ++i)
 		if ( (_si[i].host == host || _si[i].server_name == host) && _si[i].port == port ) {
 			_s_id = i;
+			_c->serv = &_si[i]; // nvx ds la struct client_info
 #ifdef _debug_
 			cout << RED "_s_id : " RESET << _s_id << endl;
 #endif
@@ -303,6 +273,7 @@ void request_handler::set_server_id(void)
 	for (size_t i = 0; i < _si.size(); ++i)
 		if (_si[i].port == port) {
 			_s_id = i;
+			_c->serv = &_si[i]; // nvx ds la struct client_info
 			break;
 		}
 #ifdef _debug_
@@ -321,14 +292,6 @@ int request_handler::handle_get_rqst(void)
 #ifdef _debug_
 	cout << BLUE "IN HANDLE_GET_RQST" RESET << endl;
 #endif
-/*
-	if (_c->ext_id || (_c->ext_id = is_cgi())) {
-	// - Check s'il y a un fichier ou juste des arguments
-	// 		- S'il y a un fichier le charger pour les cgi
-	// 		- S'il y a des arguments les charger pour les cgi
-		handle_cgi();
-	}
- */
 	file_type();
 	gen_CType();
 	gen_CLength(2);
@@ -340,9 +303,8 @@ int request_handler::handle_get_rqst(void)
 int request_handler::handle_put_rqst(void)
 {
 #ifdef _debug_
-	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
+	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE) MAL GERÉ PROBLEM
 	cout << BLUE "IN HANDLE_PUT_RQST" RESET << endl;
-	cout << BLUE "1" RESET << endl;
 #endif
 
 // PROBLEM : NO CHECK NO GOOD (POUR LES VALEURS RETOURNÉES PAR LES FIND)
@@ -350,7 +312,7 @@ int request_handler::handle_put_rqst(void)
 		// extract_multi_rqst_body();
 // NGINX ECRIT UN PUT EN MULTIPART AVEC SES BOUNDARY SANS LE TRAITER DS LE FICHIER
 		size_t actual_file_size;
-		if ((actual_file_size = check_file_size()) == string::npos)
+		if ((actual_file_size = check_file_size()) == string::npos) // PROBLEM RETURN 1 COMPLETEMENT INUTILE COMME ÇA !! DOIT ETRE REVU
 			return 1;
 		size_t pos_boundary;
 		if ((pos_boundary = _c->rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
@@ -368,23 +330,27 @@ int request_handler::handle_put_rqst(void)
 		cout << MAGENTA "LA\n" RESET;
 #endif
 
-		_body = _c->rqst.substr(pos_boundary);
+	_body = _c->rqst.substr(pos_boundary);
 	}
 	else if (_c->rqst_transfer_t == URL_ENCODED)
 		extract_xform_rqst_body();
 	else if (_c->rqst_transfer_t == CHUNCK) {
-		cout << BLUE "2" RESET << endl;
+		cout << BLUE "CHUNCK" RESET << endl;
 		if (extract_chunk_rqst_body())
 			cout << RED << "ERROR PUT CHUNK\n" RESET;
 	}
 
-	does_file_exist(PUT);
-	write_file();
-
+	if (atoi(_htx["A"][1].c_str()) < 300) {
+		does_file_exist(PUT);
+		write_file();
+	}
 	// gen_CType();
 	// gen_CLength(3);
-	add_all_field(); 
-	// add_body();
+	add_all_field();
+	if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
+		file_type();
+		add_body();
+	}
 	return 0;
 }
 
@@ -406,9 +372,17 @@ int request_handler::handle_post_rqst(void)
 	else if (_c->rqst_transfer_t == CHUNCK)
 		extract_chunk_rqst_body();
 
-	does_file_exist(POST);
-	write_file();
+	if (atoi(_htx["A"][1].c_str()) < 300) {
+		does_file_exist(POST);
+		write_file();
+	}
+	
 	add_all_field();
+
+	if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
+		file_type();
+		add_body();
+	}
 	return 0;
 }
 
@@ -447,9 +421,7 @@ int request_handler::handle_delete_rqst()
 }
 
 
-// Extrait le body du message de la post request et le mets a la fois ds le _body pour la reponse
-// et ds le fichier specifie si ce n'est pas un fichier a traiter par les cgi
-//  PROBLEM ON ECRIT DS UN FICHIER MAIS ON DE DEVRAIT PAS LE FAIRE SYSTEMATIQUEMENT
+// Extrait le body du message de la post request et le mets ds le _body pour la reponse
 int request_handler::extract_multi_rqst_body(void)
 {
 
@@ -461,7 +433,7 @@ int request_handler::extract_multi_rqst_body(void)
 #endif
 
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
-	if (check_file_size() == string::npos)
+	if (check_file_size() == string::npos) // PROBLEM NE SERT A RIEN ICI -> RETURN INUTILE
 		return 1;
 
 	client_info& cl = *_c;
@@ -510,29 +482,28 @@ int request_handler::extract_multi_rqst_body(void)
 }
 
 // Extrait le body des requetes de type : Content-Type: application/x-www-form-urlencoded
-// où le query string est représenté par le body
+// où le query string est représenté par le body et le met ds _URLquery
 int request_handler::extract_xform_rqst_body(void)
 {// https://developer.mozilla.org/fr/docs/Web/HTTP/Methods/POST
 #ifdef _debug_
 	cout << BLUE "\nDS extract_xform_rqst_body\n" RESET;
-	// cout << "_hrx['Content-Length'][0].c_str() : " << _hrx["Content-Length:"][0].c_str() << endl;
 #endif
 
 	client_info& cl = *_c;
 	size_t pos_boundary;
 
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
-	if (check_file_size() == string::npos)
+	if (check_file_size() == string::npos) // PROBLEM NE SERT A RIEN ICI -> RETURN INUTILE
 		return 1;
 
 	if ((pos_boundary = cl.rqst.find("\r\n\r\n")) == string::npos) // Vérifie qu'on a au moins les headers
 		return 1;
 	pos_boundary += 4;
 	size_t pos_last_boundary = cl.rqst.find_last_of("\r\n", cl.rqst.size() - 4);
-	_body = cl.rqst.substr(pos_boundary, pos_last_boundary - pos_boundary - 1);
+	_URLquery = cl.rqst.substr(pos_boundary, pos_last_boundary - pos_boundary - 1);
 #ifdef _debug_
-	if (_body.size() <= 1000)
-		cout << "[" << _body << "]" << endl;
+	if (_URLquery.size() <= 1000)
+		cout << "[" << _URLquery << "]" << endl;
 	else 
 		cout << RED "Body too long to be displayed\n" RESET << endl;
 #endif
@@ -552,12 +523,20 @@ int request_handler::extract_chunk_rqst_body(void)
 	while (count) {
 		pos += 2;
 		_c->clen += count = strtol(&_c->rqst[pos], NULL, 16);
+#ifdef _debug_
 		cout << "pos : " << pos << ", count : " << count << endl;
+#endif
 		pos = _c->rqst.find_first_of("\n", pos) + 1;
 		_body.append(_c->rqst, pos, count);
 		pos += count;
 	}
-	cout << "here is the concatenated string : " << _body.size()  << endl;
+#ifdef _debug_
+	cout << "here is the concatenated string size : " << _body.size()  << endl;
+#endif
+
+	if (check_file_size() == string::npos) // PROBLEM NE SERT A RIEN ICI -> RETURN INUTILE
+		return 1;
+
 #ifdef _debug_
 	if (_body.size() <= 1000)
 		cout << "[" << _body << "]" << endl;
@@ -604,6 +583,7 @@ int	request_handler::resolve_path()
 				if ((_c->rqst_t == POST || _c->rqst_t == PUT) && !it->download_path.empty())
 					_path = it->download_path + '/'; // on prend le path_ de download_path tel quel (pas de combinaison av root mettre += si on veut le combiner)
 				_l_id = index;
+				_c->loc = &_si[_s_id].location[_l_id]; // nvx ds la struct client_info
 			}
 			// _path += it->location.back() == '/' ? it->location : it->location + "/";
 			_path += _hrx["A"][1].substr(it->location.size());
@@ -626,6 +606,27 @@ int	request_handler::resolve_path()
 	return !is_method_allowed(); // retourne 1 si allowed d'ou le '!'
 }
 
+// Pour Resolve_path() : s'il y a une directive_return à l'interieure de la location
+void request_handler::return_directive(vector<locati_info>::reverse_iterator& it)
+{
+	for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
+		if (it2->location == it->retour.back()) {
+#ifdef _debug_
+			cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
+#endif
+			string::const_iterator c_it = it->retour[0].begin();
+			while (c_it != it->retour[0].end() && std::isdigit(*c_it))  // On verifie qu'il s'agisse slmt de chiffre ...
+				++c_it;
+			if ( !it->retour[0].empty() && c_it == it->retour[0].end()) // ... d'un status_code ds it->retour[0]
+				gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
+
+			_path = it2->root + "/";
+			_l_id = it2 - _si[_s_id].location.begin();
+			_c->loc = &_si[_s_id].location[_l_id];  // nvx ds la struct client_info
+			break ;
+		}
+}
+
 // Détecte si c'est un fichier normal ou s'il n'existe pas (maj de la statut-line si besoin)
 // Si c'est un dossier check l'autoindex ou la presence d'une directive index et affiche le contenu du dossier ou ajoute le fichier index respectivement
 // Si erreur lors de l'ouverture du fichier renvoie le _path sur les pages d'erreurs
@@ -641,7 +642,10 @@ int request_handler::file_type()
 		perror("lstat");
 
 	switch (sb.st_mode & S_IFMT) {
-		case S_IFDIR:  printf(RED "directory\n" RESET);
+		case S_IFDIR:
+#ifdef _debug_
+			printf(RED "directory\n" RESET);
+#endif
 			if (_si[_s_id].location[_l_id].autoindex == "on") {
 				generate_folder_list();
 				return 1;
@@ -652,8 +656,13 @@ int request_handler::file_type()
 				file_type();
 			}
 			break;
-		case S_IFREG:  printf(RED "regular file\n" RESET);
+
+		case S_IFREG:
+#ifdef _debug_
+			printf(RED "regular file\n" RESET);
+#endif
 			break;
+
 		default:
 			if (atoi(_htx["A"][1].c_str()) < 400)
 				gen_startLine( _status.find("404") );
@@ -663,7 +672,9 @@ int request_handler::file_type()
 // SI ERROR, AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
 		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
+#ifdef _debug_
 	printf("_path : %s\n", _path.c_str());
+#endif
 	return 0;
 }
 
@@ -679,7 +690,7 @@ void request_handler::generate_folder_list()
 	   	while ((epdf = readdir(dpdf))) {
 			st.insert(epdf->d_name);
 #ifdef _debug_
-	    	std::cout << epdf->d_name << std::endl;
+			std::cout << epdf->d_name << std::endl;
 #endif
 		}
 	closedir(dpdf);
@@ -692,13 +703,12 @@ void request_handler::generate_folder_list()
 	buffer << autoindex_file.rdbuf();
 	_body = buffer.str();
 	autoindex_file.close();
-	// cout << "_hrx['A'][1]" << _hrx["A"][1] << " _path : "  << _path << endl;
 	for (set<string>::iterator i = st.begin(); i != st.end(); ++i)
 		_body.append("<div style='padding:10px;'><a href=\"" + _hrx["A"][1] + '/' + *i + "\">" + *i + "</a></div>");
 	_body.append("</div></body></html>");
 }
 
-// Clear la string (response) et y ajoute tous les field
+// Clear la string _c->resp (response) et y ajoute tous les field
 void request_handler::add_all_field()
 {
 	_c->resp.clear();
@@ -711,7 +721,7 @@ void request_handler::add_all_field()
 		cout << BLUE "DS ADD_ALL_FIELD() all_response_header :\n" RESET << _c->resp << endl;
 #endif
 
-#ifdef _debug_
+#ifdef _log_
 	ofstream _LOGfile;
 	_LOGfile.open("log.txt", std::ofstream::app);
 	if (_LOGfile.is_open()) {
@@ -734,10 +744,7 @@ void request_handler::add_body(int slt_src)
 	else 
 		cout << BLUE "DS ADD_BODY() body(TOO_LONG)size : " RESET << _body.size() << endl;
 #endif
-	// cout << (slt_src ? ("reqst_t :" + _c->rqst_t) : ("_path :" + _path ) ) << endl;
-/* 	if (_htx["A"][1] == "413") // PLUS DE REQUETE TROP LONGUE POUR LA REPONSE AU CLIENT
-		return ; */
-	if (/* _c->rqst_t != PUT_CHUNCK &&  !_body.empty()*/slt_src) {
+	if (slt_src) {
 #ifdef _debug_
 		cout << RED "Body (folder) written !" RESET  << endl;
 #endif
@@ -754,10 +761,6 @@ void request_handler::add_body(int slt_src)
 		_c->resp.append((istreambuf_iterator<char>(fs)),
 						 (istreambuf_iterator<char>() ));
 	}
-	// else if (_hrx["A"][0] == "POST") {
-	// 	cout << RED "Post body written !" RESET  << endl;
-	// 	_c->resp.append(_c->resp);
-	// }
 }
 
 // Verifie si la méhtode est autorisee ds le cas d'une methode inconnue faite av curl -X (maj gen_stratLine 405 si besoin)
@@ -776,7 +779,9 @@ bool request_handler::is_method_allowed(void)
 		// cout << MAGENTA << *strs << RESET << endl;
 		if (array[i] == _hrx["A"][0]) {
 			_c->rqst_t = i;
+#ifdef _debug_
 			cout << GREEN << "_c->rqst_t : " RESET << (int)_c->rqst_t << endl;
+#endif
 			allowed = true;
 		}
 	if (!allowed){
@@ -799,46 +804,43 @@ bool request_handler::is_method_allowed(void)
 	return allowed;
 }
 
-// Pour Resolve_path() : s'il y a une directive_return à l'interieure de la location
-void request_handler::return_directive(vector<locati_info>::reverse_iterator& it)
-{
-	for (vector<locati_info>::iterator it2 = _si[_s_id].location.begin(); it2 != _si[_s_id].location.end(); ++it2)
-		if (it2->location == it->retour.back()) {
-#ifdef _debug_
-			cout << RED " it->retour[1] :" RESET +  it->retour[1] << endl;
-#endif
-			string::const_iterator c_it = it->retour[0].begin();
-			while (c_it != it->retour[0].end() && std::isdigit(*c_it))  // On verifie qu'il s'agisse slmt de chiffre ...
-				++c_it;
-			if ( !it->retour[0].empty() && c_it == it->retour[0].end()) // ... d'un status_code ds it->retour[0]
-				gen_startLine( _status.find(it->retour[0]) ); // 301 dependament du .conf
-
-			_path = it2->root + "/";
-			_l_id = it2 - _si[_s_id].location.begin();
-			break ;
-		}
-}
-
 // Check si le fichier fourni par la rqst est plus long que "max_file_size" defini ds la conf
 // maj de la stratLine au cas où : 413 Request Entity Too Large, ds ce cas return npos
 size_t request_handler::check_file_size(void)
 {
 	// EN CAS DE BODY PLUS LONG QU'AUTORISÉ -> 413 (REQUEST ENTITY TOO LARGE)
+#ifdef _debug_
+	cout << BLUE "DS CHECK_FILE_SIZE()" RESET << endl;
+#endif
+
+	if (_c->rqst_transfer_t == CHUNCK)
+		if (!_si[_s_id].location[_l_id].max_file_size.empty() && (_c->clen > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))) {
+			gen_startLine( _status.find("413") );
+#ifdef _debug_
+	cout << RED "DS CHECK_FILE_SIZE, TROP GROS _c->clen : " RESET << _c->clen << " / conf : " <<  atoi(_si[_s_id].location[_l_id].max_file_size.c_str()) << endl;
+#endif			
+			return string::npos;
+		}
+
 	if (_hrx.find("Content-Length:") == _hrx.end() || _hrx["Content-Length:"].empty())
 		return string::npos;
 	size_t max_file_size = atoi(_si[_s_id].max_file_size.c_str());
 	size_t actual_file_size = atoi(_hrx["Content-Length:"][0].c_str());
 	if (!_si[_s_id].max_file_size.empty() && actual_file_size > max_file_size ) {
 		gen_startLine( _status.find("413") ); 
+#ifdef _debug_
+	cout << RED "DS CHECK_FILE_SIZE, TROP GROS actual_file_size : " RESET << actual_file_size << " / conf : " <<  max_file_size << endl;
+#endif			
+
 		return string::npos;
 	}
 #ifdef _debug_
-	cout << BLUE "DS CHECK_FILE_SIZE, Content-Length: " RESET << actual_file_size << endl;
+	cout << actual_file_size << endl;
 #endif
 	return actual_file_size;
 }
 
-// Retourne la taille du fichier
+// Retourne la taille du fichier INUTILISÉ
 string request_handler::get_file_size(string& path)
 {
 	std::ifstream f(path);
@@ -925,44 +927,8 @@ int request_handler::cgi_input()
 		if (!close(_c->cgi_fd[1]))
 			cout << GREEN "_c->cgi_fd[1] closed\n" RESET;
 
-	cout << "100 1st char of _body in cgi_input : " << _body.substr(0, 100) << endl;
+	// cout << "100 1st char of _body in cgi_input : " << _body.substr(0, 100) << endl;
 // ::
-
-
-// /
-/* 	int fd = open("_temp", O_RDWR);
-	if (fd <= 0) {
-		cout << RED "PAS OPEN (cgi_input)!!\n";
-		return 1;
-	}
-	else
-		while (_c->cgi_byte_write < _body.size()) {
-			_c->cgi_byte_write += write(fd, &_body[_c->cgi_byte_write], _body.size() - _c->cgi_byte_write);
-			cout << "cgi_byte_write : [" << _c->cgi_byte_write << "]\n";
-		} */
-// /
-
-
-
-// //////////////
-/* 	std::ifstream t(_path);
-	if (!t.is_open()) {
-		cout << RED "PAS OPEN!!\n";
-		return 1;
-	}
-	std::string str((std::istreambuf_iterator<char>(t)),
-                 	std::istreambuf_iterator<char>());
-
-	int written = 0;
-	int byte_written = 0;
-	while ((written = write(_c->cgi_fd[1], &str[byte_written], str.size() - byte_written)) > 0) {
-		byte_written += written;
-#ifdef _debug_
-		cout << GREEN "byte_written : " RESET << byte_written << endl;
-#endif
-	}
-	close (_c->cgi_fd[1]); */
-// //////////////
 
 #ifdef _debug_
 	// cout << GREEN "written : " RESET << written << endl;
@@ -973,7 +939,9 @@ int request_handler::cgi_input()
 // Extrait la réponse des cgi vers la réponse à faire au client
 int request_handler::cgi_output()
 {
+#ifdef _debug_
 	cout << BLUE "IN CGI_OUTPUT()\n" RESET;
+#endif
 
 	char str[100000];
 	int len, nb = 0;
@@ -990,74 +958,28 @@ int request_handler::cgi_output()
 	else 
 		cout << GREEN "DS CGI_OUTPUT _body(TOO_LONG) : \n" RESET "[" << _body.size() << "]" << endl;
 #endif
-	if (len < 1000) {
+	if (len < 100000) {
 		std::cout << "CGI EOF" << std::endl;
-		cout << "100 1st char of _body in cgi_input : " << _body.substr(0, 100) << endl;
 		waitpid(-1, NULL, 0);
 		clean_body();
-		cout << "100 1st char of _body in cgi_input : " << _body.substr(0, 100) << endl;
 // ECRIT EFFECTIVEMENT LA RÉPONSE COMPLETE (AV LES HEADERS)
 		gen_startLine( _status.find("200") );
 		gen_CLength(3);
 		add_all_field(); 
-		std::cout << "All fields added" << std::endl;
 		add_body(true);
-		std::cout << "Body added" << std::endl;
 		_hrx.clear();
 		_htx.clear();
 
-#ifdef _debug_
+#ifdef _log_
 	ofstream _LOGfile;
-	_LOGfile.open("POST.txt", std::ofstream::app);
+	_LOGfile.open("POST.txt", std::ofstream::trunc);
 	if (_LOGfile.is_open()) {
 		_LOGfile << _c->resp;
 		_LOGfile.close();
 	}
 #endif
-
-
 	}
-
 	return 0;
-
-// /////////////////// VERSION D'ARTHUR :
-/* 
-	int	read_bytes;
-	const int	MAX_LEN = 8192;
-	char	buf[MAX_LEN + 1];
-
-	read_bytes = read(_c->cgi_fd[0], &buf, MAX_LEN);
-// ///////////////
-	buf[read_bytes] = '\0';
-	cout << GREEN "DS CGI_OUTPUT Buff : \n" RESET << buf << endl;
-// ///////////////
-	if (read_bytes == -1)
-		return ;
-	else
-	{
-		_c->resp.append(buf, read_bytes); // donc resp c'est le body ?
-		std::cout << BLUE "A CGI READ HAPPENED read_bytes : " RESET<< read_bytes << std::endl;
-		if (read_bytes < MAX_LEN) {
-			std::cout << "CGI EOF" << std::endl;
-			waitpid(-1, NULL, 0);
-			_body = _c->resp;
-			std::cout << "_body : " << _body << std::endl;
-			_c->resp.clear();
-			clean_body();
-			std::cout << "_body : " << _body << std::endl;
-// ECRIT EFFECTIVEMENT LA RÉPONSE COMPLETE (AV LES HEADERS)
-			gen_startLine( _status.find("200") );
-			gen_CLength(3);
-			gen_CType();
-			add_all_field(); 
-			std::cout << "All fields added" << std::endl;
-			add_body(true);
-			std::cout << "Body added" << std::endl;
-			_hrx.clear();
-			_htx.clear();
-		}
-	}
- */
 }
 
 
@@ -1068,7 +990,10 @@ int request_handler::cgi_output()
 
 
 
-
+  std::string to_upper(std::string s) {
+	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+	return s;
+  }
 
 
 /* VERSION SOLAL */
@@ -1091,13 +1016,18 @@ char** request_handler::setCGIEnv()
   cgi_env_["QUERY_STRING"] = _URLquery;//config_.getQuery();
   cgi_env_["REMOTE_ADDR"] = "127.0.0.1"; //config_.getClient().getAddr();
 
-/*
-  if (config_.getAuth() != "off") {
-    cgi_env_["AUTH_TYPE"] = "Basic";
-    cgi_env_["REMOTE_IDENT"] = config_.getAuth().substr(0, config_.getAuth().find(':'));
-    cgi_env_["REMOTE_USER"] = config_.getAuth().substr(0, config_.getAuth().find(':'));
+/* 
+//   if (config_.getAuth() != "off") {
+  if (_hrx.count("X-Secret-Header-For-Test:")) {
+	cgi_env_["AUTH_TYPE"] = "Basic";
+	// cgi_env_["REMOTE_IDENT"] = config_.getAuth().substr(0, config_.getAuth().find(':'));
+	cgi_env_["REMOTE_IDENT"] = "test";
+	// cgi_env_["REMOTE_USER"] = config_.getAuth().substr(0, config_.getAuth().find(':'));
+	cgi_env_["REMOTE_USER"] = "test";
+
   }
-*/
+ */
+
   cgi_env_["REQUEST_METHOD"] = _hrx["A"][0]; //config_.getMethod();
 	cgi_env_["REQUEST_URI"] = _path; // file_path_;
 
@@ -1109,16 +1039,17 @@ char** request_handler::setCGIEnv()
 
 //	if (extension_ == ".php")
 //		cgi_env_["REDIRECT_STATUS"] = "200";
-/*
-  for (std::map<std::string, std::string>::iterator it = req_headers_.begin(); it != req_headers_.end(); it++) {
-    if (!it->second.empty()) {
-      std::string header = "HTTP_" + it->first; //ft::to_upper(it->first);
-      std::replace(header.begin(), header.end(), '-', '_');
-      cgi_env_[header] = it->second;
-    }
+
+  for (std::map<std::string, std::vector <std::string> >::iterator it = _hrx.begin(); it != _hrx.end(); it++) {
+	if (!it->second.empty()) 
+		if (it->first == "X-Secret-Header-For-Test:")	{
+	  std::string header = "HTTP_" + to_upper(it->first);
+	  header.pop_back();
+	  std::replace(header.begin(), header.end(), '-', '_');
+	  cgi_env_[header] = it->second[0];
+	}
   }
-*/
-        char **env_;
+		char **env_;
 	if (!(env_ = (char **)malloc(sizeof(char *) * (cgi_env_.size() + 1))))
 		return NULL;
 
@@ -1127,13 +1058,15 @@ char** request_handler::setCGIEnv()
 	for (std::map<std::string, std::string>::iterator it = cgi_env_.begin(); it != cgi_env_.end(); it++) {
 		std::string tmp = it->first + "=" + it->second;
 		if (!(env_[i] = strdup(tmp.c_str())))
-                    return NULL;
-               else
-                   std::cout << "env : " << env_[i] << std::endl;
+					return NULL;
+#ifdef _debug_
+		else
+			std::cout << "env : " << env_[i] << std::endl;
+#endif
 		i++;
 	}
 	env_[i] = NULL;
-  return env_;
+	return env_;
 }
 
 
@@ -1173,37 +1106,12 @@ int	request_handler::handle_cgi(void)
 	else
 		std::cout << "Buffer copied in body(TOO_LONG) :[" <<  _body.size() << "]\n";
 #endif
-	// cgi_resp_handler();
 		cgi_output();
 	}
 	else 
 		return 1;
 
 	return (0);
-}
-
-std::string	request_handler::reverse_resolve_path(std::string &loc_path)
-{
-	std::string	ret;
-
-	(void)loc_path;
-	ret = (char*)"http://127.0.0.1:8081/new_test_folder/Dino_arlo.png\r\n";
-	return (ret);
-}
-
-
-/* 
-** PROVENANT DU FICHIER CGI_HANDLER D'ARTHUR
-*/
-
-
-void debug_mp_out(std::map<std::string, std::vector<std::string> >& mp)
-{
-	for (std::map<std::string, std::vector<std::string> >::iterator it = mp.begin(); it != mp.end(); it++)
-	{
-		for (std::vector<std::string>::iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
-			std::cout << it->first << "=" << *it1 << std::endl;
-	}
 }
 
 // Détecte s'il s'agit d'un cgi
@@ -1267,47 +1175,12 @@ int	request_handler::launch_cgi()
 	// fcntl(input_fd[1], F_SETFL, O_NONBLOCK); // <- A REMMETTRE ?
 	// fcntl(output_fd[0], F_SETFL, O_NONBLOCK); // <- A REMMETTRE ?
 
-	std::ifstream t(_path);
-	if (!t.is_open()) {
-		gen_startLine( _status.find("404") );
-		cout << RED "PAS OPEN!!\n";
-		return 0;
-	}
-
-///////////////////
-/*
-	std::ifstream t("files/scripts/hello.php");
-	std::string str((std::istreambuf_iterator<char>(t)),
-                 	std::istreambuf_iterator<char>());
-
-	int written = 0;
-	int byte_written = 0;
-	while ((written = write(input_fd[1], &str[byte_written], str.size() - byte_written))) {
-		byte_written += written;
-		cout << GREEN "byte_written : " RESET << byte_written << endl;
-	}
-	close (input_fd[1]);
-
-	cout << GREEN "str : " RESET << str << endl;
-
-	int readed = 0;
-	int byte_read = 0;
-	char array[100000] = {0};
-	while ((readed = read(input_fd[0], &array[byte_read], 1000))) {
-		byte_read += readed;
-		if (byte_read >= byte_written)
-		cout << GREEN "byte_read : " RESET << byte_written << endl;
-	}
-	cout << GREEN "array : " RESET << array << endl;
- */
-///////////
-
-
-//		return (CRASH_PIPE);
-//	int	opt = 1;
-//	setsockopt(input_fd[0], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-//	setsockopt(input_fd[1], SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(int));
-	
+	// std::ifstream t(_path);
+	// if (!t.is_open()) {
+	// 	gen_startLine( _status.find("404") );
+	// 	cout << RED "PAS OPEN!!\n";
+	// 	return 0;
+	// }
 
 	pid = fork();
 	if (pid == -1)
@@ -1317,27 +1190,13 @@ int	request_handler::launch_cgi()
 #ifdef _debug_
 		cout << GREEN "\nCGI_FORK OK !\n" RESET;
 #endif
-/* 
-		int i = 0;
-		cgi_var_init();
-		std::vector<std::string> env = extract_env();
-		char**c_env = new char*[env.size() + 1];//{ (char*)"files/cgi/php-cgi", NULL };
-		for (std::vector<std::string>::iterator it = env.begin(); it != env.end(); it++, i++)
-			// std::cout << GREEN << it->c_str() << RESET << std::endl;
-			c_env[i] = (char*)it->c_str();
-		c_env[i] = NULL;
- */
+
 		char**c_env = setCGIEnv();
 
 		close(input_fd[1]);
 		close(output_fd[0]);
 		dup2(input_fd[0], STDIN_FILENO);	 // read
 		dup2(output_fd[1], STDOUT_FILENO);	// write
-
-		// close(output_fd[1]);// ON FERME LE WRITE DE output_FD
-//		close(STDOUT_FILENO);
-		// dup2(input_fd[1], STDOUT_FILENO);
-		// close(input_fd[1]);
 
 		execve(*e_path, e_path, c_env);
 		exit(1);
@@ -1350,332 +1209,6 @@ int	request_handler::launch_cgi()
 	_c->cgi_fd[0] = output_fd[0];// ici on lit depuis l'executable des cgi
 	_c->cgi_fd[1] = input_fd[1]; // ici on ecrit vers l'executable des cgi
 	return (1);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* INUTILISÉ */
-
-
-// Create the CGI response --> INUTILISÉ <--
-int	request_handler::create_write_resp(std::string &file_path)
-{
-#ifdef _debug_
-	cout << BLUE "IN CREATE_WRITE_RESP\n" RESET;
-#endif
-
-//	ifstream file( file_path.c_str(), ios::binary | ios::ate);
-//	size_t size = file.tellg();
-//	stringstream	ss;
-
-	gen_startLine( _status.find("303") );
-
-	_htx["Status"] = std::vector<std::string>();
-		_htx["Status"].push_back("Status: ");
-		_htx["Status"].push_back("303 ");
-		_htx["Status"].push_back("See Other\r\n");
-
-	gen_date();
-	gen_serv();
-	gen_CLength(3);
-	gen_CType(/* file_path.substr(file_path.find_last_of(".") + 1) */);
-
-	if (_htx["Referer"].empty())
-		_htx["Referer"] = std::vector<std::string>();
-	_htx["Referer"].push_back("Referer: ");
-	_htx["Referer"].push_back("http://127.0.0.1:8081/layout.html\r\n");
-	if (_htx["Location"].empty())
-		_htx["Location"] = std::vector<std::string>();
-	_htx["Location"].push_back("Location: ");
-	_htx["Location"].push_back(reverse_resolve_path(file_path));
-	_htx["Server"][1] += ":8081";
-//	if (_htx["Content-Length"].empty())
-//		_htx["Content-Length"] = std::vector<std::string>();
-//	_htx["Content-Length"].push_back("Content-Length: ");
-//	ss << size;
-//	_htx["Content-Length"].push_back(ss.str());
-//	_htx["Content-Length"].push_back("\r\n");
-	add_all_field(); 
-	_path = file_path;
-#ifdef _debug_
-	std::cout << "Searching for file at address: " << _path << std::endl;
-#endif
-	_body.clear();
-	add_body();
-
-// COMMENTÉ CAR _RESPONSE VIRÉE DES ATTRIBUTS POUR LE METTRE DS _Client
-	// _response.replace(0, _response.find("\r\n"), "GET http://127.0.0.1:8081/new_test_folder/Dino_arlo.png HTTP/1.1", 64);
-	// std::cout << BLUE "Formated Response: " RESET << std::endl;
-	// std::cout << _response.substr(0, _response.find("\r\n\r\n") + 4) << std::endl;
-// FIN COMMENTÉ CAR _RESPONSE VIRÉE DES ATTRIBUTS POUR LE METTRE DS _Client
-
-//	_htx["A"].clear();
-//	_htx["A"] = std::vector<std::string>();
-//		_htx["A"].push_back("GET");
-//		_htx["A"].push_back(" http://127.0.0.1:8081/scripts/layout.html ");
-//		_htx["A"].push_back("HTTP/1.1\r\n");
-
-
-	_hrx.clear();
-	_htx.clear();
-	return (0);
-}
-
-
-// AJOUT VENANT DE CLIEN_INFO D'ARTHUR L.53
-
-/* 
-*/
-
-/* 
-
- */
-
-// Lis les bouts de rqst de l'executable cgi vers la reponse client --> INUTILISÉ <-- au profit de cgi_output()
-void	request_handler::cgi_resp_handler()	
-{
-#ifdef _debug_
-		std::cout << BLUE "DS CGI_RESP_HANDLER" RESET<< std::endl;
-#endif
-
-	int	read_bytes;
-	const int	MAX_LEN = 8192;
-	char	buf[MAX_LEN + 1];
-
-	read_bytes = read(_c->cgi_fd[0], &buf, MAX_LEN);
-// ///////////////
-	buf[read_bytes] = '\0';
-#ifdef _debug_
-	cout << GREEN "DS CGI_RESP_HANDLER Buff : \n" RESET << buf << endl;
-#endif
-// ///////////////
-	if (read_bytes == -1)
-		return ;
-	else
-	{
-		_c->resp.append(buf, read_bytes); // donc resp c'est le body ?
-#ifdef _debug_
-		std::cout << BLUE "A CGI READ HAPPENED read_bytes : " RESET<< read_bytes << std::endl;
-#endif
-		// if (read_bytes == 0)
-		// {
-#ifdef _debug_
-			std::cout << "CGI EOF" << std::endl;
-#endif
-			waitpid(-1, NULL, 0);
-			_body = _c->resp;
-#ifdef _debug_
-			// std::cout << "_body : " << _body << std::endl;
-#endif
-			_c->resp.clear();
-			clean_body();
-#ifdef _debug_
-			// std::cout << "_body : " << _body << std::endl;
-#endif
-			
-			// Copye de cgi_writer()
-			gen_startLine( _status.find("200") );
-			gen_CLength(3);
-			gen_CType();
-			add_all_field();
-#ifdef _debug_
-			std::cout << "All fields added" << std::endl;
-#endif
-			add_body(true);
-#ifdef _debug_
-			std::cout << "Body added" << std::endl;
-#endif
-			_hrx.clear();
-			_htx.clear();
-		// }
-	}
-}
-
-
-
-/*
-** AJOUT POST D'ARTHUR
-*/ 
-
-std::vector<std::string> request_handler::extract_env()
-{
-#ifdef _debug_
-	cout << BLUE "IN EXTRACT_ENV()\n" RESET;
-#endif
-
-	std::vector<std::string>	env;
-	std::string			tmp;
-
-	tmp = "CONTENT_LENGTH=";
-	if (!_hrx["Content-Length:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Content-Length:"].size(); ++j)
-			tmp+= _hrx["Content-Length:"][j];
-	}
-	else
-		tmp+="0";
-	env.push_back(tmp);
-
-	tmp = "CONTENT_TYPE=";
-	if (!_hrx["Content-Type:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Content-Type:"].size(); ++j)
-			tmp+= _hrx["Content-Type:"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "GATEWAY_INTERFACE=CGI/1.1";
-	env.push_back(tmp);
-
-	tmp = "PATH_INFO=";
-	if (!_hrx["Path-Info"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Path-Info"].size(); ++j)
-			tmp+= _hrx["Path-Info"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "PATH_TRANSLATED="; // SHOULD
-	if (!_hrx["Path-Translated"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Path-Translated"].size(); ++j)
-			tmp+= _hrx["Path-Translated"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "QUERY_STRING=";
-	if (!_hrx["Query-String"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Query-String"].size(); ++j)
-			tmp+= _hrx["Query-String"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "REMOTE_ADDRESS=127.0.0.1";
-	env.push_back(tmp);
-
-	tmp = "REMOTE_HOST="; // SHOULD
-	if (!_hrx["Host:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Host:"].size(); ++j)
-			tmp+= _hrx["Host:"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "REQUEST_METHOD=";
-	tmp += _hrx["A"][0];
-	env.push_back(tmp);
-
-	tmp = "SCRIPT_NAME=";
-	if (!_hrx["Script-Name"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Script-Name"].size(); ++j)
-			tmp+= _hrx["Script-Name"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "SERVER_NAME=";
-	tmp += _si[_s_id].host;
-	env.push_back(tmp);
-
-	tmp = "SERVER_PORT=";
-	tmp += _si[_s_id].port;
-	env.push_back(tmp);
-	tmp = "SERVER_PROTOCOL=HTTP/1.1";
-	env.push_back(tmp);
-
-	tmp = "SERVER_SOFTWARE=";
-	for (size_t j = 0; j < _si[_s_id].server_name.size(); ++j)
-		tmp += _si[_s_id].server_name[j];
-	env.push_back(tmp);
-/* 
-	tmp = "DOCUMENT_ROOT=";
-	if (!_hrx["Document-Root"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Document-Root"].size(); ++j)
-			tmp+= _hrx["Document-Root"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "HTTP_ACCEPT=";
-	if (!_hrx["Accept:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Accept:"].size(); ++j)
-			tmp+= _hrx["Accept:"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "HTTP_ACCEPT_LANGUAGE=";
-	if (!_hrx["Accept-Language:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Accept-Language:"].size(); ++j)
-			tmp+= _hrx["Accept-Language:"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "HTTP_USER_AGENT=";
-	if (!_hrx["User-Agent:"].empty())
-	{
-		for (size_t j = 0; j < _hrx["User-Agent:"].size(); ++j)
-			tmp+= _hrx["User-Agent:"][j];
-	}
-	env.push_back(tmp);
-
-	tmp = "HTTP_REFERER=";
-	if (!_hrx["Referer"].empty())
-	{
-		for (size_t j = 0; j < _hrx["Referer"].size(); ++j)
-			tmp+= _hrx["Referer"][j];
-	}
-	env.push_back(tmp);
-
-	tmp =  "REDIRECT_STATUS=CGI";
-	env.push_back(tmp);
-
-	tmp = "TMPDIR=";
-	if (!_si[_s_id].location[_l_id].download_path.empty())
-		tmp += _si[_s_id].location[_l_id].download_path + '/';
-	else if (!_si[_s_id].location[_l_id].root.empty())
-		tmp += _si[_s_id].location[_l_id].root;
-	env.push_back(tmp);
-	 */
-	return (env);
 }
 
 // On ne sait pas ce que ça fait
@@ -1705,106 +1238,4 @@ void	request_handler::clean_body()
 				_htx[index].push_back(tmp.substr(0, tmp.find("\r\n") + 2));
 		}
 	}
-}
-
-
-// Initialise les variables d'environnement pour les cgi
-void	request_handler::cgi_var_init()
-{
-#ifdef _debug_
-	cout << BLUE "IN CGI_VAR_INIT()\n" RESET;
-#endif
-/*
-	size_t				len, pos;
-	std::string			var;
-
-	//CGI variables initialisation
-	if ((len = _path.find("?")) != std::string::npos) // Plus besoin traité ds is_cgi()
-	{
-		var = _path.substr(len + 1);
-		_path = _path.substr(0, len);
-	}
-#ifdef _debug_
-	std::cout << "PATH=" << _path << std::endl;
-#endif
-	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
-	_hrx["Path-Translated"].push_back(_path);
-
-#ifdef _debug_
-	std::cout << "QUERY_STRING=" << var << std::endl;
-	std::cout << "(_URLquery) QUERY_STRING=" << _URLquery << std::endl;
-#endif
-	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	_hrx["Query-String"].push_back(_URLquery);
-	var.clear();
-
-	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	pos = _path.find(_si[_s_id].location[_l_id].cgi_file_types[_c->ext_id]);
-	if (pos != std::string::npos)
-	{
-		var = _path.substr(pos + 4);
-		_path = _path.substr(0, pos + 4); // <-- Est-ce que ça sert ça ?
-	}
-	if (!var.empty() && (pos = var.find("/")) != std::string::npos)
-		var = var.substr(pos + 1);
-	_hrx["Path-Info"].push_back(var);
-	var.clear();
-
-	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
-	var = (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
-	_hrx["Script-Name"].push_back(var);
-
- 	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
-	pos = _path.find_last_of("/");
-	var = _path.substr(0, pos);
-	if (var.substr(0, 2) == "./")
-		var = var.substr(2);
-	_hrx["Document-Root"].push_back(var);
-	var.clear(); */
-
-	size_t				len, pos;
-	std::string			var;
-	char				str[100];
-
-	bzero(&str, sizeof(str));
-	//CGI variables initialisation
-	if ((len = _path.find("?")) != std::string::npos)
-	{
-		var = _path.substr(len + 1);
-		_path = _path.substr(0, len);
-	}
-//	std::cout << "PATH=" << _path << std::endl;
-	_hrx.insert(std::make_pair("Path-Translated", std::vector<std::string>()));
-	getcwd(str, sizeof(str));
-	var = str;
-	var += "/";
-	pos = _path.find_last_of("/");
-	var += _path.substr(0, 2) == "./" ? _path.substr(2, pos + 1) : _path.substr(0, pos + 1);
-	var += (_hrx["A"][1][0] == '/' ? _hrx["A"][1].substr(1) : _hrx["A"][1]);
-	_hrx["Path-Translated"].push_back(var);
-	var.clear();
-	_hrx.insert(std::make_pair("Query-String", std::vector<std::string>()));
-	_hrx["Query-String"].push_back(var);
-	var.clear();
-	_hrx.insert(std::make_pair("Script-Filename", std::vector<std::string>()));
-	getcwd(str, sizeof(str));
-	var = str;
-	var += "/";
-	var += _path;
-	_hrx["Script-Filename"].push_back(var);
-	_hrx.insert(std::make_pair("Script-Name", std::vector<std::string>()));
-	var = var.substr(var.find_last_of("/") + 1);
-	_hrx["Script-Name"].push_back(var);
-	_hrx.insert(std::make_pair("Document-Root", std::vector<std::string>()));
-	pos = _path.find_last_of("/");
-	var = _path.substr(0, pos);// + 1);
-	if (var.substr(0, 2) == "./")
-		var = var.substr(2);
-	_hrx["Document-Root"].push_back(var);
-	_hrx.insert(std::make_pair("Path-Info", std::vector<std::string>()));
-	var = _hrx["A"][1];
-	_hrx["Path-Info"].push_back(var);
-#ifdef _debug_
-	cout << GREEN "3-CGI_VAR_INIT() path : " RESET << _path << endl;
-#endif
 }

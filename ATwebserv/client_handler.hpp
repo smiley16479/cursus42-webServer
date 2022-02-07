@@ -21,14 +21,12 @@ public:
 	client_handler(struct_epoll &, request_handler &);
 	~client_handler();
 	bool is_request_fulfilled(int);
-	bool request_type(client_info& client);
 	bool request_transfer_type(client_info& client);
 	bool is_fulfilled(client_info& client);
 	void remove(int i); // REMOVE A CLIENT
 	void add(int time_out, int i); // ADD A CLIENT
 	void check_all_timeout(void);
 	void send(int id);
-	void recv(int id);
 
 	/* FUNCTION RUBRIQUE : GETTER SETTER */
 	void clear(int id); // CLEAR CLIENT CONTENT
