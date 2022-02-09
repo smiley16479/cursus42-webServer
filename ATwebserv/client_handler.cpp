@@ -151,19 +151,6 @@ bool client_handler::is_fulfilled(client_info& client)
 	return false;
 }
 
-void client_handler::remove(int i)
-{
-
-#ifdef _debug_
-	cout << BLUE "DS (CLIENT) REMOVE()\n" RESET;
-#endif
-
-	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
-	clients.erase(_epoll._events[i].data.fd);
-	if (close(_epoll._events[i].data.fd)) 
-		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
-}
-
 void client_handler::clear(int id) {	clients[_epoll._events[id].data.fd].rqst.clear(); 
 	client_info& c = clients[_epoll._events[id].data.fd];
 	c.rqst.clear();
@@ -199,6 +186,7 @@ void client_handler::check_all_timeout(void)
 			epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, it->first, &_epoll._event);
 			if (close(it->first)) 
 				throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
+			cout << BLUE "DS (time_out)" RESET "close(" << it->first << ")\n";
 			clients.erase(it->first);
 		}
 }
@@ -211,6 +199,11 @@ void client_handler::add(int time_out, int i)
 	socklen_t len = sizeof(clientaddr);
 	if ((client_fd = accept(_epoll._events[i].data.fd, (struct sockaddr *)&clientaddr, &len)) < 0)
 		throw std::runtime_error("ERROR IN SOCKET ATTRIBUTION");
+
+	cout << BLUE "DS (CLIENT) ADD() " RESET "accept client_fd(" << client_fd << ")\n";
+#ifdef _debug_
+#endif
+
 	// clientaddr.sin_addr;
 	_epoll._event.events = EPOLLIN | EPOLLOUT;
 	_epoll._event.data.fd = client_fd;
@@ -222,36 +215,56 @@ void client_handler::add(int time_out, int i)
 	clients[client_fd].time_out = time_out;
 	time(&clients[client_fd].rqst_time_start);
 	clients[client_fd].c_id = client_fd;
-#ifdef _debug_
 	cout << BLUE "DS CLIENT_ADD()" RESET " client_fd : " << client_fd
 	 << " _epoll._events[i].data.fd; : " << _epoll._events[i].data.fd << endl;
+#ifdef _debug_
 #endif
+}
+
+void client_handler::remove(int i)
+{
+
+	cout << BLUE "DS (CLIENT) REMOVE() close(" << _epoll._events[i].data.fd << ")\n" RESET;
+#ifdef _debug_
+#endif
+	epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_DEL, _epoll._events[i].data.fd, &_epoll._event);
+	clients.erase(_epoll._events[i].data.fd);
+	if (close(_epoll._events[i].data.fd)) 
+		throw std::runtime_error("CLOSE FAILLED (client_handler::remove)");
 }
 
 // Envoie la reponse du client et efface le client si tout a été envoyé
 void client_handler::send(int id)
 {
 	client_info& c = clients[_epoll._events[id].data.fd];
-	if (!c.request_fulfilled)
-		return ;
+	// if (!c.request_fulfilled)
+	// 	return ;
+
 #ifdef _debug_
-	cout << BLUE "DS SEND byte sent : " RESET << c.byte_send << endl;
+	cout << BLUE "DS SEND byte sent : " RESET << c.byte_send;
+	cout << " client fd : " << c.c_id << endl;
 	if (c.resp.length() < 1000)
 		cout << "c.resp : \n[" << c.resp << "]\n";
 #endif
+	if (c.byte_send < c.resp.length()) {
+		int test;
 
-	c.byte_send += ::send(_epoll._events[id].data.fd, &c.resp[c.byte_send], c.resp.length() - c.byte_send, 0);
+		c.byte_send += test = ::send(_epoll._events[id].data.fd, &c.resp[c.byte_send], c.resp.length() - c.byte_send, 0);
 #ifdef _debug_
-	cout << GREEN "c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " to client N°" << _epoll._events[id].data.fd << endl;
+	cout << GREEN "c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " - test : " << test << " to client N°" << _epoll._events[id].data.fd << endl;
 #endif
-	if (c.byte_send >= c.resp.length()) {
+	// if (c.byte_send == c.resp.length()) {
+	if (test <= 0) {
 
 #ifdef _debug_
+	cout <<  RED "!! REQUEST SENT CLIENT REMOVED !! test : " RESET << test << endl;
 	cout <<  GREEN << c.resp.substr(0, c.resp.find("\r\n\r\n")) << RESET << endl;
 #endif
+		c.byte_send = 0;
 		remove(id);
 		// clients.erase(_epoll._events[id].data.fd); // ça ça plante
 		// clear(id);
+	}
 	}
 }
 

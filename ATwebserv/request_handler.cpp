@@ -130,6 +130,7 @@ void request_handler::writer(void) {
 		}
 	}
 	else (this->*_tab[_c->rqst_t])();
+	_body.clear();
 	_hrx.clear();
 	_htx.clear();
 }
@@ -379,10 +380,10 @@ int request_handler::handle_post_rqst(void)
 	
 	add_all_field();
 
-	if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
-		file_type();
-		add_body();
-	}
+	// if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
+		// file_type();
+		add_body(true);
+	// }
 	return 0;
 }
 
@@ -715,6 +716,7 @@ void request_handler::add_all_field()
 	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_c->resp += it->second[i];
+	_c->resp += "Connection: close\r\n";
 	_c->resp += "\r\n";
 #ifdef _debug_
 	if (_c->rqst.size() < 1000)
@@ -759,7 +761,7 @@ void request_handler::add_body(int slt_src)
 #endif
 		ifstream fs(_path);
 		_c->resp.append((istreambuf_iterator<char>(fs)),
-						 (istreambuf_iterator<char>() ));
+						(istreambuf_iterator<char>() ));
 	}
 }
 

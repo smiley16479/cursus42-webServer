@@ -94,7 +94,8 @@ void server::run(void) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
 						client.remove(i);
-						printf("server: client just left\n");
+						printf(RED "server: client just left\n" RESET);
+						// sleep(1);
 						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
@@ -114,6 +115,9 @@ void server::run(void) {
 #ifdef _debug_
 				printf("client N°%d EPOLLOUT\n", _epoll._events[i].data.fd);
 #endif
+				// sleep(1);
+
+				// shutdown(_epoll._events[i].data.fd, SHUT_RD);
 				client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
 			}
 		}

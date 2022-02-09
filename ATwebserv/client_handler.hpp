@@ -23,8 +23,8 @@ public:
 	bool is_request_fulfilled(int);
 	bool request_transfer_type(client_info& client);
 	bool is_fulfilled(client_info& client);
-	void remove(int i); // REMOVE A CLIENT
 	void add(int time_out, int i); // ADD A CLIENT
+	void remove(int i); // REMOVE A CLIENT
 	void check_all_timeout(void);
 	void send(int id);
 
