@@ -20,8 +20,11 @@ client_handler::~client_handler()
 bool client_handler::is_request_fulfilled(int id)
 {
 #ifdef _debug_
-	cout << BLUE "DANS IS_REQUEST_FULFILLED, size of current reqst : " << clients[_epoll._events[id].data.fd].rqst.length() <<"\n" RESET;
-	// cout << "Client N°" << _epoll._events[id].data.fd << " request : \n[" << clients[_epoll._events[id].data.fd].rqst + "]" << endl;
+	cout << BLUE "DANS IS_REQUEST_FULFILLED" RESET " size of current reqst : " << clients[_epoll._events[id].data.fd].rqst.length() <<"\n";
+	if (clients[_epoll._events[id].data.fd].rqst.length() < 1000)
+		cout << "Client N°" << _epoll._events[id].data.fd << " request : \n[" << clients[_epoll._events[id].data.fd].rqst + "]" << endl;
+	else
+		cout << "Client N°" << _epoll._events[id].data.fd << " request > 1000octets " MAGENTA " non affichée\n" RESET;	
 #endif
 
 	client_info& client = clients[_epoll._events[id].data.fd];
@@ -54,13 +57,7 @@ bool client_handler::request_transfer_type(client_info& client)
 #endif
 		return (client.rqst_transfer_t = NONE);
 	}
-#ifdef _log_
-	ofstream _LOGfile("log.txt", std::ofstream::app);
-	if (_LOGfile.is_open()) {
-		_LOGfile << client.rqst.substr(0, client.header_end) << "\n\n";
-		_LOGfile.close();
-	}
-#endif
+
 	size_t pos2;
 	// if (client.rqst_t == HEAD)
 	// 	return true;
@@ -215,15 +212,14 @@ void client_handler::add(int time_out, int i)
 	clients[client_fd].time_out = time_out;
 	time(&clients[client_fd].rqst_time_start);
 	clients[client_fd].c_id = client_fd;
+#ifdef _debug_
 	cout << BLUE "DS CLIENT_ADD()" RESET " client_fd : " << client_fd
 	 << " _epoll._events[i].data.fd; : " << _epoll._events[i].data.fd << endl;
-#ifdef _debug_
 #endif
 }
 
 void client_handler::remove(int i)
 {
-
 	cout << BLUE "DS (CLIENT) REMOVE() close(" << _epoll._events[i].data.fd << ")\n" RESET;
 #ifdef _debug_
 #endif
@@ -246,21 +242,21 @@ void client_handler::send(int id)
 	if (c.resp.length() < 1000)
 		cout << "c.resp : \n[" << c.resp << "]\n";
 #endif
-	if (c.byte_send < c.resp.length()) {
+	if (c.request_fulfilled /* && c.byte_send < c.resp.length() */) {
 		int test;
 
 		c.byte_send += test = ::send(_epoll._events[id].data.fd, &c.resp[c.byte_send], c.resp.length() - c.byte_send, 0);
+	cout << GREEN "!! SEND !! c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " - test : " << test << " to client N°" << _epoll._events[id].data.fd << " c.request_fulfilled ? " << (int)c.request_fulfilled << endl;
 #ifdef _debug_
-	cout << GREEN "c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " - test : " << test << " to client N°" << _epoll._events[id].data.fd << endl;
 #endif
 	// if (c.byte_send == c.resp.length()) {
 	if (test <= 0) {
 
-#ifdef _debug_
-	cout <<  RED "!! REQUEST SENT CLIENT REMOVED !! test : " RESET << test << endl;
+	cout <<  RED "!! DS SENT CLIENT REMOVED !! test : " RESET << test << endl;
 	cout <<  GREEN << c.resp.substr(0, c.resp.find("\r\n\r\n")) << RESET << endl;
+#ifdef _debug_
 #endif
-		c.byte_send = 0;
+		// c.byte_send = 0;
 		remove(id);
 		// clients.erase(_epoll._events[id].data.fd); // ça ça plante
 		// clear(id);

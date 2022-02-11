@@ -88,13 +88,14 @@ void server::run(void) {
 #endif
 			}
 			else if ( (_epoll._events[i].events & EPOLLIN) == EPOLLIN ) {
-#ifdef _debug_
-				printf("client N°%d EPOLLIN\n", _epoll._events[i].data.fd);
-#endif
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
-				if ((byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0)) <= 0) {
+				byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0);
+				printf(RED "EPOLLIN " RESET "client N°%d byte_recved : %d\n", _epoll._events[i].data.fd, byte_recved);
+#ifdef _debug_
+				// sleep(1);
+#endif
+				if (byte_recved <= 0) {
 						client.remove(i);
-						printf(RED "server: client just left\n" RESET);
 						// sleep(1);
 						// break; // Pk Break T-ON ?
 				}
@@ -112,10 +113,10 @@ void server::run(void) {
 				}
 			}
 			else if ( (_epoll._events[i].events & EPOLLOUT) == EPOLLOUT ) {
+				printf(RED "EPOLLOUT " RESET "client N°%d\n", _epoll._events[i].data.fd);
 #ifdef _debug_
-				printf("client N°%d EPOLLOUT\n", _epoll._events[i].data.fd);
-#endif
 				// sleep(1);
+#endif
 
 				// shutdown(_epoll._events[i].data.fd, SHUT_RD);
 				client.send(i); // send() FERME LA CONNEXION ET VIRER LE CLIENT MS JE SAIS PAS SI ÇA DOIT ETRE FAIT COMMME ÇA
@@ -123,7 +124,7 @@ void server::run(void) {
 		}
 		client.check_all_timeout();
 #ifdef _debug_
-		printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
+		// printf(RED "_event_count : %d\n" RESET, _epoll._event_count);
 #endif
 	}
 	if(close(_epoll._epoll_fd))

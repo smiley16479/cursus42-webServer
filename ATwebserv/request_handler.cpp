@@ -65,6 +65,7 @@ void request_handler::reader(client_info& cl_info)
 	std::stringstream ss_1(cl_info.rqst);
 #ifdef _debug_
 	cout << RED "DANS HEADER READER" RESET "\n" << endl; //cl_info.rqst << endl;
+	cout << "[" + _c->rqst.substr(0, _c->header_end) << "]\n";
 #endif
 	// LECTURE DE LA START_LINE
 	if (std::getline(ss_1, buf_1)) {
@@ -72,11 +73,6 @@ void request_handler::reader(client_info& cl_info)
 		while (ss_2 >> buf_1)
 			_hrx["A"].push_back(buf_1);
 	}
-#ifdef _debug_
-	for (auto it = _hrx["A"].begin(); it != _hrx["A"].end(); it++)
-		cout << "*it : " << *it << endl;
-#endif
-
 	// LECTURE DU RESTE DE LA REQUETE
 	while (std::getline(ss_1, buf_1)) {
 		if (buf_1[0] == '\r') { 
@@ -100,8 +96,16 @@ void request_handler::reader(client_info& cl_info)
 #endif
 	}
 	set_server_id();
-	// cout << RED "APRES GETLINE : " << buf_1 << RESET << endl;
-	// this->display();
+	
+#ifdef _log_
+	ofstream _LOGfile("log.txt", std::ofstream::app);
+	if (_LOGfile.is_open()) {
+		_LOGfile << _c->rqst.substr(0, _c->header_end) << "\n";
+		_LOGfile.close();
+	}
+#endif
+
+		// this->display();
 }
 
 void request_handler::writer(void) {
@@ -118,6 +122,7 @@ void request_handler::writer(void) {
 // EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION ON ENVOI LES PQGES D'ERREUR
 	if (resolve_path()) {
 		file_type();
+		gen_CLength(2);
 		add_all_field();
 		add_body(false);
 	}
@@ -227,24 +232,22 @@ void	request_handler::gen_CLength(int slct_src_len)
 	if (slct_src_len == 1) {
 		ss << _c->clen;
 #ifdef _debug_
-		cout << MAGENTA "3\n" RESET;
+		cout << "add c->clen(" << _c->clen << ") (pour les chunck) vs _body.size() = " <<_body.size() << "\n";
 #endif
 	}
 	else if (slct_src_len == 2) {
-#ifdef _debug_
-		cout << MAGENTA "4\n" RESET;
-#endif
 		ifstream fs(_path.c_str(), std::ifstream::binary | std::ifstream::ate);
 		ss << fs.tellg();
+#ifdef _debug_
+		cout << "add file.size(" << fs.tellg() << ")\n";
+#endif
 		fs.close();
 	}
 	else {
+		ss << _body.size();
 #ifdef _debug_
-		cout << MAGENTA "5\n" RESET;
+		cout << "add _body.size(" << _body.size() << ")\n";
 #endif
-		if (_body.size())
-			ss << _body.size();
-		else return ;
 	}
 	_htx["Content-Length"].push_back("Content-Length: "); // HEADER_LABEL -> IL APPARAITTRA ALORS DS LES HEADER _HTX
 	_htx["Content-Length"].push_back( ss.str());
@@ -376,14 +379,20 @@ int request_handler::handle_post_rqst(void)
 	if (atoi(_htx["A"][1].c_str()) < 300) {
 		does_file_exist(POST);
 		write_file();
+		if (_c->rqst_transfer_t == CHUNCK)
+			gen_CLength(1);
 	}
-	
-	add_all_field();
 
-	// if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
-		// file_type();
+	if (atoi(_htx["A"][1].c_str()) >= 300){ // S'il y a un erreur mais pas bien fait PROBLEM
+		file_type();
+		gen_CLength(2);
+	}
+	add_all_field();
+	if (atoi(_htx["A"][1].c_str()) >= 300) // S'il y a un erreur mais pas bien fait PROBLEM
+		add_body();
+	else	
 		add_body(true);
-	// }
+
 	return 0;
 }
 
@@ -535,8 +544,10 @@ int request_handler::extract_chunk_rqst_body(void)
 	cout << "here is the concatenated string size : " << _body.size()  << endl;
 #endif
 
-	if (check_file_size() == string::npos) // PROBLEM NE SERT A RIEN ICI -> RETURN INUTILE
+	if (check_file_size() == string::npos) {// PROBLEM NE SERT A RIEN ICI -> RETURN INUTILE
+		cout << "rqst file size trop grande\n";
 		return 1;
+	}
 
 #ifdef _debug_
 	if (_body.size() <= 1000)
@@ -732,6 +743,7 @@ void request_handler::add_all_field()
 		std::stringstream ss(_c->resp);
 		while (getline(ss, str))
 			_LOGfile << "> " + str + "\n";
+		_LOGfile << "\n";
 		_LOGfile.close();
 	}
 #endif
