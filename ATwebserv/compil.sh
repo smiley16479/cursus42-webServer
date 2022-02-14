@@ -12,5 +12,5 @@ else
 fi
 
 SRC="main.cpp config_checker.cpp server.cpp request_handler.cpp client_handler.cpp" # cgi_handler.cpp "
-g++ $SRC -fsanitize=address -g3 -D_debug_ -D_log_  #&& ./a.out $TEST
+g++ $SRC -fsanitize=address -g3 $FLAG -D_debug_ -D_log_  #&& ./a.out $TEST
 # g++ $SRC -D_log_ && ./a.out $TEST

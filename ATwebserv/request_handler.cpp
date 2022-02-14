@@ -665,7 +665,7 @@ int request_handler::file_type()
 			}
 // S'IL S'AGIT D'UN DOSSIER DS LEQUEL IL Y A UN INDEX.HTML A RÉCUPÉRER
 			if (!_si[_s_id].location[_l_id].index.empty()) {
-				_path += _path.back() == '/' ? _si[_s_id].location[_l_id].index : '/' + _si[_s_id].location[_l_id].index;
+				_path += /* _path.back() == '/' ? _si[_s_id].location[_l_id].index : */ '/' + _si[_s_id].location[_l_id].index;
 				file_type();
 			}
 			break;
@@ -772,7 +772,7 @@ void request_handler::add_body(int slt_src)
 #ifdef _debug_
 		cout << RED "File written !" RESET  << endl;
 #endif
-		ifstream fs(_path);
+		ifstream fs(_path.c_str());
 		_c->resp.append((istreambuf_iterator<char>(fs)),
 						(istreambuf_iterator<char>() ));
 	}
@@ -858,7 +858,7 @@ size_t request_handler::check_file_size(void)
 // Retourne la taille du fichier INUTILISÉ
 string request_handler::get_file_size(string& path)
 {
-	std::ifstream f(path);
+	std::ifstream f(path.c_str());
 	std::stringstream ss;
 	if (!f.is_open()) {
 		cout << RED "PAS OPEN!!\n" RESET;
@@ -910,7 +910,7 @@ void request_handler::does_file_exist(e_rqst_type type)
 // Creer et/ou ecrit ds le fichier, (!! ENLEVÉ !!: ainsi que ds _body pour la reponse)
 void request_handler::write_file(void) 
 {
-	ofstream my_file(_c->post_file_path, std::ofstream::out | std::ofstream::trunc);
+	ofstream my_file(_c->post_file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
 	if (my_file.is_open()) {
 		my_file.write(_body.c_str(), _body.size());
 		my_file.close();
@@ -1059,7 +1059,8 @@ char** request_handler::setCGIEnv()
 	if (!it->second.empty()) 
 		if (it->first == "X-Secret-Header-For-Test:")	{
 	  std::string header = "HTTP_" + to_upper(it->first);
-	  header.pop_back();
+	//   header.pop_back();
+	  header.erase(header.size() - 1);
 	  std::replace(header.begin(), header.end(), '-', '_');
 	  cgi_env_[header] = it->second[0];
 	}

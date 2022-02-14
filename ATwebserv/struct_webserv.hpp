@@ -42,17 +42,17 @@ struct client_info {
 	std::string	resp;								// Réponse à renvoyer au client
 	std::string post_boundary;						// boundary=([)------------------------f3a140510ee62d32(])
 	std::string	post_file_path;						// Chemin du fichier demandé par les requetes (POST & PUT)
-	time_t		rqst_time_start =0;					// Moment à partir duquel on mesure le time_out d'une requete
-	int			time_out = 0;							// Temps de time_out renseigné ds la config
-	int			cgi_fd[2] = {0};							// Fd servant aux IO des cgi
-	char		ext_id = 0;								// [Id - 1] de l'extension du fichier à gérer pour les cgi contenu ds -> _si[_s_id].location[_l_id].cgi_file_types[_c->ext_id]
-	char		rqst_t = 0;								// type de requete (GET, PUT, POST, HEAD, DELETE, INVALID)
-	char		rqst_transfer_t = 0;					// type de transfert de la requete (Chunk, multipart, etc.)
-	char		request_fulfilled = 0;					// Etape de traitement de la requete
-	size_t		header_end = 0;							// position de la fin des headers
-	size_t		byte_send = 0;							// Total byte sent over the body_length
-	size_t		cgi_byte_write = 0;						// Total byte write over the body_length
-	size_t		clen = 0;								// Len du body (pas de la rqst)
+	time_t		rqst_time_star;					// Moment à partir duquel on mesure le time_out d'une requete
+	int			time_out;							// Temps de time_out renseigné ds la config
+	int			cgi_fd[2];							// Fd servant aux IO des cgi
+	char		ext_id;								// [Id - 1] de l'extension du fichier à gérer pour les cgi contenu ds -> _si[_s_id].location[_l_id].cgi_file_types[_c->ext_id]
+	char		rqst_t;								// type de requete (GET, PUT, POST, HEAD, DELETE, INVALID)
+	char		rqst_transfer_t;					// type de transfert de la requete (Chunk, multipart, etc.)
+	char		request_fulfilled;					// Etape de traitement de la requete
+	size_t		header_end;							// position de la fin des headers
+	size_t		byte_send;							// Total byte sent over the body_length
+	size_t		cgi_byte_write;						// Total byte write over the body_length
+	size_t		clen;								// Len du body (pas de la rqst)
 
 	server_info* serv;								// Pas utilisé pour le moment
 	locati_info* loc;								// Pas utilisé pour le moment
