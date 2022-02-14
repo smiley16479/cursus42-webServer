@@ -296,11 +296,12 @@ int request_handler::handle_get_rqst(void)
 #ifdef _debug_
 	cout << BLUE "IN HANDLE_GET_RQST" RESET << endl;
 #endif
-	file_type();
-	gen_CType();
+	bool fileType = file_type();
+	if (!file_type)
+		gen_CType();
 	gen_CLength(2);
 	add_all_field();
-	add_body(false); // add file content
+	add_body(fileType); // add file content
 	return 0;
 }
 
@@ -727,7 +728,7 @@ void request_handler::add_all_field()
 	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_c->resp += it->second[i];
-	_c->resp += "Connection: close\r\n";
+	// _c->resp += "Connection: close\r\n"; // NE SERT A RIEN MANIFESTEMENT
 	_c->resp += "\r\n";
 #ifdef _debug_
 	if (_c->rqst.size() < 1000)
@@ -1183,8 +1184,11 @@ int	request_handler::launch_cgi()
 								NULL
 							 };
 
-	if (pipe(input_fd) == -1 || pipe(output_fd) == -1)
-		throw (std::runtime_error("Pipe initialization failled"));
+	if (pipe(input_fd) == -1 || pipe(output_fd) == -1) {
+		// throw (std::runtime_error("Pipe initialization failled"));
+		gen_startLine( _status.find("500") );
+		return 0;	
+	}
 	// fcntl(input_fd[0], F_SETFL, O_NONBLOCK); // <- A REMMETTRE ?
 	// fcntl(input_fd[1], F_SETFL, O_NONBLOCK); // <- A REMMETTRE ?
 	// fcntl(output_fd[0], F_SETFL, O_NONBLOCK); // <- A REMMETTRE ?
@@ -1197,8 +1201,11 @@ int	request_handler::launch_cgi()
 	// }
 
 	pid = fork();
-	if (pid == -1)
-		throw (std::runtime_error("fork initialization failled"));
+	if (pid == -1) {
+		// throw (std::runtime_error("fork initialization failled"));
+		gen_startLine( _status.find("500") );
+		return 0;	
+	}
 	if (pid == 0)
 	{ // DS L'ENFANT
 #ifdef _debug_
