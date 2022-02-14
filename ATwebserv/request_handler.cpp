@@ -296,8 +296,8 @@ int request_handler::handle_get_rqst(void)
 #ifdef _debug_
 	cout << BLUE "IN HANDLE_GET_RQST" RESET << endl;
 #endif
-	bool fileType = file_type();
-	if (!file_type)
+	int fileType = file_type();
+	if (!fileType)
 		gen_CType();
 	gen_CLength(2);
 	add_all_field();
