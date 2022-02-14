@@ -15,8 +15,10 @@
 #include <sys/stat.h>	// pour lstat
 #include <dirent.h>		// readdir et struct DIR etc.. (plus besoin si on utilise perl pour générer le html)
 #include <unistd.h>		// strlen
-// # include "cgi_handler.hpp"
-// class cgi_handler;
+#include <cstdlib>
+#include <sys/wait.h>
+#include <cstring>
+#include <fcntl.h>
 
 using namespace std;
 
