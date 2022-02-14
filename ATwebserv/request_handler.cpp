@@ -19,7 +19,6 @@
 
 
 #include "request_handler.hpp"
-#include "cgi_handler.hpp"
 
 namespace patch
 {
