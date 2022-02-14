@@ -12,7 +12,11 @@ bool _run = true;      // Initialisé à true tant qu'il n'y a pas de SIGINT
 server::server(std::string av)
 {
 	config_checker confCheck;
-	confCheck.check_conFile(av);
+	struct stat sb;
+	if (stat(av.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+		confCheck.check_conFile(av);
+	else 
+		throw std::runtime_error("Bad configuration file given");
 	this->_s = *confCheck._si; // je voulais le passer par reference mais pas possible av l'architecture actuelle
 }
 

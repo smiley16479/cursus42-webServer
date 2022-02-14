@@ -1007,20 +1007,10 @@ int request_handler::cgi_output()
 }
 
 
-
-
-
-
-
-
-
   std::string to_upper(std::string s) {
 	std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 	return s;
   }
-
-
-/* VERSION SOLAL */
 
 char** request_handler::setCGIEnv()
 {
