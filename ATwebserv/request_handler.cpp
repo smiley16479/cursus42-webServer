@@ -21,6 +21,16 @@
 #include "request_handler.hpp"
 #include "cgi_handler.hpp"
 
+namespace patch
+{
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
 request_handler::request_handler(std::vector<server_info>& server_info) : _si(server_info)
 {
 // CREER LA LOOKUP TABLE
@@ -1023,7 +1033,7 @@ char** request_handler::setCGIEnv()
 
   if (_c->rqst_t == POST){
 		cgi_env_["CONTENT_TYPE"] = _hrx["Content-Type:"].empty() ? "" : _hrx["Content-Type:"][0];// req_headers_["Content-Type"];
-		cgi_env_["CONTENT_LENGTH"] = _hrx["Content-Length:"].empty() ? std::to_string(_body.size()) : _hrx["Content-Length:"][0] ; // ft::to_string(req_body_.length());
+		cgi_env_["CONTENT_LENGTH"] = _hrx["Content-Length:"].empty() ? patch::to_string(_body.size()) : _hrx["Content-Length:"][0] ; // ft::to_string(req_body_.length());
 	}
 	cgi_env_["GATEWAY_INTERFACE"] = "CGI/1.1";
   cgi_env_["PATH_INFO"] = _path; //"ATwebserv/YoupirBanane"; // file_path_;
@@ -1047,9 +1057,9 @@ char** request_handler::setCGIEnv()
 	cgi_env_["REQUEST_URI"] = _path; // file_path_;
 
   cgi_env_["SCRIPT_NAME"] = _si[_s_id].location[_l_id].cgi_path; // cgi_path_;
-	cgi_env_["SERVER_NAME"] = "WEBSERV/1.0"; //config_.getHost();
+	cgi_env_["SERVER_NAME"] = _si[_s_id].server_name; // "WEBSERV/1.0"; //config_.getHost();
 	cgi_env_["SERVER_PROTOCOL"] = "HTTP/1.1"; // config_.getProtocol();
-	cgi_env_["SERVER_PORT"] = "8080"; // ft::to_string(config_.getPort());
+	cgi_env_["SERVER_PORT"] = _si[_s_id].port; // "8080"; // ft::to_string(config_.getPort());
   cgi_env_["SERVER_SOFTWARE"] = "WEBSERV/1.0";
 
 //	if (extension_ == ".php")

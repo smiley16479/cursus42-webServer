@@ -42,7 +42,7 @@ struct client_info {
 	std::string	resp;								// Réponse à renvoyer au client
 	std::string post_boundary;						// boundary=([)------------------------f3a140510ee62d32(])
 	std::string	post_file_path;						// Chemin du fichier demandé par les requetes (POST & PUT)
-	time_t		rqst_time_star;					// Moment à partir duquel on mesure le time_out d'une requete
+	time_t		rqst_time_start;					// Moment à partir duquel on mesure le time_out d'une requete
 	int			time_out;							// Temps de time_out renseigné ds la config
 	int			cgi_fd[2];							// Fd servant aux IO des cgi
 	char		ext_id;								// [Id - 1] de l'extension du fichier à gérer pour les cgi contenu ds -> _si[_s_id].location[_l_id].cgi_file_types[_c->ext_id]
