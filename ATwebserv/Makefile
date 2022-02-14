@@ -13,11 +13,11 @@ RM = rm -f
 
 NAME = webserv
 
-ifeq ($(df), 0)
+# ifeq ($(df), 0)
 CPP_FLAGS += -Wall
 CPP_FLAGS += -Werror
 CPP_FLAGS += -Wextra
-endif
+# endif
 
 CPP_FLAGS += -std=c++98
 CPP_FLAGS += -g3

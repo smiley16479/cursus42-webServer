@@ -143,7 +143,7 @@ void request_handler::writer(void) {
 			add_body(false);
 		}
 	}
-	else (this->*_tab[_c->rqst_t])();
+	else (this->*_tab[static_cast<int>(_c->rqst_t)])();
 	_body.clear();
 	_hrx.clear();
 	_htx.clear();
@@ -737,7 +737,7 @@ void request_handler::add_all_field()
 	for (std::map<string, vector<string> >::iterator it = _htx.begin(); it != _htx.end(); it++)
 		for (size_t i = 0, j = it->second.size(); i < j; ++i)
 			_c->resp += it->second[i];
-	// _c->resp += "Connection: close\r\n"; // NE SERT A RIEN MANIFESTEMENT
+	_c->resp += "Connection: close\r\n"; // NE SERT A RIEN MANIFESTEMENT
 	_c->resp += "\r\n";
 #ifdef _debug_
 	if (_c->rqst.size() < 1000)
@@ -799,7 +799,7 @@ bool request_handler::is_method_allowed(void)
 #endif
 	bool allowed = false;
 	const char *array[] = {"GET", "PUT", "POST", "HEAD", "DELETE", NULL};
-	for (char i = 0; array[i]; ++i)
+	for (int i = 0; array[i]; ++i)
 		// cout << MAGENTA << *strs << RESET << endl;
 		if (array[i] == _hrx["A"][0]) {
 			_c->rqst_t = i;
@@ -838,7 +838,7 @@ size_t request_handler::check_file_size(void)
 #endif
 
 	if (_c->rqst_transfer_t == CHUNCK)
-		if (!_si[_s_id].location[_l_id].max_file_size.empty() && (_c->clen > atoi(_si[_s_id].location[_l_id].max_file_size.c_str()))) {
+		if (!_si[_s_id].location[_l_id].max_file_size.empty() && (_c->clen > static_cast<size_t>(atoi(_si[_s_id].location[_l_id].max_file_size.c_str())))) {
 			gen_startLine( _status.find("413") );
 #ifdef _debug_
 	cout << RED "DS CHECK_FILE_SIZE, TROP GROS _c->clen : " RESET << _c->clen << " / conf : " <<  atoi(_si[_s_id].location[_l_id].max_file_size.c_str()) << endl;
@@ -968,7 +968,7 @@ int request_handler::cgi_output()
 #endif
 
 	char str[100000];
-	int len, nb = 0;
+	int len; //, nb = 0;
 	_body.clear();
 	while ((len = read(_c->cgi_fd[0], str, 100000)) > 0) {// Peut-etre pas faire de while là
 		_body.append(str, len);
