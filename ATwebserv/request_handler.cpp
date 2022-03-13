@@ -128,6 +128,12 @@ void request_handler::writer(void) {
 	gen_date();
 	gen_serv();
 
+/* 	static int i = 0;
+	static int cpt = 0;
+	if (i == _c->rqst_t)
+		cout << cpt++ << "\r";
+	i = _c->rqst_t; */
+
 // EN CAS DE MÉTHODE NON AUTORISÉE DS CETTE LOCATION ON ENVOI LES PQGES D'ERREUR
 	if (resolve_path()) {
 		file_type();
@@ -693,7 +699,7 @@ int request_handler::file_type()
 	}
 // SI ERROR, AIGUILLE LE PATH SUR LA PAGE D'ERREUR CORRESPONDANTE
 	if (atoi(_htx["A"][1].c_str()) >= 400)
-		_path = _si[_s_id].error_page.empty() || _si[_s_id].error_page.find("files/error_pages") != string::npos ? "files/error_pages/4xx.html" : _si[_s_id].error_page + _htx["A"][1] + ".html";
+		_path = _si[_s_id].error_page.empty() ? "files/error_pages/4xx.html" : _si[_s_id].error_page + "/" + _htx["A"][1] + ".html";
 #ifdef _debug_
 	printf("_path : %s\n", _path.c_str());
 #endif
@@ -973,7 +979,7 @@ int request_handler::cgi_output()
 	while ((len = read(_c->cgi_fd[0], str, 100000)) > 0) {// Peut-etre pas faire de while là
 		_body.append(str, len);
 #ifdef _debug_
-		cout << GREEN "read len : " RESET "[" << len << "]" << " nb [" << ++nb << "]" << endl;
+		// cout << GREEN "read len : " RESET "[" << len << "]" << " nb [" << ++nb << "]" << endl;
 #endif
 	}
 #ifdef _debug_

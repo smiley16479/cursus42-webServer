@@ -91,6 +91,11 @@ void server::run(void) {
 				printf("New client added\n");
 #endif
 			}
+			else if ( (_epoll._events[i].events & EPOLLRDHUP) == EPOLLRDHUP ) {
+				printf(RED "EPOLLRDHUP " RESET "client N°%d REMOVED !!\n", _epoll._events[i].data.fd);
+				client.remove(i);
+				// sleep(1);
+			}
 			else if ( (_epoll._events[i].events & EPOLLIN) == EPOLLIN ) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0);

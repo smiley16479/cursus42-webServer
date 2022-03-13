@@ -202,7 +202,7 @@ void client_handler::add(int time_out, int i)
 #endif
 
 	// clientaddr.sin_addr;
-	_epoll._event.events = EPOLLIN | EPOLLOUT;
+	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -257,7 +257,7 @@ void client_handler::send(int id)
 #ifdef _debug_
 #endif
 		// c.byte_send = 0;
-		remove(id);
+		// remove(id);
 		// clients.erase(_epoll._events[id].data.fd); // ça ça plante
 		// clear(id);
 	}
