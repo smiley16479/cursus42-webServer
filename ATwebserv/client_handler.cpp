@@ -202,7 +202,7 @@ void client_handler::add(int time_out, int i)
 #endif
 
 	// clientaddr.sin_addr;
-	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP;
+	_epoll._event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP;
 	_epoll._event.data.fd = client_fd;
 	if(epoll_ctl(_epoll._epoll_fd, EPOLL_CTL_ADD, client_fd, &_epoll._event)) {
 		fprintf(stderr, "Failed to add file descriptor to epoll\n");
@@ -246,15 +246,15 @@ void client_handler::send(int id)
 		int test;
 
 		c.byte_send += test = ::send(_epoll._events[id].data.fd, &c.resp[c.byte_send], c.resp.length() - c.byte_send, 0);
-	cout << GREEN "!! SEND !! c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " - test : " << test << " to client N°" << _epoll._events[id].data.fd << " c.request_fulfilled ? " << (int)c.request_fulfilled << endl;
 #ifdef _debug_
+	cout << GREEN "!! SEND !! c.byte_send : " RESET << c.byte_send << " / " << c.resp.length() << " - test : " << test << " to client N°" << _epoll._events[id].data.fd << " c.request_fulfilled ? " << (int)c.request_fulfilled << endl;
 #endif
 	// if (c.byte_send == c.resp.length()) {
 	if (test <= 0) {
 
+#ifdef _debug_
 	cout <<  RED "!! DS SENT CLIENT REMOVED !! test : " RESET << test << endl;
 	cout <<  GREEN << c.resp.substr(0, c.resp.find("\r\n\r\n")) << RESET << endl;
-#ifdef _debug_
 #endif
 		// c.byte_send = 0;
 		// remove(id);

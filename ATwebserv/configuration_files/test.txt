@@ -1,2 +1,4 @@
 
 ##	SERVER					DATA_TYPE		VAL_NUM			VALID				
+after\n #comment
+not a comment

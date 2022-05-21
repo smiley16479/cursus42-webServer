@@ -100,13 +100,9 @@ void server::run(void) {
 				bzero(str, sizeof(str)); // ON EFFACE UN HYPOTHÉTIQUE PRÉCÉDENT MSG
 				byte_recved = recv(_epoll._events[i].data.fd, str, sizeof(str), 0);
 				printf(RED "EPOLLIN " RESET "client N°%d byte_recved : %d\n", _epoll._events[i].data.fd, byte_recved);
-#ifdef _debug_
-				// sleep(1);
-#endif
+
 				if (byte_recved <= 0) {
 						client.remove(i);
-						// sleep(1);
-						// break; // Pk Break T-ON ?
 				}
 				else { /* RECEPTION... ET TRAITEMENT DE LA REQUETE */
 					// printf("client(fd : %d) msg : " YELLOW "\n%s\n" RESET,_events[i].data.fd,  str); 

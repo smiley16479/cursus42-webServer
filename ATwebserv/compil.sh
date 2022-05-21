@@ -3,7 +3,8 @@
 # -std=c++98
 FLAG="-Wall -Werror -Wextra"
 
-if [ $1 = "t" ]; then
+if [[ $1 = "t" ]]
+then
 	echo "run avec configuration_files/valid/test.conf"
     TEST="configuration_files/valid/test.conf"
 else
@@ -12,5 +13,5 @@ else
 fi
 
 SRC="main.cpp config_checker.cpp server.cpp request_handler.cpp client_handler.cpp" # cgi_handler.cpp "
-g++ $SRC -fsanitize=address -g3 $FLAG -D_debug_ && ./a.out $TEST # -D_log_ 
+g++ $SRC -fsanitize=address -g3 $FLAG && ./a.out $TEST # -D_log_  -D_debug_ 
 # g++ $SRC -D_log_ && ./a.out $TEST
